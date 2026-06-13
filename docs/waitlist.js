@@ -30,3 +30,34 @@ function mycroWaitlist(e){
     });
   return false;
 }
+
+/* Founding Grower presale -> Stripe Checkout (live).
+   We capture the email as a waitlist lead first (so an abandoned checkout still
+   becomes a lead, tagged source=founding-intent), then hand off to Stripe with the
+   email pre-filled. Stripe handles the actual payment; on success the buyer lands
+   on /success.html. */
+window.MYCRO_FOUNDING_LINK = window.MYCRO_FOUNDING_LINK || "https://buy.stripe.com/9B66oJ4Bp1iV5BBfVHe7m01";
+function mycroFounding(e){
+  e.preventDefault();
+  var f=e.target, msg=document.getElementById('fnd-msg');
+  var input=f.querySelector('input[type=email]');
+  var btn=f.querySelector('button');
+  var email=(input.value||'').trim();
+  if(msg) msg.style.display='block';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    if(msg) msg.textContent="Please enter a valid email address."; return false;
+  }
+  var orig=btn.textContent; btn.disabled=true; btn.textContent="Taking you to checkout…";
+  try{ localStorage.setItem('mycro_waitlist_email', email); }catch(_){}
+  var go=function(){ location.href = window.MYCRO_FOUNDING_LINK + "?prefilled_email=" + encodeURIComponent(email); };
+  // Fire-and-forget lead capture; redirect regardless after a short beat so we never block the sale.
+  var redirected=false, redirect=function(){ if(!redirected){ redirected=true; go(); } };
+  try{
+    fetch(window.MYCRO_API+"/api/waitlist",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"", note:"founding-intent" })
+    }).then(redirect, redirect);
+  }catch(_){ redirect(); }
+  setTimeout(redirect, 1200);
+  return false;
+}

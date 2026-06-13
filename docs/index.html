@@ -33,8 +33,8 @@
   <div class="nav-links">
     <a href="calculator.html" class="hide-sm">Grow Calculator</a>
     <a href="#tools" class="hide-sm">Free tools</a>
-    <a href="#pricing" class="hide-sm">Pricing</a>
-    <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+    <a href="#founding" class="hide-sm">Founding offer</a>
+    <a href="#founding" class="btn" style="padding:8px 16px;font-size:.92rem">Become a Founding Grower</a>
   </div>
 </div></nav>
 
@@ -47,7 +47,7 @@
       and profit per block.</p>
     <div class="hero-cta">
       <a href="calculator.html" class="btn">Try the free Grow Calculator →</a>
-      <a href="#waitlist" class="btn ghost">Join the early-access list</a>
+      <a href="#founding" class="btn ghost">Become a Founding Grower →</a>
     </div>
     <p class="muted" style="margin-top:14px;font-size:.92rem">No login to use the calculator.
       Oyster, lion's mane, shiitake, king trumpet &amp; more. Built for legal culinary
@@ -137,7 +137,8 @@
 <section id="pricing"><div class="wrap center">
   <div class="section-tag">Simple, honest pricing</div>
   <h2>Start free. Upgrade when it's paying for itself.</h2>
-  <p class="muted">Early-access pricing — locked in for people who join now.</p>
+  <p class="muted">Early-access pricing — and Founding Growers
+    (<a href="#founding">$99 once, below</a>) lock these rates in for life.</p>
   <div class="grid cols-3" style="margin-top:26px;text-align:left">
     <div class="card"><span class="pill">Free</span><h3 style="margin-top:10px">$0</h3>
       <p style="color:var(--ink)">The Grow Calculator, the species reference, and up to 3 active
@@ -152,6 +153,53 @@
         lists &amp; labels, multi-user, and simple invoicing.</p></div>
   </div>
   <p class="disclaimer">Prices shown are early-access targets and may change before launch.</p>
+</div></section>
+
+<style>
+  .fnd-band{background:linear-gradient(135deg,var(--brand),var(--brand-ink));border-radius:var(--radius);
+    overflow:hidden;box-shadow:var(--shadow)}
+  .fnd-grid{display:grid;grid-template-columns:1.08fr .92fr}
+  .fnd-pitch{padding:34px}
+  .fnd-pitch h2{color:#fff;margin:14px 0 10px}
+  .fnd-pitch p,.fnd-pitch li{color:#fbe9d8}
+  .fnd-list{list-style:none;padding:0;margin:0}
+  .fnd-list li{padding:6px 0 6px 26px;position:relative}
+  .fnd-list li::before{content:"✓";position:absolute;left:0;color:#fff;font-weight:800}
+  .fnd-buy{background:#fff;color:var(--ink);padding:30px;display:flex;flex-direction:column;justify-content:center}
+  .fnd-buy form{display:flex;flex-direction:column;gap:10px;margin:0}
+  .fnd-buy input{padding:12px 14px;border-radius:999px;border:1px solid var(--line);
+    background:var(--surface-2);color:var(--ink);font:inherit;width:100%}
+  .fnd-buy .btn{width:100%}
+  @media(max-width:720px){ .fnd-grid{grid-template-columns:1fr} }
+</style>
+<section id="founding"><div class="wrap">
+  <div class="fnd-band"><div class="fnd-grid">
+    <div class="fnd-pitch">
+      <span class="pill" style="background:rgba(255,255,255,.2);color:#fff">🍄 Founding Grower · only 50 spots</span>
+      <h2>Back Mycro early. Lock in founder pricing for life.</h2>
+      <p style="margin:0 0 16px">We're building Mycro hand-in-hand with working growers. Claim a Founding
+        Grower spot now and you're not just on a list — you're shaping the product and locking your price forever.</p>
+      <ul class="fnd-list">
+        <li>Lifetime founder pricing — you never pay standard rates</li>
+        <li>First access the day Mycro opens</li>
+        <li>A direct line to the team to shape what we build first</li>
+        <li>Founding Grower badge on your account</li>
+      </ul>
+      <p style="font-size:.9rem;margin:16px 0 0;opacity:.95">This is a pre-order for software still in
+        active build — and it's <b style="color:#fff">fully refundable</b> any time before launch. No risk to back us early.</p>
+    </div>
+    <div class="fnd-buy">
+      <div style="font-size:2.6rem;font-weight:800;line-height:1">$99 <span style="font-size:1rem;font-weight:600;color:var(--muted)">one-time</span></div>
+      <p class="muted" style="margin:6px 0 16px">Founder price, locked for life. Refundable anytime before launch.</p>
+      <form onsubmit="return mycroFounding(event)">
+        <input type="email" name="email" placeholder="you@yourfarm.com" required aria-label="Email">
+        <button class="btn" type="submit">Reserve my Founding Grower spot →</button>
+      </form>
+      <p id="fnd-msg" class="muted" style="margin-top:10px;display:none"></p>
+      <p class="muted" style="font-size:.82rem;margin-top:14px">🔒 Secure checkout by Stripe. You'll get a
+        receipt now and your early-access link before launch. Not ready? <a href="#waitlist">Join the free list →</a></p>
+    </div>
+  </div></div>
 </div></section>
 
 <section id="waitlist"><div class="wrap">
