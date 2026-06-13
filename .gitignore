@@ -6,6 +6,9 @@ NICHE_RESEARCH.md
 MARKETING.md
 PRODUCT.md
 METRICS.md
+STRIPE_PRESALE.md
+# Backend (Cloud Run) — kept in the private backup; public repo stays site-only
+server/
 .claude/
 .DS_Store
 node_modules/

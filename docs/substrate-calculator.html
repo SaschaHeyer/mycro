@@ -33,7 +33,7 @@
   <div class="nav-links">
     <a href="calculator.html" class="hide-sm">Grow Calculator</a>
     <a href="guides/biological-efficiency.html" class="hide-sm">Guides</a>
-    <a href="index.html#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+    <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
   </div>
 </div></nav>
 
@@ -126,11 +126,15 @@
     <p class="muted" id="r-note" style="margin:14px 0 0;font-size:.9rem"></p>
   </div>
 
-  <div class="note" style="margin-top:18px">
+  <div class="note" id="waitlist" style="margin-top:18px">
     <b style="color:var(--ink)">Dialing in a recipe block by block?</b> Mycro logs each batch's
     substrate, spawn, and final yield — so you learn which mix actually gives <i>your</i> farm the
-    best biological efficiency and lowest cost per pound, instead of guessing.
-    <a href="index.html#waitlist" class="btn" style="margin-top:12px;padding:10px 18px">Get early access →</a>
+    best biological efficiency and lowest cost per pound, instead of guessing. Join the early-access list:
+    <form class="waitlist" style="margin:14px 0 0;justify-content:flex-start" onsubmit="return mycroWaitlist(event)">
+      <input type="email" name="email" placeholder="you@yourfarm.com" required aria-label="Email">
+      <button class="btn" type="submit">Get early access →</button>
+    </form>
+    <p id="wl-msg" class="muted" style="margin-top:12px;display:none"></p>
   </div>
 
   <!-- Methodology + reference (SEO depth + trust) -->
@@ -294,5 +298,6 @@ document.querySelectorAll('#unitToggle button').forEach(function(b){
 
 setUnitLabels(); calc();
 </script>
+<script src="waitlist.js"></script>
 </body>
 </html>
