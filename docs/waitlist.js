@@ -21,6 +21,7 @@ function mycroWaitlist(e){
   }).then(function(r){ return r.ok ? r.json().catch(function(){return {ok:true};}) : {ok:false}; })
     .then(function(d){
       if(d && d.ok){
+        if(window.track) try{ track('waitlist_signup', {src: location.pathname}); }catch(_){}
         f.style.display='none';
         msg.textContent="You're on the list 🍄 Check your inbox — we just sent you a quick welcome with all the free tools. (Peek in spam if it's not there in a minute.)";
       } else { throw new Error("bad"); }
@@ -48,6 +49,7 @@ function mycroFounding(e){
     if(msg) msg.textContent="Please enter a valid email address."; return false;
   }
   var orig=btn.textContent; btn.disabled=true; btn.textContent="Taking you to checkout…";
+  if(window.track) try{ track('founding_click', {src: location.pathname}); }catch(_){}
   try{ localStorage.setItem('mycro_waitlist_email', email); }catch(_){}
   var go=function(){ location.href = window.MYCRO_FOUNDING_LINK + "?prefilled_email=" + encodeURIComponent(email); };
   // Fire-and-forget lead capture; redirect regardless after a short beat so we never block the sale.
