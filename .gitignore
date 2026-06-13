@@ -11,3 +11,4 @@ METRICS.md
 node_modules/
 *.log
 .secrets/
+sync-private.sh
