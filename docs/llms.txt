@@ -19,6 +19,9 @@
 - [Contamination: identify & prevent](https://usemycro.com/guides/contamination.html): how to identify green mold (Trichoderma), cobweb, black mold, and bacterial blotch / wet spot, why each happens, and the prevention checklist.
 - [All guides](https://usemycro.com/guides/)
 
+## Open source
+- [mycro-grow on GitHub](https://github.com/SaschaHeyer/mycro-grow): the open-source (MIT) engine behind Mycro's calculators — hydration, spawn ratio, biological-efficiency yield, batch economics, substrate recipes, and fruiting-condition data for 14 species, as a zero-dependency JavaScript library + CLI.
+
 ## About
 - Mycro is for legal culinary and functional/medicinal mushroom cultivation only.
 - Early access (the batch-tracking app) is open via the waitlist at https://usemycro.com/#waitlist
