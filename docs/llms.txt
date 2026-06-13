@@ -6,6 +6,7 @@
 > software (in early access) for tracking batches from spawn to flush.
 
 ## Free tools
+- [Grow Log (batch tracker)](https://usemycro.com/grow-log.html): a free, no-sign-up mushroom grow log — add each batch, advance it through inoculation, colonization, fruiting and harvest, and get biological efficiency, days-in-stage, an overdue-colonization flag, and contamination rate computed automatically. Saves in the browser; exports CSV/JSON. This is the free, single-device taste of Mycro's grow-operations app.
 - [Grow Calculator](https://usemycro.com/calculator.html): estimate substrate, spawn, expected yield (via biological efficiency), and cost/profit per block for any batch and species.
 - [Substrate Recipe Calculator](https://usemycro.com/substrate-calculator.html): scale a Masters Mix, supplemented-sawdust, soy-hull, or straw recipe to any number of blocks — exact sawdust, soy hull, bran, gypsum, and water to field capacity.
 - [Fruiting Conditions cheat-sheet](https://usemycro.com/fruiting-conditions.html): temperature, humidity, CO2, fresh-air, and light targets for 14 gourmet and medicinal species, with °C/°F toggle.
