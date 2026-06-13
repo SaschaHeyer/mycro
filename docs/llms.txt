@@ -11,6 +11,7 @@
 - [Fruiting Conditions cheat-sheet](https://usemycro.com/fruiting-conditions.html): temperature, humidity, CO2, fresh-air, and light targets for 14 gourmet and medicinal species, with °C/°F toggle.
 
 ## Guides
+- [How to start a mushroom farming business](https://usemycro.com/guides/start-mushroom-business.html): realistic, numbers-first guide to going commercial — startup costs, the production cycle, profitability math (biological efficiency × yield × price), finding buyers (markets, restaurants, CSAs), and the mistakes that sink new farms.
 - [Biological efficiency, explained](https://usemycro.com/guides/biological-efficiency.html): the BE formula, a worked example, target BE by species, and seven ways to improve it.
 - [Spawn ratio, explained](https://usemycro.com/guides/spawn-ratio.html): how much grain spawn to use (10% vs 20% vs 30%+) and the trade-offs for speed, contamination, and yield.
 - [How much water to add (field capacity)](https://usemycro.com/guides/field-capacity.html): what field capacity means, the squeeze test, water per substrate type, and how to fix a batch that's too wet or too dry.
