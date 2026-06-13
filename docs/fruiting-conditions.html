@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mushroom Fruiting Conditions by Species — Temp, Humidity, CO₂ & FAE Cheat-Sheet | Mycro</title>
+<meta name="description" content="A free, filterable cheat-sheet of colonization and fruiting conditions for 14 gourmet & medicinal mushrooms — temperature, humidity, CO₂, fresh air (FAE), and light for oyster, lion's mane, shiitake, king oyster and more. Switch °C/°F, no sign-up.">
+<meta name="keywords" content="mushroom fruiting conditions, oyster mushroom fruiting temperature, lion's mane fruiting conditions, shiitake fruiting temperature, mushroom humidity, CO2 mushroom fruiting, fresh air exchange mushrooms, FAE, mushroom growing conditions chart, king oyster temperature, mushroom colonization temperature">
+<link rel="canonical" href="https://saschaheyer.github.io/mycro/fruiting-conditions.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mushroom Fruiting Conditions by Species — a free cheat-sheet">
+<meta property="og:description" content="Temperature, humidity, CO₂, fresh air and light for 14 gourmet & medicinal mushrooms — oyster, lion's mane, shiitake, king oyster and more. °C/°F, no sign-up.">
+<meta property="og:url" content="https://saschaheyer.github.io/mycro/fruiting-conditions.html">
+<meta property="og:image" content="https://saschaheyer.github.io/mycro/social-card.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#C2702B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mushroom Fruiting Conditions Cheat-Sheet",
+"applicationCategory":"BusinessApplication","operatingSystem":"Web",
+"url":"https://saschaheyer.github.io/mycro/fruiting-conditions.html",
+"description":"A filterable reference of colonization and fruiting conditions (temperature, humidity, CO₂, fresh air, light) for gourmet and medicinal mushrooms.",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What temperature do oyster mushrooms fruit at?","acceptedAnswer":{"@type":"Answer","text":"Most blue and pearl oyster (Pleurotus ostreatus) fruit best at roughly 10–21°C (50–70°F). Warm-loving pink and golden oysters prefer 18–30°C (64–86°F). All oysters want 85–95% humidity and plenty of fresh air."}},
+{"@type":"Question","name":"What are the ideal fruiting conditions for lion's mane?","acceptedAnswer":{"@type":"Answer","text":"Lion's mane (Hericium erinaceus) fruits at about 18–24°C (64–75°F) with 90–95% humidity, low CO₂ (under ~800 ppm), and high fresh-air exchange. Too much CO₂ produces branchy 'coral' growth with no spines."}},
+{"@type":"Question","name":"What humidity do mushrooms need to fruit?","acceptedAnswer":{"@type":"Answer","text":"Most gourmet mushrooms fruit at 85–95% relative humidity. Lion's mane and nameko prefer the high end (90–95%), while shiitake tolerates a bit drier (80–90%). Pins abort if humidity drops too low."}},
+{"@type":"Question","name":"What is FAE in mushroom growing?","acceptedAnswer":{"@type":"Answer","text":"FAE stands for fresh-air exchange — replacing CO₂-rich air with fresh air during fruiting. Most gourmet species need high FAE; too little fresh air causes long stems, small caps, and aborted pins. Reishi and the cultivated long-stem enoki form are exceptions that use high CO₂ deliberately."}}]}
+</script>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="index.html">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg>
+    Mycro
+  </a>
+  <div class="nav-links">
+    <a href="calculator.html" class="hide-sm">Grow Calculator</a>
+    <a href="substrate-calculator.html" class="hide-sm">Substrate Calculator</a>
+    <a href="index.html#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+  </div>
+</div></nav>
+
+<main class="wrap" style="max-width:980px;padding:32px 20px 0">
+  <p class="muted" style="font-size:.85rem;margin-bottom:6px"><a href="index.html">Home</a> ·
+    <a href="index.html#tools">Free tools</a> · Fruiting conditions cheat-sheet</p>
+  <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:12px">🍄 Free · no sign-up</span>
+  <h1>Mushroom fruiting conditions, by species</h1>
+  <p class="muted" style="font-size:1.12rem;max-width:720px">The numbers growers look up constantly —
+    colonization and fruiting temperature, humidity, CO₂, fresh air, and light — for 14 popular
+    gourmet &amp; medicinal mushrooms, in one place. Search, filter, and switch between °C and °F.</p>
+
+  <div class="panel" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:20px">
+    <input id="q" type="search" placeholder="Search a species (e.g. lion's mane, shiitake)…"
+      aria-label="Search species" style="flex:1;min-width:220px;font:inherit;font-size:1rem;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)">
+    <div id="filters" style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="chip active" data-type="all">All</button>
+      <button class="chip" data-type="Oyster">Oysters</button>
+      <button class="chip" data-type="Wood-lover">Wood-lovers</button>
+      <button class="chip" data-type="Medicinal">Medicinal</button>
+    </div>
+    <div class="toggle" role="group" aria-label="Temperature unit">
+      <button id="u-f" class="active" type="button">°F</button>
+      <button id="u-c" type="button">°C</button>
+    </div>
+  </div>
+
+  <div id="grid" class="grid cols-2" style="margin-top:18px"></div>
+  <p id="empty" class="muted" style="display:none;text-align:center;padding:30px">No species match that search.</p>
+
+  <div class="note" style="margin:24px 0 0">
+    <b style="color:var(--ink)">How to read this.</b> Ranges reflect common cultivation practice for
+    healthy commercial strains — your strain, substrate, and room will shift them. <b>FAE</b> is
+    fresh-air exchange (venting CO₂-rich air); <b>CO₂</b> targets are the fruiting-room level, not
+    colonization (colonizing mycelium <i>likes</i> high CO₂). Temperatures are the <i>fruiting</i>
+    optimum unless labelled "colonize."
+  </div>
+
+  <div class="cta-band" style="margin:26px 0 0;text-align:left">
+    <h2 style="color:#fff;margin-top:0">Stop re-looking-up your own grows</h2>
+    <p style="margin-left:0">A cheat-sheet gets you in the ballpark. Mycro logs the conditions and
+      results of <i>your</i> batches — so you learn the exact temp, humidity, and timing that your
+      room and your strains actually want, flush after flush.</p>
+    <a href="index.html#waitlist" class="btn" style="background:var(--brand)">Get early access →</a>
+  </div>
+
+  <p style="margin:26px 0 10px"><b>Keep going:</b>
+    <a href="calculator.html">Grow Calculator</a> ·
+    <a href="substrate-calculator.html">Substrate Recipe Calculator</a> ·
+    <a href="guides/biological-efficiency.html">Biological Efficiency guide</a></p>
+
+  <p class="disclaimer" style="margin-top:8px;margin-bottom:30px">General guidance from common
+    cultivation practice, not guarantees — your results vary with strain, substrate, and conditions.
+    Mycro is for legal culinary &amp; medicinal mushrooms only.</p>
+</main>
+
+<footer><div class="wrap foot-row">
+  <div><a class="brand" href="index.html" style="font-size:1.05rem"><svg viewBox="0 0 32 32" style="width:22px;height:22px" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg> Mycro</a>
+    <p class="disclaimer" style="margin-top:8px;max-width:520px">For legal culinary &amp; medicinal
+      mushroom cultivation only.</p></div>
+  <div style="text-align:right"><a href="index.html">Home</a> · <a href="calculator.html">Grow Calculator</a> · <a href="substrate-calculator.html">Substrate Calculator</a><br>
+    <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms</span></div>
+</div></footer>
+
+<style>
+.chip{border:1px solid var(--line);background:#fff;color:var(--muted);font:inherit;font-weight:700;
+  font-size:.86rem;padding:7px 14px;border-radius:999px;cursor:pointer;transition:.12s}
+.chip:hover{background:var(--surface-2)}
+.chip.active{background:var(--moss);color:#fff;border-color:var(--moss)}
+.sp-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;box-shadow:var(--shadow)}
+.sp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sp-head h3{margin:0;font-size:1.18rem}
+.sp-latin{font-style:italic;color:var(--muted);font-size:.9rem;margin:2px 0 0}
+.sp-badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px}
+.sp-badge{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+.b-Oyster{background:var(--brand-soft);color:var(--brand-ink)}
+.b-Wood-lover{background:var(--moss-soft);color:var(--moss)}
+.b-Medicinal{background:#ECE6F5;color:#5b4a87}
+.b-Beginner{background:#E6F1E8;color:#2f7d4f}
+.b-Intermediate{background:#FBF0DD;color:#9a6312}
+.b-Advanced{background:#F7E3DC;color:#b4452b}
+.sp-card .rowline{font-size:.92rem}
+.sp-card .rowline span{color:var(--muted)} .sp-card .rowline b{color:var(--ink)}
+.sp-note{font-size:.86rem;color:var(--muted);margin:10px 0 0;line-height:1.5}
+</style>
+
+<script>
+// Canonical data — temperatures stored in °C ranges [min,max]; converted to °F on toggle.
+var SPECIES = [
+ {n:"Blue Oyster",l:"Pleurotus ostreatus",t:"Oyster",d:"Beginner",col:[21,27],fr:[10,21],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate (12 h)",days:"10–14 days",be:"75–100%+",note:"The most forgiving species and a great first grow — tolerates a wide temperature band."},
+ {n:"Pearl Oyster",l:"Pleurotus ostreatus",t:"Oyster",d:"Beginner",col:[21,27],fr:[13,21],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"10–14 days",be:"75–100%",note:"The classic grey oyster; fruits a touch warmer than the blue strain."},
+ {n:"Pink Oyster",l:"Pleurotus djamor",t:"Oyster",d:"Beginner",col:[24,30],fr:[18,30],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"10–14 days",be:"65–90%",note:"Loves heat and fruits fast, but very short shelf life — sell within a day or two."},
+ {n:"Golden / Yellow Oyster",l:"Pleurotus citrinopileatus",t:"Oyster",d:"Beginner",col:[24,30],fr:[21,30],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"10–14 days",be:"65–90%",note:"Warm-season; delicate bright-yellow clusters that are fragile after harvest."},
+ {n:"King Oyster",l:"Pleurotus eryngii",t:"Oyster",d:"Intermediate",col:[22,25],fr:[15,18],rh:"85–90%",co2:"500–800 ppm",fae:"Moderate",light:"Low–moderate",days:"14–21 days",be:"50–75%",note:"Fruit few per block for big meaty stems; a brief cold shock helps trigger pinning."},
+ {n:"Lion's Mane",l:"Hericium erinaceus",t:"Wood-lover",d:"Intermediate",col:[21,24],fr:[18,24],rh:"90–95%",co2:"<800 ppm",fae:"High",light:"Low",days:"10–14 days",be:"50–75%",note:"High CO₂ makes branchy 'coral' growth with no spines — keep fresh air high and humidity up."},
+ {n:"Shiitake",l:"Lentinula edodes",t:"Wood-lover",d:"Advanced",col:[21,27],fr:[10,21],rh:"80–90%",co2:"<1000 ppm",fae:"Moderate–high",light:"Moderate",days:"35–70 days + browning",be:"75–125%",note:"Long colonization, then the block must brown before fruiting. A cold-water soak triggers each flush."},
+ {n:"Chestnut",l:"Pholiota adiposa",t:"Wood-lover",d:"Intermediate",col:[21,24],fr:[13,18],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"14–21 days",be:"50–75%",note:"Crunchy, nutty, chef-favorite clusters with a nicer shelf life than oysters."},
+ {n:"Pioppino",l:"Cyclocybe aegerita",t:"Wood-lover",d:"Intermediate",col:[24,27],fr:[15,21],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"14–21 days",be:"50–75%",note:"Long elegant stems and a deep savory flavor; tolerant once fully colonized."},
+ {n:"Nameko",l:"Pholiota microspora",t:"Wood-lover",d:"Intermediate",col:[21,24],fr:[10,16],rh:"90–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"14–30 days",be:"50–75%",note:"Cool-fruiting with a glossy gelatinous cap; a staple in miso soup."},
+ {n:"Enoki",l:"Flammulina velutipes",t:"Wood-lover",d:"Advanced",col:[21,24],fr:[8,13],rh:"80–90%",co2:"High (long-stem form)",fae:"Low (restricted)",light:"Low",days:"14–21 days",be:"50–75%",note:"The white long-stem market form is grown cold in CO₂-rich tubes; with fresh air you get the wild brown form."},
+ {n:"Maitake (Hen of the Woods)",l:"Grifola frondosa",t:"Wood-lover",d:"Advanced",col:[21,24],fr:[13,18],rh:"85–95%",co2:"<800 ppm",fae:"High",light:"Moderate",days:"30–60 days + initiation",be:"~30–50%",note:"Demands extended incubation and a cool initiation — one of the trickier gourmets to fruit."},
+ {n:"Reishi",l:"Ganoderma lingzhi",t:"Medicinal",d:"Intermediate",col:[25,30],fr:[24,29],rh:"90–95%",co2:"High → antlers / Low → conks",fae:"Varies by form",light:"Needed for conks",days:"14–21 days",be:"~30–50%",note:"Steer the form with CO₂: high CO₂ + low light gives antlers; low CO₂ + light gives flat conks. Grown for medicine, not weight."},
+ {n:"Turkey Tail",l:"Trametes versicolor",t:"Medicinal",d:"Beginner",col:[24,27],fr:[18,24],rh:"85–95%",co2:"<1000 ppm",fae:"High",light:"Needed",days:"14–30 days",be:"medicinal — not weight-based",note:"Vigorous and tolerant; grown for extracts. Light plus fresh air gives good banded rosettes."}
+];
+
+var unit = 'F';
+function c2f(c){ return Math.round(c*9/5+32); }
+function temp(range){
+  if(unit==='C') return range[0]+'–'+range[1]+' °C';
+  return c2f(range[0])+'–'+c2f(range[1])+' °F';
+}
+function row(label,val){ return '<div class="rowline"><span>'+label+'</span><b>'+val+'</b></div>'; }
+function card(s){
+  return '<div class="sp-card">'+
+    '<div class="sp-head"><div><h3>'+s.n+'</h3><p class="sp-latin">'+s.l+'</p></div></div>'+
+    '<div class="sp-badges">'+
+      '<span class="sp-badge b-'+s.t+'">'+s.t+'</span>'+
+      '<span class="sp-badge b-'+s.d+'">'+s.d+'</span></div>'+
+    row('🌡️ Fruiting temp', temp(s.fr))+
+    row('🌱 Colonize temp', temp(s.col))+
+    row('💧 Humidity', s.rh)+
+    row('🌬️ Fresh air (FAE)', s.fae)+
+    row('🫁 CO₂ (fruiting)', s.co2)+
+    row('💡 Light', s.light)+
+    row('⏱️ Colonize time', s.days)+
+    row('📊 Typical BE', s.be)+
+    '<p class="sp-note">💡 '+s.note+'</p>'+
+  '</div>';
+}
+var curType='all';
+function render(){
+  var q=(document.getElementById('q').value||'').toLowerCase().trim();
+  var list=SPECIES.filter(function(s){
+    if(curType!=='all' && s.t!==curType) return false;
+    if(q && (s.n+' '+s.l).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  document.getElementById('grid').innerHTML=list.map(card).join('');
+  document.getElementById('empty').style.display=list.length?'none':'block';
+}
+document.getElementById('q').addEventListener('input',render);
+Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.chip').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active'); curType=b.getAttribute('data-type'); render();
+  });
+});
+function setUnit(u){
+  unit=u;
+  document.getElementById('u-f').classList.toggle('active',u==='F');
+  document.getElementById('u-c').classList.toggle('active',u==='C');
+  render();
+}
+document.getElementById('u-f').addEventListener('click',function(){setUnit('F')});
+document.getElementById('u-c').addEventListener('click',function(){setUnit('C')});
+render();
+</script>
+</body>
+</html>
