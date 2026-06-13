@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mushroom Grow Calculator — substrate, spawn ratio, yield &amp; profit | Mycro</title>
+<meta name="description" content="Free mushroom grow calculator: substrate hydration to field capacity, spawn ratio, expected yield from biological efficiency, and full cost &amp; profit per block. For oyster, lion's mane, shiitake and other gourmet mushrooms.">
+<meta name="keywords" content="mushroom substrate calculator, spawn ratio calculator, biological efficiency calculator, mushroom yield calculator, substrate hydration, field capacity, mushroom COGS, oyster mushroom yield">
+<link rel="canonical" href="https://saschaheyer.github.io/mycro/calculator.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Free Mushroom Grow Calculator — substrate, spawn, yield &amp; profit">
+<meta property="og:description" content="The math you do by hand — substrate hydration, spawn ratio, expected yield, and cost-and-profit per block — in one free tool.">
+<meta property="og:url" content="https://saschaheyer.github.io/mycro/calculator.html">
+<meta property="og:image" content="https://saschaheyer.github.io/mycro/social-card.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#C2702B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"How much water to add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"To reach field capacity (about 60% moisture), add water equal to roughly 1.5x the dry substrate weight, so dry substrate plus water ends near 2.5x the dry weight. Water = M/(1-M) x dry weight, where M is the target moisture fraction."}},
+{"@type":"Question","name":"What is biological efficiency for mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is fresh mushroom yield divided by dry substrate weight, as a percentage. Oyster mushrooms commonly hit 75-100%+, while king oyster and lion's mane are often 50-75%."}},
+{"@type":"Question","name":"What spawn ratio should I use?","acceptedAnswer":{"@type":"Answer","text":"A common spawn rate is 10-30% of the hydrated substrate weight. 20% equals a 1:5 spawn-to-substrate ratio. Higher spawn rates colonize faster and resist contamination but cost more."}}]}
+</script>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="index.html">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg>
+    Mycro
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="hide-sm">Home</a>
+    <a href="index.html#features" class="hide-sm">Features</a>
+    <a href="index.html#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+  </div>
+</div></nav>
+
+<header class="wrap" style="padding:40px 20px 6px;max-width:760px">
+  <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:14px">🍄 Free tool · no sign-up</span>
+  <h1>Mushroom Grow Calculator</h1>
+  <p class="muted" style="font-size:1.12rem">Plan a batch end to end: how much water and spawn
+    you need, how much you'll likely harvest, and whether it actually makes money. Edit any
+    field — everything updates live.</p>
+</header>
+
+<main class="wrap" style="max-width:760px;padding-bottom:10px">
+
+  <div style="display:flex;justify-content:flex-end;margin:6px 0 14px">
+    <div class="toggle" id="unitToggle" role="group" aria-label="Units">
+      <button data-unit="lb" class="active">lb / oz</button>
+      <button data-unit="kg">kg / g</button>
+    </div>
+  </div>
+
+  <!-- 1. Substrate -->
+  <div class="panel">
+    <h3><span class="step">1</span> Substrate batch</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Hydrate dry substrate (sawdust,
+      soy hull / "masters mix", straw pellets) to field capacity.</p>
+    <div class="inline-grid">
+      <div class="field"><label>Dry substrate per block <span id="u-w1" class="hint"></span></label>
+        <input id="dryPerBag" type="number" step="0.1" min="0" value="5">
+        <span class="hint">Dry weight before adding water.</span></div>
+      <div class="field"><label>Target moisture %</label>
+        <input id="moisture" type="number" step="1" min="40" max="75" value="60">
+        <span class="hint">Field capacity is ~58–62% for masters mix.</span></div>
+      <div class="field"><label>Number of blocks / bags</label>
+        <input id="bags" type="number" step="1" min="1" value="24">
+        <span class="hint">In this batch.</span></div>
+    </div>
+    <div style="margin-top:8px">
+      <div class="rowline"><span>Water to add per block</span><b id="o-waterPerBag">–</b></div>
+      <div class="rowline"><span>Hydrated weight per block</span><b id="o-hydPerBag">–</b></div>
+      <div class="rowline"><span>Total dry substrate</span><b id="o-totalDry">–</b></div>
+      <div class="rowline"><span>Total water</span><b id="o-totalWater">–</b></div>
+      <div class="rowline"><span>Total hydrated substrate</span><b id="o-totalHyd">–</b></div>
+    </div>
+  </div>
+
+  <!-- 2. Spawn -->
+  <div class="panel">
+    <h3><span class="step">2</span> Spawn</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Grain (or sawdust) spawn as a
+      percentage of the hydrated substrate weight.</p>
+    <div class="inline-grid">
+      <div class="field"><label>Spawn rate %</label>
+        <input id="spawnRate" type="number" step="1" min="2" max="50" value="20">
+        <span class="hint">10–30% typical · higher = faster colonization, less contam.</span></div>
+      <div class="field"><label>Spawn-to-substrate ratio</label>
+        <input id="o-ratio" type="text" value="1 : 5.0" readonly
+          style="background:var(--surface-2);font-weight:700">
+        <span class="hint">For your spawn rate.</span></div>
+    </div>
+    <div style="margin-top:8px">
+      <div class="rowline"><span>Spawn per block</span><b id="o-spawnPerBag">–</b></div>
+      <div class="rowline"><span>Total spawn needed</span><b id="o-totalSpawn">–</b></div>
+    </div>
+  </div>
+
+  <!-- 3. Yield -->
+  <div class="panel">
+    <h3><span class="step">3</span> Expected yield</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Estimated fresh harvest across
+      all flushes, from biological efficiency (fresh weight ÷ dry substrate).</p>
+    <div class="inline-grid">
+      <div class="field"><label>Species (sets a typical BE)</label>
+        <select id="species">
+          <option value="85">Blue / Pearl Oyster</option>
+          <option value="75">Pink / Yellow Oyster</option>
+          <option value="60">King Oyster (Trumpet)</option>
+          <option value="60">Lion's Mane</option>
+          <option value="90">Shiitake</option>
+          <option value="60">Chestnut</option>
+          <option value="60">Pioppino</option>
+          <option value="60">Nameko</option>
+          <option value="45">Reishi</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <span class="hint">Typical mid-range — edit BE to match your strain.</span></div>
+      <div class="field"><label>Biological efficiency (BE) %</label>
+        <input id="be" type="number" step="1" min="5" max="200" value="85">
+        <span class="hint">Oyster 75–100%+ · King/Lion's Mane 50–75% · Shiitake 75–125%.</span></div>
+    </div>
+    <div style="margin-top:8px">
+      <div class="rowline"><span>Expected fresh yield per block</span><b id="o-yieldPerBag">–</b></div>
+      <div class="rowline"><span>Total expected fresh yield</span><b id="o-totalYield" style="color:var(--moss)">–</b></div>
+    </div>
+  </div>
+
+  <!-- 4. Economics -->
+  <div class="panel">
+    <h3><span class="step">4</span> Cost &amp; profit</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Your real cost per block and per
+      pound — so you can price wholesale with confidence.</p>
+    <div class="inline-grid">
+      <div class="field"><label>Dry substrate cost <span id="u-p1" class="hint"></span></label>
+        <input id="costSub" type="number" step="0.01" min="0" value="0.45"></div>
+      <div class="field"><label>Spawn cost <span id="u-p2" class="hint"></span></label>
+        <input id="costSpawn" type="number" step="0.01" min="0" value="2.50"></div>
+      <div class="field"><label>Other cost per block ($)</label>
+        <input id="extraPerBag" type="number" step="0.01" min="0" value="0.75">
+        <span class="hint">Bag, filter, labor, energy, etc.</span></div>
+      <div class="field"><label>Sale price <span id="u-p3" class="hint"></span></label>
+        <input id="salePrice" type="number" step="0.5" min="0" value="12"></div>
+    </div>
+    <div style="margin-top:8px">
+      <div class="rowline"><span>Cost per block</span><b id="o-costPerBag">–</b></div>
+      <div class="rowline"><span>Total batch cost</span><b id="o-totalCost">–</b></div>
+      <div class="rowline"><span>Cost per <span class="o-wu">lb</span> produced</span><b id="o-costPerLb">–</b></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">Batch summary</h3>
+      <span class="muted" id="r-sub" style="font-size:.9rem"></span>
+    </div>
+    <div class="kpis" style="margin-top:16px">
+      <div class="kpi"><div class="v" id="k-yield">–</div><div class="l">Fresh yield</div></div>
+      <div class="kpi"><div class="v" id="k-cost">–</div><div class="l">Batch cost</div></div>
+      <div class="kpi"><div class="v" id="k-rev">–</div><div class="l">Expected revenue</div></div>
+      <div class="kpi" id="k-profit-card"><div class="v" id="k-profit">–</div><div class="l">Profit · <span id="k-margin">–</span> margin</div></div>
+    </div>
+    <p class="muted" id="r-note" style="margin:14px 0 0;font-size:.9rem"></p>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <b style="color:var(--ink)">Want this to remember every batch for you?</b> Mycro logs each
+    batch from spawn to flush, tracks contamination, and turns months of batches into the real
+    BE and cost numbers for <i>your</i> farm.
+    <a href="index.html#waitlist" class="btn" style="margin-top:12px;padding:10px 18px">Get early access →</a>
+  </div>
+
+  <!-- Methodology + species ref (SEO depth + trust) -->
+  <section style="padding:30px 0 0">
+    <h2>How the math works</h2>
+    <p class="muted">No black box — here's exactly what the calculator does.</p>
+    <h3 style="margin-top:18px">Substrate hydration (field capacity)</h3>
+    <p class="muted">To hit a target moisture content <b>M</b>, water added = <b>M ÷ (1 − M) ×
+      dry weight</b>. At 60% moisture that's 1.5× the dry weight in water, so a hydrated block
+      ends around 2.5× its dry weight. Assumes a near-dry starting substrate (sawdust, soy
+      hull pellets, dried straw). "Field capacity" means fully hydrated but not dripping when
+      squeezed firmly.</p>
+    <h3 style="margin-top:14px">Spawn ratio</h3>
+    <p class="muted">Spawn rate here is a percentage of the <b>hydrated</b> substrate weight.
+      20% equals a 1:5 spawn-to-substrate ratio. More spawn colonizes faster and crowds out
+      contamination, at higher cost.</p>
+    <h3 style="margin-top:14px">Yield &amp; biological efficiency</h3>
+    <p class="muted">Biological efficiency is <b>fresh mushroom weight ÷ dry substrate weight ×
+      100%</b>, summed across flushes. We estimate fresh yield as <b>dry substrate × BE</b>.
+      BE varies widely with species, strain, substrate, and conditions — treat the presets as
+      starting points and dial in BE from your own results (which is exactly what Mycro tracks).</p>
+    <h3 style="margin-top:14px">Cost &amp; profit</h3>
+    <p class="muted">Batch cost = dry substrate cost + spawn cost + other per-block costs.
+      Revenue = expected fresh yield × sale price. Cost per pound produced = total cost ÷ total
+      fresh yield — the number to beat when you quote a restaurant.</p>
+
+    <h2 style="margin-top:30px">Typical biological efficiency by species</h2>
+    <table class="spec">
+      <thead><tr><th>Species</th><th>Typical BE</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Blue / Pearl Oyster</td><td>75–100%+</td><td>Fast, forgiving, high yield</td></tr>
+        <tr><td>Pink / Yellow Oyster</td><td>65–90%</td><td>Fast; short shelf life</td></tr>
+        <tr><td>King Oyster</td><td>50–75%</td><td>Loves supplemented sawdust</td></tr>
+        <tr><td>Lion's Mane</td><td>50–75%</td><td>Sensitive to fresh-air / humidity</td></tr>
+        <tr><td>Shiitake</td><td>75–125%</td><td>Long colonization; multiple flushes</td></tr>
+        <tr><td>Chestnut / Pioppino / Nameko</td><td>50–75%</td><td>Clustered, attractive to chefs</td></tr>
+        <tr><td>Reishi</td><td>~30–50%</td><td>Grown for medicinal use, not weight</td></tr>
+      </tbody>
+    </table>
+    <p class="disclaimer">Ranges are general guidance gathered from common cultivation practice,
+      not guarantees. Your mileage will vary. Mycro is for legal culinary &amp; medicinal
+      mushrooms only.</p>
+  </section>
+
+</main>
+
+<footer><div class="wrap foot-row">
+  <div><a class="brand" href="index.html" style="font-size:1.05rem"><svg viewBox="0 0 32 32" style="width:22px;height:22px" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg> Mycro</a>
+    <p class="disclaimer" style="margin-top:8px;max-width:520px">For legal culinary &amp; medicinal
+      mushroom cultivation only. Calculator results are estimates.</p></div>
+  <div style="text-align:right"><a href="index.html">Home</a> · <a href="index.html#pricing">Pricing</a><br>
+    <span class="disclaimer">© 2026 Mycro · an autonomous AI-CEO venture</span></div>
+</div></footer>
+
+<script>
+var unit='lb';
+var LB=453.59237;
+function toG(v){return unit==='lb'? v*LB : v*1000;}
+function fromG(g){return unit==='lb'? g/LB : g/1000;}
+function priceToPerG(p){return unit==='lb'? p/LB : p/1000;} // $ per current weight unit -> $/g
+var $=function(id){return document.getElementById(id);};
+function val(id){var n=parseFloat($(id).value);return isFinite(n)?n:0;}
+function money(x){return '$'+ (isFinite(x)?x:0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function wt(g){var v=fromG(g);var d=v<10?2:(v<100?1:0);return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+unit;}
+
+function setUnitLabels(){
+  var w = unit, pw = '$/'+unit;
+  $('u-w1').textContent='('+w+')';
+  $('u-p1').textContent='('+pw+' dry)';
+  $('u-p2').textContent='('+pw+')';
+  $('u-p3').textContent='('+pw+', wholesale)';
+  Array.prototype.forEach.call(document.querySelectorAll('.o-wu'),function(e){e.textContent=unit;});
+}
+
+function calc(){
+  var dryPerBagG=toG(val('dryPerBag'));
+  var M=Math.min(0.75,Math.max(0.40,val('moisture')/100));
+  var bags=Math.max(0,Math.round(val('bags')));
+  var waterPerBagG = (1-M)>0 ? M*dryPerBagG/(1-M) : 0;
+  var hydPerBagG = dryPerBagG + waterPerBagG;
+  var totalDryG=dryPerBagG*bags, totalWaterG=waterPerBagG*bags, totalHydG=hydPerBagG*bags;
+
+  var r=Math.max(0,val('spawnRate'))/100;
+  var spawnPerBagG = hydPerBagG*r;
+  var totalSpawnG=spawnPerBagG*bags;
+  $('o-ratio').value = r>0 ? '1 : '+(1/r).toFixed(1) : '—';
+
+  var be=Math.max(0,val('be'))/100;
+  var yieldPerBagG=dryPerBagG*be;
+  var totalYieldG=yieldPerBagG*bags;
+
+  var costSubTotal = totalDryG*priceToPerG(val('costSub'));
+  var costSpawnTotal = totalSpawnG*priceToPerG(val('costSpawn'));
+  var extraTotal = val('extraPerBag')*bags;
+  var totalCost = costSubTotal+costSpawnTotal+extraTotal;
+  var costPerBag = bags>0? totalCost/bags : 0;
+  var revenue = totalYieldG*priceToPerG(val('salePrice'));
+  var profit = revenue-totalCost;
+  var margin = revenue>0? profit/revenue*100 : 0;
+  var costPerLb = totalYieldG>0? totalCost/fromG(totalYieldG) : null;
+  var revPerBag = bags>0? revenue/bags : 0, profitPerBag = bags>0? profit/bags : 0;
+
+  // substrate outs
+  $('o-waterPerBag').textContent=wt(waterPerBagG);
+  $('o-hydPerBag').textContent=wt(hydPerBagG);
+  $('o-totalDry').textContent=wt(totalDryG);
+  $('o-totalWater').textContent=wt(totalWaterG);
+  $('o-totalHyd').textContent=wt(totalHydG);
+  // spawn
+  $('o-spawnPerBag').textContent=wt(spawnPerBagG);
+  $('o-totalSpawn').textContent=wt(totalSpawnG);
+  // yield
+  $('o-yieldPerBag').textContent=wt(yieldPerBagG);
+  $('o-totalYield').textContent=wt(totalYieldG);
+  // econ
+  $('o-costPerBag').textContent=money(costPerBag);
+  $('o-totalCost').textContent=money(totalCost);
+  $('o-costPerLb').textContent= costPerLb!=null? money(costPerLb)+' / '+unit : '—';
+
+  // results
+  $('k-yield').textContent=wt(totalYieldG);
+  $('k-cost').textContent=money(totalCost);
+  $('k-rev').textContent=money(revenue);
+  $('k-profit').textContent=money(profit);
+  $('k-margin').textContent=(revenue>0? margin.toFixed(0):'0')+'%';
+  var pc=$('k-profit-card'); pc.classList.remove('good','bad');
+  pc.classList.add(profit>=0?'good':'bad');
+  $('r-sub').textContent=bags+' blocks · '+ $('species').options[$('species').selectedIndex].text;
+  $('r-note').textContent = 'At ~'+money(revPerBag)+' revenue and '+money(profitPerBag)+
+    ' profit per block. '+(profit>=0? 'This batch pencils out — nice.' :
+    'This batch loses money — raise price, cut cost, or improve BE.');
+}
+
+// species preset -> set BE
+$('species').addEventListener('change',function(){
+  if(this.value!=='custom'){ $('be').value=this.value; }
+  calc();
+});
+
+// unit toggle: convert weight + price-per-weight inputs
+document.querySelectorAll('#unitToggle button').forEach(function(b){
+  b.addEventListener('click',function(){
+    var newUnit=this.dataset.unit; if(newUnit===unit) return;
+    var wIds=['dryPerBag']; var pIds=['costSub','costSpawn','salePrice'];
+    var factor = newUnit==='kg'? (LB/1000) : (1000/LB); // lb->kg multiply value by 0.4536
+    // weight value in lb -> kg: divide by 2.2046 => multiply by 0.4536; kg->lb multiply 2.2046
+    var wFactor = newUnit==='kg'? (1/2.2046226) : 2.2046226;
+    var pFactor = newUnit==='kg'? 2.2046226 : (1/2.2046226); // $/lb -> $/kg multiply by 2.2046
+    wIds.forEach(function(id){ $(id).value=(val(id)*wFactor).toFixed(2); });
+    pIds.forEach(function(id){ $(id).value=(val(id)*pFactor).toFixed(2); });
+    unit=newUnit;
+    document.querySelectorAll('#unitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+    setUnitLabels(); calc();
+  });
+});
+
+document.querySelectorAll('input,select').forEach(function(el){
+  if(el.id==='o-ratio') return;
+  el.addEventListener('input',calc);
+});
+setUnitLabels(); calc();
+</script>
+</body>
+</html>

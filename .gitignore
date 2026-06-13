@@ -1,0 +1,12 @@
+# Internal CEO working files — kept local, not published
+loop_state.md
+human-tasks.md
+STRATEGY.md
+NICHE_RESEARCH.md
+MARKETING.md
+PRODUCT.md
+METRICS.md
+.claude/
+.DS_Store
+node_modules/
+*.log
