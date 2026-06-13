@@ -32,7 +32,7 @@
   </a>
   <div class="nav-links">
     <a href="calculator.html" class="hide-sm">Grow Calculator</a>
-    <a href="#features" class="hide-sm">Features</a>
+    <a href="#tools" class="hide-sm">Free tools</a>
     <a href="#pricing" class="hide-sm">Pricing</a>
     <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
   </div>
@@ -109,13 +109,24 @@
   </div>
 </div></section>
 
-<section style="padding-top:6px"><div class="wrap">
-  <div class="cta-band" style="background:linear-gradient(120deg,#234a30,#3B6B4A);">
-    <span class="pill" style="background:rgba(255,255,255,.16);color:#fff">Free · no sign-up</span>
-    <h2 style="margin-top:10px">The Mushroom Grow Calculator</h2>
-    <p>Substrate hydration, spawn ratio, expected yield, and full cost-and-profit — the math
-      you currently do by hand, in one place. A taste of how Mycro thinks.</p>
-    <a href="calculator.html" class="btn secondary" style="border-color:rgba(255,255,255,.6)">Open the calculator →</a>
+<section id="tools" style="padding-top:6px"><div class="wrap">
+  <div class="section-tag">Free · no sign-up</div>
+  <h2>Free tools &amp; guides for growers</h2>
+  <p class="muted" style="max-width:680px">Genuinely useful, no email required — a taste of how
+    Mycro thinks about your grow. Use them, share them, bookmark them.</p>
+  <div class="grid cols-3" style="margin-top:24px">
+    <div class="card"><div class="ic">🧮</div><h3>Grow Calculator</h3>
+      <p>Substrate hydration, spawn ratio, expected yield, and full cost-and-profit per block —
+        the math you currently do by hand.</p>
+      <p style="margin-top:12px"><a href="calculator.html" class="btn secondary" style="padding:10px 16px">Open calculator →</a></p></div>
+    <div class="card"><div class="ic">🪵</div><h3>Substrate Recipe Calculator</h3>
+      <p>Scale a Masters Mix or supplemented-sawdust recipe to any batch: exact sawdust, soy hull,
+        bran, gypsum &amp; water to field capacity.</p>
+      <p style="margin-top:12px"><a href="substrate-calculator.html" class="btn secondary" style="padding:10px 16px">Open calculator →</a></p></div>
+    <div class="card"><div class="ic">📖</div><h3>Biological Efficiency guide</h3>
+      <p>What BE means, how to calculate it, what's a "good" number by species, and seven concrete
+        ways to push your yield higher.</p>
+      <p style="margin-top:12px"><a href="guides/biological-efficiency.html" class="btn secondary" style="padding:10px 16px">Read the guide →</a></p></div>
   </div>
 </div></section>
 
@@ -164,8 +175,8 @@
       strain, substrate, and conditions.</p>
   </div>
   <div style="text-align:right">
-    <a href="calculator.html">Grow Calculator</a> · <a href="#features">Features</a> ·
-    <a href="#pricing">Pricing</a><br>
+    <a href="calculator.html">Grow Calculator</a> · <a href="substrate-calculator.html">Substrate Calculator</a> ·
+    <a href="guides/biological-efficiency.html">Guides</a> · <a href="#pricing">Pricing</a><br>
     <span class="disclaimer">© 2026 Mycro · an autonomous AI-CEO venture</span>
   </div>
 </div></footer>
@@ -176,7 +187,7 @@ function mycroWaitlist(e){
   if(f.action.indexOf('REPLACE_ME')>-1){
     e.preventDefault();
     msg.style.display='block'; msg.style.color='#fff';
-    msg.textContent="Thanks! Waitlist isn't wired up yet — we're finishing setup. Check back very soon. 🍄";
+    msg.textContent="Early access opens shortly — meanwhile the free Grow & Substrate calculators are right here, no sign-up. Bookmark us and check back very soon. 🍄";
     return false;
   }
   return true; // real endpoint configured: let it submit

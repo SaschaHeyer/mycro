@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mushroom Substrate Recipe Calculator (Masters Mix) — sawdust, soy hull, bran, gypsum &amp; water | Mycro</title>
+<meta name="description" content="Free mushroom substrate recipe calculator. Scale a Masters Mix or supplemented-sawdust recipe to any number of blocks: exact hardwood sawdust, soy hull, wheat bran, gypsum, and water to hit field capacity. For oyster, lion's mane, shiitake and other gourmet mushrooms.">
+<meta name="keywords" content="masters mix calculator, mushroom substrate recipe, substrate calculator, soy hull sawdust ratio, supplemented sawdust, mushroom substrate hydration, field capacity calculator, gypsum mushroom substrate, how much sawdust and soy hull">
+<link rel="canonical" href="https://saschaheyer.github.io/mycro/substrate-calculator.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mushroom Substrate Recipe Calculator (Masters Mix) — free">
+<meta property="og:description" content="Scale any substrate recipe to N blocks: exact sawdust, soy hull, bran, gypsum, and water to field capacity. The mixing math, done for you.">
+<meta property="og:url" content="https://saschaheyer.github.io/mycro/substrate-calculator.html">
+<meta property="og:image" content="https://saschaheyer.github.io/mycro/social-card.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#C2702B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is Masters Mix for mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Masters Mix is a popular gourmet-mushroom substrate of 50% hardwood sawdust and 50% soy hull pellets by dry weight, usually with about 1% gypsum, hydrated to roughly 60% moisture (field capacity). The soy hull supplies the nitrogen supplementation, so no separate bran is needed."}},
+{"@type":"Question","name":"How much water do I add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"To reach a target moisture content M, add water equal to M divided by (1 minus M) times the total dry weight. At 60% moisture that is 1.5 times the dry weight in water, so the hydrated substrate weighs about 2.5 times its dry weight."}},
+{"@type":"Question","name":"How much gypsum should I add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"A common rate is about 1% of the dry substrate weight. Gypsum (calcium sulfate) adds calcium and sulfur, buffers pH, and reduces clumping so the substrate stays loose and well aerated."}}]}
+</script>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="index.html">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg>
+    Mycro
+  </a>
+  <div class="nav-links">
+    <a href="calculator.html" class="hide-sm">Grow Calculator</a>
+    <a href="guides/biological-efficiency.html" class="hide-sm">Guides</a>
+    <a href="index.html#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+  </div>
+</div></nav>
+
+<header class="wrap" style="padding:40px 20px 6px;max-width:760px">
+  <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:14px">🍄 Free tool · no sign-up</span>
+  <h1>Substrate Recipe Calculator</h1>
+  <p class="muted" style="font-size:1.12rem">Pick a recipe, set how many blocks you're making, and
+    get the exact weight of every ingredient — sawdust, soy hull, bran, gypsum — plus the water
+    to hit field capacity. Scale a tested mix up or down without re-doing the math.</p>
+</header>
+
+<main class="wrap" style="max-width:760px;padding-bottom:10px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 14px;flex-wrap:wrap">
+    <div class="field" style="margin:0;min-width:230px;flex:1">
+      <label for="preset" style="font-size:.9rem">Recipe preset</label>
+      <select id="preset">
+        <option value="masters">Masters Mix — 50% sawdust / 50% soy hull</option>
+        <option value="suppsaw">Supplemented sawdust — sawdust + 20% bran</option>
+        <option value="soyhull">Soy hull pellets only</option>
+        <option value="straw">Straw pellets only</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </div>
+    <div class="toggle" id="unitToggle" role="group" aria-label="Units" style="align-self:flex-end">
+      <button data-unit="lb" class="active">lb</button>
+      <button data-unit="kg">kg</button>
+    </div>
+  </div>
+
+  <!-- Batch size -->
+  <div class="panel">
+    <h3><span class="step">1</span> Batch size</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">How big is this mix?</p>
+    <div class="inline-grid">
+      <div class="field"><label>Number of blocks / bags</label>
+        <input id="bags" type="number" step="1" min="1" value="20">
+        <span class="hint">In this batch.</span></div>
+      <div class="field"><label>Dry base mix per block <span id="u-w1" class="hint"></span></label>
+        <input id="dryPerBag" type="number" step="0.1" min="0" value="5">
+        <span class="hint">Sawdust + soy hull, before bran/gypsum &amp; water.</span></div>
+    </div>
+  </div>
+
+  <!-- Recipe -->
+  <div class="panel">
+    <h3><span class="step">2</span> Recipe</h3>
+    <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Sawdust + soy hull make up the dry
+      <b>base</b> (should total 100%). Bran and gypsum are added <b>on top</b> of the base.</p>
+    <div class="inline-grid">
+      <div class="field"><label>Hardwood sawdust % of base</label>
+        <input id="pSaw" type="number" step="1" min="0" max="100" value="50"></div>
+      <div class="field"><label>Soy hull pellets % of base</label>
+        <input id="pSoy" type="number" step="1" min="0" max="100" value="50"></div>
+      <div class="field"><label>Bran (wheat/oat) % on top</label>
+        <input id="pBran" type="number" step="1" min="0" max="100" value="0">
+        <span class="hint">Supplementation; skip if using soy hull.</span></div>
+      <div class="field"><label>Gypsum % on top</label>
+        <input id="pGyp" type="number" step="0.5" min="0" max="10" value="1">
+        <span class="hint">~1% typical · buffers pH, reduces clumping.</span></div>
+    </div>
+    <p id="baseWarn" class="note" style="display:none;margin-top:10px;color:var(--warn)"></p>
+    <div class="field" style="margin-top:12px">
+      <label>Target moisture % (field capacity)</label>
+      <input id="moisture" type="number" step="1" min="40" max="75" value="60">
+      <span class="hint">~58–62% for most gourmet substrates. Squeeze test: damp, a drop or two, never streaming.</span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">Shopping list &amp; mix</h3>
+      <span class="muted" id="r-sub" style="font-size:.9rem"></span>
+    </div>
+    <div class="kpis" style="margin-top:16px">
+      <div class="kpi"><div class="v" id="k-dry">–</div><div class="l">Total dry</div></div>
+      <div class="kpi"><div class="v" id="k-water">–</div><div class="l">Water to add</div></div>
+      <div class="kpi"><div class="v" id="k-hyd">–</div><div class="l">Hydrated total</div></div>
+      <div class="kpi"><div class="v" id="k-perblock">–</div><div class="l">Hydrated / block</div></div>
+    </div>
+
+    <div style="margin-top:18px">
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;font-size:.78rem;
+        text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:0 2px 6px">
+        <span>Ingredient</span><span style="text-align:right">Per block</span><span style="text-align:right">Whole batch</span>
+      </div>
+      <div id="ingredients"></div>
+    </div>
+    <p class="muted" id="r-note" style="margin:14px 0 0;font-size:.9rem"></p>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <b style="color:var(--ink)">Dialing in a recipe block by block?</b> Mycro logs each batch's
+    substrate, spawn, and final yield — so you learn which mix actually gives <i>your</i> farm the
+    best biological efficiency and lowest cost per pound, instead of guessing.
+    <a href="index.html#waitlist" class="btn" style="margin-top:12px;padding:10px 18px">Get early access →</a>
+  </div>
+
+  <!-- Methodology + reference (SEO depth + trust) -->
+  <section style="padding:30px 0 0">
+    <h2>How the recipe math works</h2>
+    <p class="muted">No black box — here's exactly what the calculator does.</p>
+
+    <h3 style="margin-top:18px">Base vs. additives</h3>
+    <p class="muted">The <b>base</b> is your bulk carbon source, split between hardwood sawdust and
+      soy hull pellets (they should add up to 100%). <b>Bran</b> and <b>gypsum</b> are then added
+      <i>on top</i> of the base weight — so a 5&nbsp;lb base with 20% bran and 1% gypsum becomes
+      6.05&nbsp;lb of total dry ingredients before water. That matches how most growers describe
+      and weigh a recipe.</p>
+
+    <h3 style="margin-top:14px">Hydration to field capacity</h3>
+    <p class="muted">To hit a target moisture content <b>M</b>, water added = <b>M ÷ (1 − M) × total
+      dry weight</b>. At 60% moisture that's 1.5× the dry weight in water, so a hydrated block ends
+      around 2.5× its dry weight. "Field capacity" means fully hydrated but not dripping when
+      squeezed firmly — a drop or two at most.</p>
+
+    <h3 style="margin-top:14px">Why these recipes</h3>
+    <p class="muted"><b>Masters Mix</b> (50/50 hardwood sawdust and soy hull, ~1% gypsum) is the
+      go-to for oyster, lion's mane, and many gourmet species — the soy hull supplies nitrogen so
+      you skip separate bran. <b>Supplemented sawdust</b> (sawdust + ~10–20% wheat or oat bran) is
+      the classic for shiitake and works well for many wood-lovers. Higher supplementation raises
+      yield but also raises contamination risk if your sterilization isn't dialed in.</p>
+
+    <h2 style="margin-top:30px">Common substrate recipes at a glance</h2>
+    <table class="spec">
+      <thead><tr><th>Recipe</th><th>Make-up (dry)</th><th>Good for</th></tr></thead>
+      <tbody>
+        <tr><td>Masters Mix</td><td>50% hardwood sawdust · 50% soy hull · ~1% gypsum</td><td>Oyster, lion's mane, most gourmet</td></tr>
+        <tr><td>Supplemented sawdust</td><td>Hardwood sawdust · 10–20% bran · ~1% gypsum</td><td>Shiitake, king oyster, wood-lovers</td></tr>
+        <tr><td>Soy hull only</td><td>100% soy hull · ~1% gypsum</td><td>Cheap, fast oyster blocks</td></tr>
+        <tr><td>Straw pellets</td><td>100% straw pellets</td><td>Oyster (low-cost, lower yield)</td></tr>
+      </tbody>
+    </table>
+    <p class="disclaimer">Ranges are general guidance from common cultivation practice, not
+      guarantees — your results vary with strain, supplementation, sterilization, and conditions.
+      Always sterilize supplemented substrate properly. Mycro is for legal culinary &amp; medicinal
+      mushrooms only.</p>
+
+    <div class="note" style="margin-top:22px">
+      <b style="color:var(--ink)">Next step:</b> once your substrate is mixed, the
+      <a href="calculator.html">Grow Calculator</a> estimates your spawn, expected yield, and
+      profit per block — and the <a href="guides/biological-efficiency.html">biological efficiency
+      guide</a> explains how to turn that substrate into the most mushrooms.
+    </div>
+  </section>
+
+</main>
+
+<footer><div class="wrap foot-row">
+  <div><a class="brand" href="index.html" style="font-size:1.05rem"><svg viewBox="0 0 32 32" style="width:22px;height:22px" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg> Mycro</a>
+    <p class="disclaimer" style="margin-top:8px;max-width:520px">For legal culinary &amp; medicinal
+      mushroom cultivation only. Calculator results are estimates.</p></div>
+  <div style="text-align:right"><a href="index.html">Home</a> · <a href="calculator.html">Grow Calculator</a> · <a href="guides/biological-efficiency.html">Guides</a><br>
+    <span class="disclaimer">© 2026 Mycro · an autonomous AI-CEO venture</span></div>
+</div></footer>
+
+<script>
+var unit='lb';
+var $=function(id){return document.getElementById(id);};
+function val(id){var n=parseFloat($(id).value);return isFinite(n)?n:0;}
+function wt(v){var d=v<10?2:(v<100?1:0);return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+unit;}
+
+var PRESETS={
+  masters:{pSaw:50,pSoy:50,pBran:0,pGyp:1},
+  suppsaw:{pSaw:100,pSoy:0,pBran:20,pGyp:1},
+  soyhull:{pSaw:0,pSoy:100,pBran:0,pGyp:1},
+  straw:{pSaw:0,pSoy:0,pBran:0,pGyp:0,straw:true}
+};
+
+function setUnitLabels(){ $('u-w1').textContent='('+unit+')'; }
+
+function applyPreset(){
+  var p=PRESETS[$('preset').value]; if(!p) return; // custom: leave as-is
+  // straw preset has no sawdust/soyhull split; represent as 0/0 base + 100% straw handled in calc note
+  $('pSaw').value=p.pSaw; $('pSoy').value=p.pSoy; $('pBran').value=p.pBran; $('pGyp').value=p.pGyp;
+}
+
+function row(name, perBlock, total){
+  return '<div class="rowline" style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px">'+
+    '<span>'+name+'</span>'+
+    '<b style="text-align:right">'+wt(perBlock)+'</b>'+
+    '<b style="text-align:right">'+wt(total)+'</b></div>';
+}
+
+function calc(){
+  var bags=Math.max(0,Math.round(val('bags')));
+  var base=Math.max(0,val('dryPerBag'));           // dry base per block, in current unit
+  var pSaw=Math.max(0,val('pSaw')), pSoy=Math.max(0,val('pSoy'));
+  var pBran=Math.max(0,val('pBran')), pGyp=Math.max(0,val('pGyp'));
+  var M=Math.min(0.75,Math.max(0.40,val('moisture')/100));
+  var isStraw = $('preset').value==='straw';
+
+  // base split warning
+  var sum=pSaw+pSoy;
+  var warn=$('baseWarn');
+  if(!isStraw && sum>0 && Math.abs(sum-100)>0.5){
+    warn.style.display='block';
+    warn.textContent='Heads up: sawdust % + soy hull % = '+sum+'% (not 100%). The base is split by these weights as entered — adjust so they total 100% for a standard recipe.';
+  } else { warn.style.display='none'; }
+
+  // per-block weights — base is split by the given percentages of 100
+  var sawPB = base*(pSaw/100);
+  var soyPB = base*(pSoy/100);
+  var strawPB = isStraw ? base : 0;            // straw preset: whole base is straw pellets
+  var baseDryPB = isStraw ? strawPB : (sawPB+soyPB);
+  var branPB = baseDryPB*(pBran/100);
+  var gypPB  = baseDryPB*(pGyp/100);
+  var totalDryPB = baseDryPB+branPB+gypPB;
+  var waterPB = (1-M)>0 ? M*totalDryPB/(1-M) : 0;
+  var hydPB = totalDryPB+waterPB;
+
+  // ingredient rows (only non-zero)
+  var html='';
+  if(isStraw){ html+=row('Straw pellets', strawPB, strawPB*bags); }
+  else {
+    if(sawPB>0) html+=row('Hardwood sawdust', sawPB, sawPB*bags);
+    if(soyPB>0) html+=row('Soy hull pellets', soyPB, soyPB*bags);
+  }
+  if(branPB>0) html+=row('Bran (wheat/oat)', branPB, branPB*bags);
+  if(gypPB>0)  html+=row('Gypsum', gypPB, gypPB*bags);
+  html+=row('— Total dry', totalDryPB, totalDryPB*bags);
+  html+=row('Water', waterPB, waterPB*bags);
+  $('ingredients').innerHTML=html;
+
+  // KPIs
+  $('k-dry').textContent=wt(totalDryPB*bags);
+  $('k-water').textContent=wt(waterPB*bags);
+  $('k-hyd').textContent=wt(hydPB*bags);
+  $('k-perblock').textContent=wt(hydPB);
+  $('r-sub').textContent=bags+' blocks · '+($('preset').options[$('preset').selectedIndex].text.split('—')[0].trim());
+  $('r-note').textContent='Water shown is to reach '+Math.round(M*100)+'% moisture. Mix dry first, '+
+    'then add water gradually and let it absorb — aim for field capacity, not soaking.';
+}
+
+$('preset').addEventListener('change',function(){ applyPreset(); calc(); });
+
+// editing any recipe field flips preset to Custom (so presets don't fight the user)
+['pSaw','pSoy','pBran','pGyp'].forEach(function(id){
+  $(id).addEventListener('input',function(){
+    if($('preset').value!=='custom' && $('preset').value!=='straw'){ $('preset').value='custom'; }
+    calc();
+  });
+});
+['bags','dryPerBag','moisture'].forEach(function(id){ $(id).addEventListener('input',calc); });
+
+// unit toggle: only the base weight converts; percentages are unitless
+document.querySelectorAll('#unitToggle button').forEach(function(b){
+  b.addEventListener('click',function(){
+    var nu=this.dataset.unit; if(nu===unit) return;
+    var f = nu==='kg'? (1/2.2046226) : 2.2046226;
+    $('dryPerBag').value=(val('dryPerBag')*f).toFixed(2);
+    unit=nu;
+    document.querySelectorAll('#unitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+    setUnitLabels(); calc();
+  });
+});
+
+setUnitLabels(); calc();
+</script>
+</body>
+</html>

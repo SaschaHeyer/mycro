@@ -10,3 +10,4 @@ METRICS.md
 .DS_Store
 node_modules/
 *.log
+.secrets/
