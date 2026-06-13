@@ -22,7 +22,7 @@ function mycroWaitlist(e){
     .then(function(d){
       if(d && d.ok){
         f.style.display='none';
-        msg.textContent="You're on the list 🍄 We'll email you the moment early access opens. Meanwhile, every free tool here is yours to use right now.";
+        msg.textContent="You're on the list 🍄 Check your inbox — we just sent you a quick welcome with all the free tools. (Peek in spam if it's not there in a minute.)";
       } else { throw new Error("bad"); }
     }).catch(function(){
       btn.disabled=false; btn.textContent=orig;

@@ -16,3 +16,4 @@ node_modules/
 *.log
 .secrets/
 sync-private.sh
+tools/
