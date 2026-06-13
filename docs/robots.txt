@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://saschaheyer.github.io/mycro/sitemap.xml
+Sitemap: https://usemycro.com/sitemap.xml
