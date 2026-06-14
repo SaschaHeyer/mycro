@@ -21,7 +21,9 @@
 - [All guides](https://usemycro.com/guides/)
 
 ## Comparisons
+- [Best mushroom grow log apps & trackers (2026)](https://usemycro.com/alternatives/best-mushroom-grow-log-apps.html): an honest buyer's guide comparing the real ways to log mushroom grows — Mycro (free web grow log), MycoFile and MycoHub (native mobile apps), a paper log book, and spreadsheets — with pros, cons, prices and who each is best for. Quick-comparison table + how-to-choose.
 - [Mycro vs MycoHub (MycoHub alternative)](https://usemycro.com/alternatives/mycohub.html): an honest comparison for small commercial gourmet/functional farms. MycoHub is a strong offline-first mobile app for hobby/home growers (private, no account, $9.99 lifetime option); Mycro is web-based grow-ops you open in any browser — a free, no-install Grow Log with automatic biological efficiency and contamination rate, on an open-source engine, built for the commercial selling operation. Includes a side-by-side capability table and who-should-pick-which.
+- [Mycro vs MycoFile (MycoFile alternative)](https://usemycro.com/alternatives/mycofile.html): an honest comparison. MycoFile is a polished native iOS/Android grow tracker with end-to-end encryption and QR label printing (Hobby free/15 items, Pro $4/mo/75 items, Farm $25/mo+ unlimited) — but its web app is Farm-tier only. Mycro's Grow Log is free in any browser with no install, no account, and auto biological-efficiency + contamination rate, on an open-source engine.
 
 ## Open source
 - [mycro-grow on GitHub](https://github.com/SaschaHeyer/mycro-grow): the open-source (MIT) engine behind Mycro's calculators — hydration, spawn ratio, biological-efficiency yield, batch economics, substrate recipes, and fruiting-condition data for 14 species, as a zero-dependency JavaScript library + CLI.
