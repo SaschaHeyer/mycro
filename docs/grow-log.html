@@ -114,6 +114,22 @@
   <p id="empty" class="note" style="display:none">No batches yet. Add your first one above — or
     <a href="#" id="seedLink">load sample batches</a> to see how it works.</p>
 
+  <!-- Aha-moment upgrade bridge (PLG): shown only AFTER the grower logs or harvests a real batch -->
+  <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
+    <b style="color:var(--ink)">Nice — that's logged.</b> It lives only in this browser, though.
+    The Mycro app (early access) will sync this log to your phone, back it up automatically, and
+    track your real biological efficiency &amp; contamination rate <i>per strain and substrate</i>
+    over months — the part a spreadsheet can't do.
+    <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a href="/#founding" id="nudgeFounding" class="btn">Become a Founding Grower · $99</a>
+      <a href="#waitlist" id="nudgeWaitlist" class="btn secondary">Join the free early-access list</a>
+      <button type="button" id="nudgeDismiss" aria-label="Dismiss"
+        style="margin-left:auto;background:none;border:0;color:var(--muted);font:inherit;font-size:.86rem;cursor:pointer;text-decoration:underline">Dismiss</button>
+    </div>
+    <p class="muted" style="margin:11px 0 0;font-size:.85rem">$99 once · lifetime founder pricing ·
+      fully refundable any time before launch. This log stays <b>free forever</b>.</p>
+  </div>
+
   <!-- Waitlist CTA -->
   <div class="note" id="waitlist" style="margin-top:22px">
     <b style="color:var(--ink)">This log lives in this one browser.</b> Mycro is the full version:
@@ -413,6 +429,7 @@ function addBatch(e){
   save(); render();
   $('f-name').value=''; $('f-notes').value=''; $('f-date').value=today();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value}); }catch(_){}
+  showNudge('add');
   return false;
 }
 
@@ -424,6 +441,7 @@ function saveYield(e,id){
   b.yieldG=gFromInput(v); b.stage='harvested'; b.stageSince=today();
   editingYieldId=null; save(); render();
   if(window.track) try{ track('growlog_harvest',{}); }catch(_){}
+  showNudge('harvest');
   return false;
 }
 
@@ -479,6 +497,26 @@ $('exportJson').addEventListener('click',function(){
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
 });
 
+/* ---- aha-moment upgrade bridge (PLG nudge): ONE honest, dismissible, tracked CTA,
+       shown only after the grower commits/harvests a real batch — never on load ---- */
+var NUDGE_KEY='mycro_growlog_nudge_off';
+function nudgeOff(){ try{ return localStorage.getItem(NUDGE_KEY)==='1'; }catch(e){ return false; } }
+function showNudge(src){
+  if(nudgeOff()) return;
+  var n=$('ahaNudge'); if(!n || n.style.display!=='none') return;   // show once
+  n.style.display='block';
+  if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
+}
+(function wireNudge(){
+  var f=$('nudgeFounding'), w=$('nudgeWaitlist'), d=$('nudgeDismiss');
+  if(f) f.addEventListener('click',function(){ if(window.track) try{ track('growlog_cta_founding',{src:'nudge'}); }catch(_){} });
+  if(w) w.addEventListener('click',function(){ if(window.track) try{ track('growlog_cta_waitlist',{src:'nudge'}); }catch(_){}
+    var em=document.querySelector('#waitlist input[name=email]'); if(em) setTimeout(function(){ try{ em.focus(); }catch(_){} },350); });
+  if(d) d.addEventListener('click',function(){ try{ localStorage.setItem(NUDGE_KEY,'1'); }catch(_){}
+    var n=$('ahaNudge'); if(n) n.style.display='none';
+    if(window.track) try{ track('growlog_nudge_dismiss',{}); }catch(_){} });
+})();
+
 /* ---- init ---- */
 $('f-date').value=today();
 render();
@@ -486,6 +524,7 @@ render();
 
 <style>
 /* grow-log specific */
+@media print{.no-print{display:none!important}}
 .batch{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
