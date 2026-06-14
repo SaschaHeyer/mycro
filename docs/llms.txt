@@ -13,6 +13,7 @@
 
 ## Guides
 - [Oyster mushroom growing: the complete guide](https://usemycro.com/guides/oyster-mushroom-growing.html): the full beginner-to-grower walk-through for Pleurotus (oyster) — choosing a variety, substrate prep, spawning, colonization, fruiting conditions, harvesting flushes, troubleshooting, and expected yield (biological efficiency); links every calculator and deeper guide.
+- [Lion's mane mushroom growing: the complete guide](https://usemycro.com/guides/lions-mane-mushroom-growing.html): the full walk-through for Hericium erinaceus (lion's mane) — why it's a premium gourmet & functional crop, hardwood substrate (not straw), spawning, colonization, the high-humidity (90–95%) and high-fresh-air fruiting it needs, fixing branchy "coral" growth from too much CO₂, harvesting before it yellows, and expected yield (50–75% BE).
 - [How to start a mushroom farming business](https://usemycro.com/guides/start-mushroom-business.html): realistic, numbers-first guide to going commercial — startup costs, the production cycle, profitability math (biological efficiency × yield × price), finding buyers (markets, restaurants, CSAs), and the mistakes that sink new farms.
 - [Biological efficiency, explained](https://usemycro.com/guides/biological-efficiency.html): the BE formula, a worked example, target BE by species, and seven ways to improve it.
 - [Spawn ratio, explained](https://usemycro.com/guides/spawn-ratio.html): how much grain spawn to use (10% vs 20% vs 30%+) and the trade-offs for speed, contamination, and yield.
