@@ -231,6 +231,55 @@
 </div></section>
 
 <style>
+  .faq-wrap{max-width:760px;margin:0 auto}
+  .faq details{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);
+    padding:0 18px;margin:10px 0}
+  .faq summary{cursor:pointer;font-weight:650;padding:16px 0;list-style:none;color:var(--ink)}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";float:right;color:var(--brand);font-weight:800}
+  .faq details[open] summary::after{content:"–"}
+  .faq details[open] summary{padding-bottom:6px}
+  .faq p{color:var(--muted);margin:0 0 16px;line-height:1.6}
+</style>
+<section id="faq"><div class="wrap">
+  <div class="center" style="margin-bottom:20px">
+    <div class="section-tag">FAQ</div>
+    <h2>Common questions</h2>
+  </div>
+  <div class="faq faq-wrap">
+    <details><summary>What is Mycro?</summary>
+      <p>Mycro is grow-operations software for small gourmet and functional mushroom farms — the growers selling oyster, lion's mane and shiitake to restaurants, markets and CSAs. It runs in any web browser with nothing to install, and includes a free Grow Log plus calculators for substrate, spawn ratio, yield and cost.</p></details>
+    <details><summary>Is there a free mushroom grow log?</summary>
+      <p>Yes. Mycro's Grow Log is free with no sign-up — open usemycro.com/grow-log.html and start logging batches in your browser. It tracks each batch from inoculation through colonization, fruiting and harvest, and automatically computes biological efficiency, days-in-stage, an overdue-colonization flag and your contamination rate. It exports to CSV and JSON.</p></details>
+    <details><summary>How much does Mycro cost?</summary>
+      <p>The free tools and Grow Log cost $0 with no account. The cloud Grower plan is an early-access target of about $12/month (unlimited batches, analytics, reports); the Farm plan about $24/month adds wholesale orders, labels and multi-user. A one-time $99 Founding Grower pre-order locks founder pricing for life and is refundable before launch.</p></details>
+    <details><summary>How is Mycro different from MycoFile or MycoHub?</summary>
+      <p>MycoFile and MycoHub are native mobile apps you install. Mycro runs in any web browser with nothing to download, its Grow Log is free with no account or item cap, and its grow-math engine is open source. Mycro is built specifically for the commercial gourmet and functional farm rather than the hobby grower.</p></details>
+    <details><summary>Do I need to install an app?</summary>
+      <p>No. Mycro is web-based — it opens in any browser on a phone, tablet or computer, with nothing to download or update. The free Grow Log even works without an account, saving your batches in the browser. The paid cloud plans add sync, backup and multi-device access across your whole team.</p></details>
+    <details><summary>What is biological efficiency, and does Mycro calculate it?</summary>
+      <p>Biological efficiency (BE) is fresh harvest weight as a percentage of dry substrate weight — the core yield metric for mushroom farms. Mycro calculates BE automatically for every batch in the Grow Log and Grow Calculator, so you can compare strains and substrates. A typical oyster batch runs roughly 75–100% BE.</p></details>
+    <details><summary>Who is Mycro for?</summary>
+      <p>Mycro is for small commercial gourmet and functional mushroom farms — operations selling oyster, lion's mane, shiitake and similar culinary or medicinal mushrooms weekly to restaurants, farmers' markets and CSAs. It's built for the serious hobbyist going pro and the established small farm, not for psilocybin or large industrial operations.</p></details>
+  </div>
+</div></section>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What is Mycro?", "acceptedAnswer": {"@type": "Answer", "text": "Mycro is grow-operations software for small gourmet and functional mushroom farms — the growers selling oyster, lion's mane and shiitake to restaurants, markets and CSAs. It runs in any web browser with nothing to install, and includes a free Grow Log plus calculators for substrate, spawn ratio, yield and cost."}},
+    {"@type": "Question", "name": "Is there a free mushroom grow log?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Mycro's Grow Log is free with no sign-up — open usemycro.com/grow-log.html and start logging batches in your browser. It tracks each batch from inoculation through colonization, fruiting and harvest, and automatically computes biological efficiency, days-in-stage, an overdue-colonization flag and your contamination rate. It exports to CSV and JSON."}},
+    {"@type": "Question", "name": "How much does Mycro cost?", "acceptedAnswer": {"@type": "Answer", "text": "The free tools and Grow Log cost $0 with no account. The cloud Grower plan is an early-access target of about $12/month (unlimited batches, analytics, reports); the Farm plan about $24/month adds wholesale orders, labels and multi-user. A one-time $99 Founding Grower pre-order locks founder pricing for life and is refundable before launch."}},
+    {"@type": "Question", "name": "How is Mycro different from MycoFile or MycoHub?", "acceptedAnswer": {"@type": "Answer", "text": "MycoFile and MycoHub are native mobile apps you install. Mycro runs in any web browser with nothing to download, its Grow Log is free with no account or item cap, and its grow-math engine is open source. Mycro is built specifically for the commercial gourmet and functional farm rather than the hobby grower."}},
+    {"@type": "Question", "name": "Do I need to install an app?", "acceptedAnswer": {"@type": "Answer", "text": "No. Mycro is web-based — it opens in any browser on a phone, tablet or computer, with nothing to download or update. The free Grow Log even works without an account, saving your batches in the browser. The paid cloud plans add sync, backup and multi-device access across your whole team."}},
+    {"@type": "Question", "name": "What is biological efficiency, and does Mycro calculate it?", "acceptedAnswer": {"@type": "Answer", "text": "Biological efficiency (BE) is fresh harvest weight as a percentage of dry substrate weight — the core yield metric for mushroom farms. Mycro calculates BE automatically for every batch in the Grow Log and Grow Calculator, so you can compare strains and substrates. A typical oyster batch runs roughly 75–100% BE."}},
+    {"@type": "Question", "name": "Who is Mycro for?", "acceptedAnswer": {"@type": "Answer", "text": "Mycro is for small commercial gourmet and functional mushroom farms — operations selling oyster, lion's mane, shiitake and similar culinary or medicinal mushrooms weekly to restaurants, farmers' markets and CSAs. It's built for the serious hobbyist going pro and the established small farm, not for psilocybin or large industrial operations."}}
+  ]
+}
+</script>
+
+<style>
   .fnd-band{background:linear-gradient(135deg,var(--brand),var(--brand-ink));border-radius:var(--radius);
     overflow:hidden;box-shadow:var(--shadow)}
   .fnd-grid{display:grid;grid-template-columns:1.08fr .92fr}

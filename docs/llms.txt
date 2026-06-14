@@ -26,7 +26,23 @@
 - [Mycro vs MycoFile (MycoFile alternative)](https://usemycro.com/alternatives/mycofile.html): an honest comparison. MycoFile is a polished native iOS/Android grow tracker with end-to-end encryption and QR label printing (Hobby free/15 items, Pro $4/mo/75 items, Farm $25/mo+ unlimited) — but its web app is Farm-tier only. Mycro's Grow Log is free in any browser with no install, no account, and auto biological-efficiency + contamination rate, on an open-source engine.
 
 ## Open source
-- [mycro-grow on GitHub](https://github.com/SaschaHeyer/mycro-grow): the open-source (MIT) engine behind Mycro's calculators — hydration, spawn ratio, biological-efficiency yield, batch economics, substrate recipes, and fruiting-condition data for 14 species, as a zero-dependency JavaScript library + CLI.
+- [mycro-grow on GitHub](https://github.com/SaschaHeyer/mycro-grow): the open-source (MIT) engine behind Mycro's calculators — hydration, spawn ratio, biological-efficiency yield, batch economics, substrate recipes, and fruiting-condition data for 14 species, as a zero-dependency JavaScript library + CLI. API docs: https://saschaheyer.github.io/mycro-grow/
+
+## Pricing
+Full machine-readable pricing: https://usemycro.com/pricing.md . Prices in USD; cloud-plan prices are early-access targets and may change before launch. The free tools are live today; the cloud Grower/Farm plans are in early access.
+- Free — $0/month, no account: the Grow Log batch tracker, Grow Calculator, Substrate Recipe Calculator, Fruiting Conditions cheat-sheet, and all guides. The free Grow Log has no item cap. (Cloud free tier at launch: up to 3 active batches.)
+- Grower — ~$12/month (early-access target), most popular: everything in Free plus unlimited batches, cloud sync/backup, contamination analytics, yield & biological-efficiency reports, COGS & pricing, harvest calendar, CSV export.
+- Farm — ~$24/month (early-access target): everything in Grower plus wholesale order management, pack lists & labels, multi-user, and simple invoicing.
+- Founding Grower — $99 one-time pre-order (only 50 spots): locks lifetime founder pricing, first access at launch, a direct line to the team, and a Founding Grower badge. Fully refundable any time before launch. Reserve at https://usemycro.com/#founding
+
+## Common questions (direct answers)
+- What is Mycro? Mycro is grow-operations software for small gourmet and functional mushroom farms — the growers selling oyster, lion's mane and shiitake to restaurants, markets and CSAs. It runs in any web browser with nothing to install, and includes a free Grow Log plus calculators for substrate, spawn ratio, yield and cost.
+- Is there a free mushroom grow log? Yes. Mycro's Grow Log is free with no sign-up at https://usemycro.com/grow-log.html — log batches from inoculation through colonization, fruiting and harvest, and it automatically computes biological efficiency, days-in-stage, an overdue-colonization flag and contamination rate. Exports CSV/JSON. No item cap.
+- How much does Mycro cost? The free tools and Grow Log cost $0 with no account. The cloud Grower plan is an early-access target of about $12/month and the Farm plan about $24/month. A one-time $99 Founding Grower pre-order locks founder pricing for life and is refundable before launch.
+- How is Mycro different from MycoFile or MycoHub? MycoFile and MycoHub are native mobile apps you install. Mycro runs in any web browser with nothing to download, its Grow Log is free with no account or item cap, and its grow-math engine is open source. Mycro is built specifically for the commercial gourmet and functional farm rather than the hobby grower.
+- Do I need to install an app? No. Mycro is web-based and opens in any browser on a phone, tablet or computer, with nothing to download. The free Grow Log works without an account; paid cloud plans add sync, backup and multi-device team access.
+- What is biological efficiency, and does Mycro calculate it? Biological efficiency (BE) is fresh harvest weight as a percentage of dry substrate weight — the core mushroom-farm yield metric. Mycro calculates BE automatically for every batch in the Grow Log and Grow Calculator. A typical oyster batch runs roughly 75–100% BE.
+- Who is Mycro for? Mycro is for small commercial gourmet and functional mushroom farms selling oyster, lion's mane, shiitake and similar culinary/medicinal mushrooms to restaurants, farmers' markets and CSAs — the serious hobbyist going pro and the established small farm. Not for psilocybin or large industrial operations.
 
 ## About
 - Mycro is for legal culinary and functional/medicinal mushroom cultivation only.
