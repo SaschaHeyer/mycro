@@ -5,6 +5,12 @@
 (function () {
   "use strict";
   var ENDPOINT = "https://mycro-806349486128.us-central1.run.app/api/event";
+  // AEO/citation source: dedicated answer engines (ChatGPT, Perplexity, …) usually strip
+  // document.referrer, so the ONLY signal a real grower arrived via an AI answer is the
+  // utm_source tag on the link the engine cited (e.g. ?utm_source=chatgpt.com — exactly how
+  // Mycro's first real conversion arrived). utm_source is a marketing channel label, not PII.
+  var UTM = "";
+  try { UTM = (new URLSearchParams(location.search).get("utm_source") || "").slice(0, 80); } catch (e) {}
   function send(name, props) {
     try {
       var body = JSON.stringify({
@@ -12,7 +18,8 @@
         props: props || {},
         path: location.pathname,
         // referrer HOSTNAME only (where the visit came from) — never the full URL, no PII
-        ref: document.referrer ? new URL(document.referrer).hostname.slice(0, 80) : ""
+        ref: document.referrer ? new URL(document.referrer).hostname.slice(0, 80) : "",
+        utm: UTM   // utm_source (channel tag) — captures AI-answer-engine citations that drop the referrer
       });
       // text/plain keeps this a CORS "simple request" → no preflight → beacons aren't dropped.
       var blob = new Blob([body], { type: "text/plain;charset=UTF-8" });
