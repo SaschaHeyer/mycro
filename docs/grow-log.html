@@ -116,7 +116,7 @@
 
   <!-- Aha-moment upgrade bridge (PLG): shown only AFTER the grower logs or harvests a real batch -->
   <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
-    <b style="color:var(--ink)">Nice — that's logged.</b> It lives only in this browser, though.
+    <b style="color:var(--ink)" id="nudgeLead">Nice — that's logged.</b> It lives only in this browser, though.
     The Mycro app (early access) will sync this log to your phone, back it up automatically, and
     track your real biological efficiency &amp; contamination rate <i>per strain and substrate</i>
     over months — the part a spreadsheet can't do.
@@ -491,10 +491,12 @@ $('exportCsv').addEventListener('click',function(){
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
   download('mycro-grow-log.csv',csv,'text/csv');
   if(window.track) try{ track('growlog_export',{fmt:'csv'}); }catch(_){}
+  showNudge('export');
 });
 $('exportJson').addEventListener('click',function(){
   download('mycro-grow-log.json',JSON.stringify(state.batches,null,2),'application/json');
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
+  showNudge('export');
 });
 
 /* ---- aha-moment upgrade bridge (PLG nudge): ONE honest, dismissible, tracked CTA,
@@ -504,6 +506,8 @@ function nudgeOff(){ try{ return localStorage.getItem(NUDGE_KEY)==='1'; }catch(e
 function showNudge(src){
   if(nudgeOff()) return;
   var n=$('ahaNudge'); if(!n || n.style.display!=='none') return;   // show once
+  var lead=$('nudgeLead');
+  if(lead) lead.textContent = (src==='export') ? "Exporting by hand?" : "Nice — that's logged.";
   n.style.display='block';
   if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
 }
