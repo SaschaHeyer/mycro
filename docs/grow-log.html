@@ -58,10 +58,22 @@
       <button data-unit="kg">kg</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Reset to sample</button>
     </div>
+  </div>
+
+  <!-- Cloud backup result: a private restore link (opt-in, no account). Hidden until used. -->
+  <div id="backupBox" class="note no-print" style="display:none;margin:-8px 0 16px;border-left:3px solid var(--brand)">
+    <b style="color:var(--ink)" id="backupMsg">Backed up.</b>
+    <span id="backupHint">Keep this private link — open it on any device (your phone included) to restore this log. Re-tap “Back up” anytime to update it.</span>
+    <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="backupUrl" readonly onclick="this.select()" style="flex:1;min-width:240px;padding:7px 9px;font:inherit;font-size:.86rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
+      <button type="button" id="backupCopy" class="btn secondary" style="padding:7px 12px;font-size:.86rem">Copy link</button>
+    </div>
+    <p class="muted" style="margin:9px 0 0;font-size:.82rem">Anyone with the link can view &amp; overwrite this backup, so keep it to yourself. Your log stays <b>free</b>; this is just a private cloud copy.</p>
   </div>
 
   <!-- Summary -->
@@ -116,10 +128,10 @@
 
   <!-- Aha-moment upgrade bridge (PLG): shown only AFTER the grower logs or harvests a real batch -->
   <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
-    <b style="color:var(--ink)" id="nudgeLead">Nice — that's logged.</b> It lives only in this browser, though.
-    The Mycro app (early access) will sync this log to your phone, back it up automatically, and
-    track your real biological efficiency &amp; contamination rate <i>per strain and substrate</i>
-    over months — the part a spreadsheet can't do.
+    <b style="color:var(--ink)" id="nudgeLead">Nice — that's logged.</b> Back it up free with the
+    ☁ button above (a private link you can open on any device). The Mycro app (early access) goes
+    further: <i>automatic</i> background sync across phone &amp; laptop and real biological efficiency
+    &amp; contamination trends <i>per strain and substrate</i> over months — the part a spreadsheet can't do.
     <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <a href="/#founding" id="nudgeFounding" class="btn">Become a Founding Grower · $99</a>
       <a href="#waitlist" id="nudgeWaitlist" class="btn secondary">Join the free early-access list</a>
@@ -182,11 +194,13 @@
       to your process actually moved the needle. New to diagnosing contamination? Read the
       <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
 
-    <h3 style="margin-top:16px">Your data stays on your device</h3>
-    <p class="muted">This free log saves in your browser only — no account, no upload. That's perfect
-      for trying it and for a single grower on one machine. The trade-off is that it can't sync to
-      your phone, back up to the cloud, or roll months of batches into per-strain trends — which is
-      exactly what the full Mycro app adds.</p>
+    <h3 style="margin-top:16px">Your data stays on your device — back it up when you want</h3>
+    <p class="muted">This free log saves in your browser only — no account, no upload. Want a copy off
+      this machine? Tap <b>☁ Back up</b> to save it to the cloud and get a private link you can open on
+      your phone or another computer to restore it (opt-in — nothing leaves your browser until you do).
+      The trade-off vs the full Mycro app: backups here are manual, and it can't <i>automatically</i>
+      sync in the background or roll months of batches into per-strain trends — which is exactly what
+      the paid app adds.</p>
 
     <p class="muted" style="margin-top:14px">Prefer a spreadsheet? Grab the free
       <a href="grow-log-template.html">mushroom grow log template (CSV)</a> — the same columns as this log,
@@ -500,6 +514,56 @@ $('exportJson').addEventListener('click',function(){
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
   showNudge('export');
 });
+
+/* ---- cloud backup / restore (FREE, no-login): a private restore link, like an unlisted
+        gist. The random id IS the secret. Makes the tool's "back up to the cloud / open on your
+        phone" promise real, and feeds a genuine reason to convert. ---- */
+var API='https://mycro-806349486128.us-central1.run.app';
+var CLOUD_KEY='mycro_growlog_cloud_id';
+function cloudId(){ try{ return localStorage.getItem(CLOUD_KEY)||''; }catch(e){ return ''; } }
+function setCloudId(id){ try{ localStorage.setItem(CLOUD_KEY,id); }catch(e){} }
+function restoreUrl(id){ return 'https://usemycro.com/grow-log.html?log='+id; }
+
+$('cloudBackup').addEventListener('click',function(){
+  var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Backing up…';
+  var body=JSON.stringify({ id:cloudId()||undefined, data:state });
+  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:body})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(j){
+      setCloudId(j.id);
+      var box=$('backupBox'), url=restoreUrl(j.id);
+      $('backupMsg').textContent='Backed up to the cloud ✓';
+      $('backupUrl').value=url; box.style.display='block';
+      if(window.track) try{ track('growlog_cloud_backup',{}); }catch(_){}
+    })
+    .catch(function(){ alert('Backup failed — please try again in a moment. Your log is still saved on this device.'); })
+    .then(function(){ btn.disabled=false; btn.textContent=prev; });
+});
+$('backupCopy').addEventListener('click',function(){
+  var inp=$('backupUrl'); inp.select();
+  var done=function(){ var b=$('backupCopy'), t=b.textContent; b.textContent='Copied ✓'; setTimeout(function(){b.textContent=t;},1500); };
+  try{ if(navigator.clipboard){ navigator.clipboard.writeText(inp.value).then(done,function(){ document.execCommand('copy'); done(); }); } else { document.execCommand('copy'); done(); } }
+  catch(e){ document.execCommand('copy'); done(); }
+});
+
+/* Restore on load if the page was opened with ?log=<id> (e.g. on a phone). */
+(function restoreFromLink(){
+  var m=/[?&]log=([a-z0-9]{16,40})\b/.exec(location.search); if(!m) return;
+  var id=m[1];
+  fetch(API+'/api/growlog/backup/'+id)
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(j){
+      var s=j&&j.data;
+      if(!(s && Array.isArray(s.batches) && s.batches.every(validBatch))) throw new Error('bad');
+      if(state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) return;
+      state=s; setCloudId(id); editingYieldId=null; save(); render();
+      $('backupMsg').textContent='Restored from your backup link ✓';
+      $('backupHint').textContent='This device is now linked to that backup. Tap “Back up” to push new changes to the same link.';
+      $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
+      if(window.track) try{ track('growlog_cloud_restore',{}); }catch(_){}
+    })
+    .catch(function(){ /* silent — keep whatever is on the device */ });
+})();
 
 /* ---- aha-moment upgrade bridge (PLG nudge): ONE honest, dismissible, tracked CTA,
        shown only after the grower commits/harvests a real batch — never on load ---- */
