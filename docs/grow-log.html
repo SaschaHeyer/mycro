@@ -86,6 +86,25 @@
     </div>
   </div>
 
+  <!-- Per-strain performance (appears once you've finished ≥2 batches) -->
+  <div class="results no-print" id="strainPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">Your strains, ranked by yield</h3>
+      <span class="muted" style="font-size:.82rem">Biological efficiency &amp; loss rate per species, from your own log</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="strainTable">
+        <thead><tr><th>Strain</th><th>Batches</th><th>Avg BE</th><th>Best BE</th><th>Total yield</th><th>Loss rate</th></tr></thead>
+        <tbody id="strainBody"></tbody>
+      </table>
+    </div>
+    <p class="muted strainBridge" style="font-size:.84rem;margin:12px 2px 0">
+      This is a snapshot of your current log. Mycro keeps these per-strain trends over every
+      season and syncs them across your phone &amp; laptop automatically — no manual backups.
+      <a href="/#founding">Become a Founding Grower · $99</a>
+    </p>
+  </div>
+
   <!-- Add batch -->
   <div class="panel">
     <h3><span class="step">+</span> Add a batch</h3>
@@ -346,6 +365,54 @@ function renderSummary(){
   if(rate!=null){ if(rate<=15) card.classList.add('good'); else if(rate>20) card.classList.add('bad'); }
 }
 
+/* ---- per-strain performance ---- */
+function renderStrains(){
+  var panel=$('strainPanel'); if(!panel) return;
+  var bs=state.batches;
+  var finished=bs.filter(function(b){return b.stage==='harvested'||b.stage==='contaminated';});
+  // only worth showing once there are ≥2 finished batches
+  if(finished.length<2){ panel.style.display='none'; return; }
+  var by={};
+  bs.forEach(function(b){
+    var k=b.species; if(!SPECIES[k]) return;
+    var g=by[k]||(by[k]={sp:SPECIES[k].label,n:0,fin:0,harv:0,contam:0,yield:0,bes:[]});
+    g.n++;
+    if(b.stage==='harvested'||b.stage==='contaminated') g.fin++;
+    if(b.stage==='contaminated') g.contam++;
+    if(b.stage==='harvested'){ g.harv++; g.yield+=(b.yieldG||0); }
+    var be=beOf(b); if(be!=null) g.bes.push(be);
+  });
+  var rows=Object.keys(by).map(function(k){
+    var g=by[k];
+    g.avgBe = g.bes.length ? g.bes.reduce(function(a,x){return a+x;},0)/g.bes.length : null;
+    g.bestBe = g.bes.length ? Math.max.apply(null,g.bes) : null;
+    g.loss = g.fin ? g.contam/g.fin*100 : null;
+    return g;
+  });
+  // rank: strains with a BE first (highest avg BE), then the rest
+  rows.sort(function(a,b){
+    if((a.avgBe!=null)!==(b.avgBe!=null)) return a.avgBe!=null?-1:1;
+    if(a.avgBe!=null&&b.avgBe!=null) return b.avgBe-a.avgBe;
+    return b.n-a.n;
+  });
+  var topBe=null;
+  rows.forEach(function(g){ if(g.avgBe!=null&&(topBe==null||g.avgBe>topBe)) topBe=g.avgBe; });
+  var html=rows.map(function(g){
+    var crown = (g.avgBe!=null&&g.avgBe===topBe&&rows.length>1) ? ' <span class="crown" title="Your best-yielding strain">🏆</span>' : '';
+    var lossCls = g.loss==null?'':(g.loss<=15?'lg':(g.loss>20?'lb':''));
+    return '<tr>'+
+      '<td class="sname">'+esc(g.sp)+crown+'</td>'+
+      '<td>'+g.n+(g.harv?' <span class="sub">('+g.harv+' harvested)</span>':'')+'</td>'+
+      '<td>'+(g.avgBe!=null?Math.round(g.avgBe)+'%':'—')+'</td>'+
+      '<td>'+(g.bestBe!=null?Math.round(g.bestBe)+'%':'—')+'</td>'+
+      '<td>'+(g.harv?fmtWt(g.yield):'—')+'</td>'+
+      '<td class="'+lossCls+'">'+(g.loss!=null?Math.round(g.loss)+'%':'—')+'</td>'+
+      '</tr>';
+  }).join('');
+  $('strainBody').innerHTML=html;
+  panel.style.display='block';
+}
+
 /* ---- batch rows ---- */
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -415,6 +482,7 @@ function render(){
 function paint(){
   setUnitLabels();
   renderSummary();
+  renderStrains();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
   $('empty').style.display='none';
@@ -627,6 +695,17 @@ render();
 .yieldForm{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .yieldForm .yl{font-size:.84rem;font-weight:700;display:flex;flex-direction:column;gap:4px}
 .yieldForm input{font:inherit;font-size:.95rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);width:130px}
+/* per-strain performance panel */
+#strainPanel .strainHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+table.strain{width:100%;border-collapse:collapse;font-size:.9rem}
+table.strain th{text-align:left;font-size:.74rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:0 12px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.strain td{padding:9px 12px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.strain tr:last-child td{border-bottom:none}
+table.strain td.sname{font-weight:700;color:var(--ink)}
+table.strain .sub{color:var(--muted);font-weight:600;font-size:.82rem}
+table.strain td.lg{color:#1f6b3c;font-weight:700}
+table.strain td.lb{color:#9a3417;font-weight:700}
+table.strain .crown{font-size:.85rem}
 </style>
 <script src="waitlist.js"></script>
 <script src="/track.js" defer></script>
