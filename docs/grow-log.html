@@ -24,6 +24,7 @@
 {"@type":"Question","name":"How do I keep a mushroom grow log?","acceptedAnswer":{"@type":"Answer","text":"For each batch record the species, dry substrate weight, number of blocks and the inoculation date, then update the stage as it moves through colonization, fruiting and harvest. At harvest, log the total fresh weight so you can calculate biological efficiency. This free grow log does all of that in the browser and saves on your device."}},
 {"@type":"Question","name":"How is biological efficiency calculated?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is fresh mushroom yield divided by dry substrate weight, expressed as a percentage: BE = fresh yield ÷ dry substrate × 100. The grow log computes it automatically once you record a batch's harvest weight."}},
 {"@type":"Question","name":"What is a good contamination rate for mushroom growing?","acceptedAnswer":{"@type":"Answer","text":"Many small farms run 5–15% contamination across blocks; under 5% is excellent and over 20% usually points to a sterilization, spawn or handling problem. Tracking which batches fail and at which stage is the fastest way to find the root cause."}},
+{"@type":"Question","name":"Can I print labels for my mushroom blocks?","acceptedAnswer":{"@type":"Answer","text":"Yes. The free Mycro grow log prints a label card for every batch you are running: species, spawn date, the date it should finish colonising, block count and dry substrate weight, a write-in line for each flush, and a QR code that opens your grow log on a phone. Tape one label to each block or bag so the shelf always matches the log. No sign-up and no cost."}},
 {"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 30–60 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
 </script>
 </head>
@@ -48,6 +49,10 @@
     move it through each stage, and Mycro works out your <b>biological efficiency</b>, how long each
     batch has been running, and your <b>contamination rate</b> — automatically. It starts with sample
     batches so you can see how it works; edit or clear them anytime.</p>
+  <p class="muted" style="font-size:.98rem;margin-top:-4px">New: hit <b>🏷 Print labels</b> to print a
+    card for every batch you're running — species, spawn date, expected colonisation date, block count,
+    a write-in flush line, and a QR code that opens this log on your phone. Tape one to each block and
+    the shelf matches the log. Free, no sign-up.</p>
 </header>
 
 <main class="wrap" style="max-width:820px;padding-bottom:10px">
@@ -58,6 +63,7 @@
       <button data-unit="kg">kg</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="printLabels">🏷 Print labels</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
@@ -241,6 +247,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
+<script src="/qr.js"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render
@@ -583,6 +590,90 @@ $('exportJson').addEventListener('click',function(){
   showNudge('export');
 });
 
+/* ---- printable block labels (FREE): the paper bridge between the log and the shelf.
+        One label per active batch — species, spawn date, expected colonisation date, blocks,
+        a write-in flush line, and a QR that opens THIS log (the private cloud link if the
+        device is backed up, otherwise the free tool). Rendered into a standalone print
+        window so the page's own layout/print rules stay untouched. ---- */
+function labelBatches(){
+  var act=state.batches.filter(isActive);
+  return act.length ? act : state.batches.filter(function(b){ return b.stage!=='harvested'; });
+}
+function expectedIso(b){
+  var d=parseIso(b.inoculatedOn); d.setDate(d.getDate()+SPECIES[b.species].colonize); return iso(d);
+}
+function labelQrUrl(){
+  var id=cloudId();
+  return id ? restoreUrl(id) : 'https://usemycro.com/grow-log.html';
+}
+function labelHtml(b,qr,scanNote){
+  var sp=SPECIES[b.species], dry=(unit==='lb'? b.dryG/LB : b.dryG/1000);
+  return '<div class="lbl">'+
+    '<div class="lmain">'+
+      '<div class="lname">'+esc(b.name)+'</div>'+
+      '<div class="lsp">'+esc(sp.label)+'</div>'+
+      '<table class="lfacts"><tbody>'+
+        '<tr><th>Spawned</th><td>'+esc(b.inoculatedOn)+' <span class="dim">(day '+daysSince(b.inoculatedOn)+')</span></td></tr>'+
+        '<tr><th>Colonised by</th><td>'+esc(expectedIso(b))+' <span class="dim">(~'+sp.colonize+'d typical)</span></td></tr>'+
+        '<tr><th>Batch</th><td>'+b.blocks+' blocks · '+dry.toFixed(1)+' '+unit+' dry each</td></tr>'+
+        '<tr><th>Stage</th><td>'+esc(STAGE_LABEL[b.stage])+'</td></tr>'+
+      '</tbody></table>'+
+      (b.notes ? '<div class="lnotes">'+esc(b.notes)+'</div>' : '')+
+      '<div class="lwrite">Flush 1 ____ g &nbsp; Flush 2 ____ g &nbsp; Flush 3 ____ g</div>'+
+    '</div>'+
+    '<div class="lqr">'+qr+'<div class="lcap">'+esc(scanNote)+'</div></div>'+
+  '</div>';
+}
+function buildLabelSheet(){
+  var list=labelBatches();
+  if(!list.length) return null;
+  var url=labelQrUrl(), qr=window.QR ? QR.svg(url,150) : '';
+  var scanNote = cloudId() ? 'Scan → your grow log' : 'Scan → free grow log';
+  var body=list.map(function(b){ return labelHtml(b,qr,scanNote); }).join('');
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
+    '<title>Mycro block labels</title><meta name="robots" content="noindex">'+
+    '<style>'+
+    '*{box-sizing:border-box}body{margin:0;padding:14px;background:#f6f5f2;'+
+      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#1a1a17}'+
+    '.bar{max-width:760px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.9rem}'+
+    '.bar button{font:inherit;font-weight:700;padding:8px 16px;border-radius:999px;border:0;background:#C0562C;color:#fff;cursor:pointer}'+
+    '.sheet{max-width:760px;margin:0 auto}'+
+    '.lbl{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1.5px solid #d9d5cc;'+
+      'border-radius:10px;padding:14px 16px;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid}'+
+    '.lmain{flex:1;min-width:0}'+
+    '.lname{font-size:1.25rem;font-weight:800;letter-spacing:-.01em;line-height:1.15}'+
+    '.lsp{font-size:.92rem;font-weight:700;color:#6B6457;margin-bottom:8px}'+
+    '.lfacts{border-collapse:collapse;font-size:.85rem;width:100%}'+
+    '.lfacts th{text-align:left;font-weight:700;color:#6B6457;padding:2px 12px 2px 0;white-space:nowrap;width:96px}'+
+    '.lfacts td{padding:2px 0}'+
+    '.dim{color:#8b8578}'+
+    '.lnotes{font-size:.82rem;color:#6B6457;font-style:italic;margin-top:6px}'+
+    '.lwrite{margin-top:9px;padding-top:8px;border-top:1px dashed #cfcabf;font-size:.8rem;color:#6B6457;letter-spacing:.01em}'+
+    '.lqr{text-align:center;flex:0 0 auto}'+
+    '.lqr svg{display:block;width:104px;height:104px}'+
+    '.lcap{font-size:.66rem;color:#6B6457;margin-top:4px;max-width:110px;line-height:1.3}'+
+    '.foot{max-width:760px;margin:8px auto 0;font-size:.72rem;color:#8b8578;text-align:center}'+
+    '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}}'+
+    '</style></head><body>'+
+    '<div class="bar"><span><b>'+list.length+' label'+(list.length===1?'':'s')+'</b> · cut along the cards and tape one to each block or bag.</span>'+
+    '<button type="button" onclick="window.print()">Print</button></div>'+
+    '<div class="sheet">'+body+'</div>'+
+    '<div class="foot">Mycro Grow Log · usemycro.com/grow-log.html</div>'+
+    '<script>window.onload=function(){setTimeout(function(){try{window.print();}catch(e){}},250);};<\/script>'+
+    '</body></html>';
+}
+$('printLabels').addEventListener('click',function(){
+  var html=buildLabelSheet();
+  if(!html){ alert('Add a batch first — labels are generated from the batches you are running.'); return; }
+  var w=window.open('','mycroLabels');
+  if(!w){ alert('Your browser blocked the label window. Allow pop-ups for usemycro.com and try again.'); return; }
+  // fire tracking + the nudge FIRST — the child window's print dialog is modal and would
+  // otherwise sit in front of them.
+  if(window.track) try{ track('growlog_labels_print',{n:labelBatches().length,cloud:cloudId()?1:0}); }catch(_){}
+  showNudge('labels');
+  w.document.open(); w.document.write(html); w.document.close();
+});
+
 /* ---- cloud backup / restore (FREE, no-login): a private restore link, like an unlisted
         gist. The random id IS the secret. Makes the tool's "back up to the cloud / open on your
         phone" promise real, and feeds a genuine reason to convert. ---- */
@@ -641,7 +732,8 @@ function showNudge(src){
   if(nudgeOff()) return;
   var n=$('ahaNudge'); if(!n || n.style.display!=='none') return;   // show once
   var lead=$('nudgeLead');
-  if(lead) lead.textContent = (src==='export') ? "Exporting by hand?" : "Nice — that's logged.";
+  if(lead) lead.textContent = (src==='export') ? "Exporting by hand?"
+    : (src==='labels') ? "Labels on the blocks?" : "Nice — that's logged.";
   n.style.display='block';
   if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
 }
