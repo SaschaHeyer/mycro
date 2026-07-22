@@ -80,6 +80,15 @@
       <button type="button" id="backupCopy" class="btn secondary" style="padding:7px 12px;font-size:.86rem">Copy link</button>
     </div>
     <p class="muted" style="margin:9px 0 0;font-size:.82rem">Anyone with the link can view &amp; overwrite this backup, so keep it to yourself. Your log stays <b>free</b>; this is just a private cloud copy.</p>
+    <!-- Optional: email the private link so it's never lost. Also joins the Mycro list. -->
+    <div id="backupEmailWrap" style="margin-top:12px;padding-top:11px;border-top:1px dashed var(--line,#e2e2e2)">
+      <label for="backupEmail" style="display:block;font-size:.86rem;color:var(--ink);font-weight:600;margin-bottom:6px">📧 Email me this link so I don't lose it</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="backupEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@farm.com" style="flex:1;min-width:200px;padding:8px 10px;font:inherit;font-size:.9rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
+        <button type="button" id="backupEmailBtn" class="btn secondary" style="padding:8px 14px;font-size:.9rem">Send link</button>
+      </div>
+      <p class="muted" id="backupEmailNote" style="margin:7px 0 0;font-size:.8rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    </div>
   </div>
 
   <!-- Summary -->
@@ -703,6 +712,21 @@ $('backupCopy').addEventListener('click',function(){
   var done=function(){ var b=$('backupCopy'), t=b.textContent; b.textContent='Copied ✓'; setTimeout(function(){b.textContent=t;},1500); };
   try{ if(navigator.clipboard){ navigator.clipboard.writeText(inp.value).then(done,function(){ document.execCommand('copy'); done(); }); } else { document.execCommand('copy'); done(); } }
   catch(e){ document.execCommand('copy'); done(); }
+});
+/* Optional: email the private restore link (never lose it) + join the Mycro list.
+   High-intent capture — someone backing up a whole log is the buyer for auto-sync. */
+$('backupEmailBtn').addEventListener('click',function(){
+  var em=($('backupEmail').value||'').trim(), id=cloudId(), note=$('backupEmailNote');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ note.textContent='Please enter a valid email.'; note.style.color='#b23b3b'; return; }
+  if(!id){ note.textContent='Back up first, then we can email the link.'; note.style.color='#b23b3b'; return; }
+  var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Sending…';
+  fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:id})})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){
+      $('backupEmailWrap').innerHTML='<p style="margin:0;font-size:.9rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private restore link.</p>';
+      if(window.track) try{ track('growlog_backup_email',{}); }catch(_){}
+    })
+    .catch(function(){ note.textContent='Could not send just now — copy the link above instead.'; note.style.color='#b23b3b'; btn.disabled=false; btn.textContent=prev; });
 });
 
 /* Restore on load if the page was opened with ?log=<id> (e.g. on a phone). */
