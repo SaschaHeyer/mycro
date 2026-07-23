@@ -282,6 +282,7 @@ var STAGE_LABEL = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fru
 
 var unit = 'lb';
 var editingYieldId = null;   // batch id whose harvest-yield form is open
+var yieldMode = 'append';    // 'append' = add a flush, 'edit' = correct the total
 
 /* ---- date helpers (browser-side; new Date is fine here) ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -309,7 +310,7 @@ function sampleState(){
      notes:'Slow — watching for contamination'},
     {id:'s3', name:'Pearl Oyster #11', species:'pearl', dryG:5*LB, blocks:24,
      inoculatedOn:daysAgoIso(34), stage:'harvested', stageSince:daysAgoIso(3), yieldG:90*LB,
-     notes:'Two flushes, soy hull masters mix'},
+     flushes:[52*LB,38*LB], notes:'Two flushes, soy hull masters mix'},
     {id:'s4', name:'Blue Oyster #9', species:'pearl', dryG:5*LB, blocks:20,
      inoculatedOn:daysAgoIso(40), stage:'harvested', stageSince:daysAgoIso(8), yieldG:84*LB,
      notes:''},
@@ -321,7 +322,7 @@ function sampleState(){
      notes:''},
     {id:'s7', name:'Pearl Oyster #10', species:'pearl', dryG:5*LB, blocks:24,
      inoculatedOn:daysAgoIso(45), stage:'harvested', stageSince:daysAgoIso(12), yieldG:102*LB,
-     notes:''},
+     flushes:[48*LB,34*LB,20*LB], notes:''},
     {id:'s8', name:'King Oyster #3', species:'king', dryG:5*LB, blocks:10,
      inoculatedOn:daysAgoIso(28), stage:'contaminated', stageSince:daysAgoIso(11), yieldG:null,
      notes:'Green mold at several blocks → tossed batch'}
@@ -330,14 +331,25 @@ function sampleState(){
 function validBatch(b){
   return b && typeof b.id==='string' && typeof b.name==='string' &&
     SPECIES[b.species] && typeof b.dryG==='number' && typeof b.blocks==='number' &&
-    typeof b.inoculatedOn==='string' && STAGE_LABEL[b.stage] && typeof b.stageSince==='string';
+    typeof b.inoculatedOn==='string' && STAGE_LABEL[b.stage] && typeof b.stageSince==='string' &&
+    (b.flushes==null || Array.isArray(b.flushes));
+}
+// Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
+// (yieldG set, no flushes) is treated as a single flush so the model stays consistent.
+function normFlushes(b){
+  if(Array.isArray(b.flushes)){
+    b.flushes = b.flushes.filter(function(x){return typeof x==='number' && isFinite(x) && x>=0;});
+    b.yieldG = b.flushes.length ? b.flushes.reduce(function(a,x){return a+x;},0) : (b.stage==='harvested'?0:null);
+  } else if(b.stage==='harvested' && typeof b.yieldG==='number' && b.yieldG>0){
+    b.flushes = [b.yieldG];
+  }
 }
 function load(){
   try{
     var s = JSON.parse(localStorage.getItem(KEY));
     if(s && Array.isArray(s.batches) && s.batches.every(validBatch)){
       s.batches.forEach(function(b){ if(typeof b.yieldG!=='number') b.yieldG = b.yieldG==null?null:null;
-        if(typeof b.notes!=='string') b.notes=''; });
+        if(typeof b.notes!=='string') b.notes=''; normFlushes(b); });
       return s;
     }
   }catch(e){}
@@ -446,17 +458,24 @@ function stepperHtml(b){
 }
 
 function actionsHtml(b){
-  if(b.stage==='contaminated' || b.stage==='harvested'){
-    var extra = b.stage==='harvested'
-      ? '<button class="mini" data-act="harvest" data-id="'+b.id+'">Edit yield</button>' : '';
-    return extra+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
-  }
   if(editingYieldId===b.id){
+    var n=(b.flushes||[]).length;
+    var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
+            : 'Fresh yield — flush '+(n+1)+' ('+unit+')';
+    var btn = yieldMode==='edit' ? 'Save total' : (n?'Add flush':'Save harvest');
     return '<form class="yieldForm" onsubmit="return saveYield(event,\''+b.id+'\')">'+
-      '<label class="yl">Total fresh yield ('+unit+') '+
+      '<label class="yl">'+lbl+' '+
       '<input id="yieldInput" type="number" step="0.1" min="0" autocomplete="off" required></label>'+
-      '<button class="mini solid" type="submit">Save harvest</button>'+
+      '<button class="mini solid" type="submit">'+btn+'</button>'+
       '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button></form>';
+  }
+  if(b.stage==='contaminated' || b.stage==='harvested'){
+    var extra='';
+    if(b.stage==='harvested'){
+      extra = '<button class="mini solid" data-act="logflush" data-id="'+b.id+'">+ Log another flush</button>'+
+              '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>';
+    }
+    return extra+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
   }
   var next = {inoculated:['colonizing','Start colonizing'],colonizing:['fruiting','Move to fruiting'],fruiting:['harvest','Record harvest']};
   var n=next[b.stage];
@@ -475,8 +494,12 @@ function batchHtml(b){
   var chipCls = {inoculated:'chip-inoc',colonizing:'chip-col',fruiting:'chip-fruit',harvested:'chip-harv',contaminated:'chip-contam'}[b.stage];
   var meta = fmtWt(b.dryG)+' dry/block · '+b.blocks+' blocks · inoculated '+esc(b.inoculatedOn)+
              ' ('+daysSince(b.inoculatedOn)+'d ago)';
+  var fl=(b.flushes||[]);
+  var flushLine = fl.length>1
+    ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x){return fmtWt(x);}).join(' + ')+'</div>'
+    : '';
   var beLine = be!=null
-    ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry</div>'
+    ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry</div>'+flushLine
     : '';
   var odLine = od ? '<div class="flag">⚠ '+esc(od)+'</div>' : '';
   var notes = b.notes ? '<div class="bnotes">'+esc(b.notes)+'</div>' : '';
@@ -538,10 +561,19 @@ function saveYield(e,id){
   var b=find(id); if(!b) return false;
   var v=parseFloat($('yieldInput').value);
   if(!isFinite(v)||v<0) return false;
-  b.yieldG=gFromInput(v); b.stage='harvested'; b.stageSince=today();
-  editingYieldId=null; save(); render();
-  if(window.track) try{ track('growlog_harvest',{}); }catch(_){}
-  showNudge('harvest');
+  var g=gFromInput(v);
+  var wasHarvested = b.stage==='harvested';
+  if(yieldMode==='edit'){
+    b.flushes=[g];
+  } else {
+    b.flushes=(Array.isArray(b.flushes)?b.flushes:[]).concat([g]);
+  }
+  b.yieldG=b.flushes.reduce(function(a,x){return a+x;},0);
+  b.stage='harvested'; b.stageSince=today();
+  editingYieldId=null; yieldMode='append'; save(); render();
+  if(window.track) try{ track('growlog_harvest',{flush:b.flushes.length}); }catch(_){}
+  // Only nudge on the first harvest of a batch (the aha moment), not on every extra flush.
+  if(!wasHarvested) showNudge('harvest');
   return false;
 }
 
@@ -550,8 +582,10 @@ document.addEventListener('click',function(e){
   if(!el) return;
   var act=el.getAttribute('data-act'); var id=el.getAttribute('data-id'); var b=id?find(id):null;
   if(act==='advance' && b){ b.stage=el.getAttribute('data-to'); b.stageSince=today(); editingYieldId=null; save(); render(); }
-  else if(act==='harvest' && b){ editingYieldId=id; render(); }
-  else if(act==='cancelYield'){ editingYieldId=null; render(); }
+  else if(act==='harvest' && b){ editingYieldId=id; yieldMode='append'; render(); }
+  else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
+  else if(act==='edityield' && b){ editingYieldId=id; yieldMode='edit'; render(); }
+  else if(act==='cancelYield'){ editingYieldId=null; yieldMode='append'; render(); }
   else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='delete' && b){ state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render(); }
 });
@@ -580,13 +614,15 @@ function download(name,text,type){
   a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 $('exportCsv').addEventListener('click',function(){
-  var rows=[['label','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'biological_efficiency_pct','notes']];
+  var rows=[['label','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','notes']];
+  var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   state.batches.forEach(function(b){
     var dry = unit==='lb'? b.dryG/LB : b.dryG/1000;
-    var y = b.yieldG!=null ? (unit==='lb'? b.yieldG/LB : b.yieldG/1000) : '';
+    var y = b.yieldG!=null ? toU(b.yieldG) : '';
+    var flu = (b.flushes||[]).map(function(x){return toU(x).toFixed(2);}).join('; ');
     var be=beOf(b);
     rows.push([b.name,SPECIES[b.species].label,b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
-      daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), be!=null?be.toFixed(0):'', (b.notes||'').replace(/"/g,'""')]);
+      daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'', (b.notes||'').replace(/"/g,'""')]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
   download('mycro-grow-log.csv',csv,'text/csv');
@@ -739,6 +775,7 @@ $('backupEmailBtn').addEventListener('click',function(){
       var s=j&&j.data;
       if(!(s && Array.isArray(s.batches) && s.batches.every(validBatch))) throw new Error('bad');
       if(state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) return;
+      s.batches.forEach(normFlushes);
       state=s; setCloudId(id); editingYieldId=null; save(); render();
       $('backupMsg').textContent='Restored from your backup link ✓';
       $('backupHint').textContent='This device is now linked to that backup. Tap “Back up” to push new changes to the same link.';
@@ -796,8 +833,9 @@ render();
 .stepper .dot{font-size:.74rem;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:#fff}
 .stepper .dot.done{background:var(--moss-soft);color:var(--moss);border-color:transparent}
 .stepper .dot.now{background:var(--brand);color:#fff;border-color:transparent}
-.beline{font-size:.92rem;background:var(--moss-soft);border-radius:10px;padding:8px 12px;margin:2px 0 8px}
+.beline{font-size:.92rem;background:var(--moss-soft);border-radius:10px;padding:8px 12px;margin:2px 0 4px}
 .beline b{color:var(--moss)}
+.flushline{font-size:.82rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .flag{font-size:.86rem;color:var(--warn);background:#FBEDE8;border-radius:10px;padding:8px 12px;margin:2px 0 8px}
 .bnotes{font-size:.88rem;color:var(--muted);margin:2px 0 8px;font-style:italic}
 .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
