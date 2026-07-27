@@ -74,7 +74,8 @@
   <!-- Cloud backup result: a private restore link (opt-in, no account). Hidden until used. -->
   <div id="backupBox" class="note no-print" style="display:none;margin:-8px 0 16px;border-left:3px solid var(--brand)">
     <b style="color:var(--ink)" id="backupMsg">Backed up.</b>
-    <span id="backupHint">Keep this private link — open it on any device (your phone included) to restore this log. Re-tap “Back up” anytime to update it.</span>
+    <span id="backupHint">Keep this private link — open it on any device (your phone included) to restore this log. From now on, <b>every change on this device syncs here automatically</b> — no need to tap Back up again.</span>
+    <div id="syncStatus" class="muted" style="display:none;margin-top:7px;font-size:.82rem">All changes synced to your private link ✓</div>
     <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input id="backupUrl" readonly onclick="this.select()" style="flex:1;min-width:240px;padding:7px 9px;font:inherit;font-size:.86rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
       <button type="button" id="backupCopy" class="btn secondary" style="padding:7px 12px;font-size:.86rem">Copy link</button>
@@ -114,9 +115,9 @@
       </table>
     </div>
     <p class="muted strainBridge" style="font-size:.84rem;margin:12px 2px 0">
-      This is a snapshot of your current log. Mycro keeps these per-strain trends over every
-      season and syncs them across your phone &amp; laptop automatically — no manual backups.
-      <a href="/#founding">Become a Founding Grower · $99</a>
+      This is a snapshot of your current log (auto-synced to your private link once you've backed up).
+      The full Mycro app keeps every season's per-strain history in a real account you log into from
+      any device — no link to keep track of. <a href="/#founding">Become a Founding Grower · $99</a>
     </p>
   </div>
 
@@ -176,7 +177,7 @@
     <p class="muted" style="margin:11px 0 0;font-size:.85rem">
       Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
       or <a href="/#founding" id="nudgeFounding">become a Founding Grower ($99, refundable)</a> for
-      <i>automatic</i> sync &amp; per-strain trends when the full app ships.
+      a real account &amp; long-term per-strain history when the full app ships.
       <button type="button" id="nudgeDismiss" aria-label="Dismiss"
         style="margin-left:8px;background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline">Dismiss</button>
     </p>
@@ -184,10 +185,11 @@
 
   <!-- Waitlist CTA -->
   <div class="note" id="waitlist" style="margin-top:22px">
-    <b style="color:var(--ink)">This log lives in this one browser.</b> Mycro is the full version:
-    your grow log synced across phone &amp; laptop, automatic cloud backup, your real BE and
-    contamination patterns per strain and substrate over months, harvest calendar, and COGS — so
-    nothing is lost when a laptop dies or you grow past a spreadsheet. Join the early-access list:
+    <b style="color:var(--ink)">This log lives in this one browser</b> (back it up once and it auto-syncs
+    to a private link). Mycro is the full version: a real <b>account</b> you log into from any device,
+    your BE and contamination patterns per strain and substrate rolled up over months, a harvest
+    calendar, and COGS — so nothing is lost when a laptop dies or you grow past a spreadsheet. Join the
+    early-access list:
     <form class="waitlist" style="margin:14px 0 0;justify-content:flex-start" onsubmit="return mycroWaitlist(event)">
       <input type="email" name="email" placeholder="you@yourfarm.com" required aria-label="Email">
       <button class="btn" type="submit">Get early access →</button>
@@ -234,13 +236,13 @@
       to your process actually moved the needle. New to diagnosing contamination? Read the
       <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
 
-    <h3 style="margin-top:16px">Your data stays on your device — back it up when you want</h3>
+    <h3 style="margin-top:16px">Your data stays on your device — and auto-syncs once you back it up</h3>
     <p class="muted">This free log saves in your browser only — no account, no upload. Want a copy off
-      this machine? Tap <b>☁ Back up</b> to save it to the cloud and get a private link you can open on
-      your phone or another computer to restore it (opt-in — nothing leaves your browser until you do).
-      The trade-off vs the full Mycro app: backups here are manual, and it can't <i>automatically</i>
-      sync in the background or roll months of batches into per-strain trends — which is exactly what
-      the paid app adds.</p>
+      this machine? Tap <b>☁ Back up</b> once to get a private cloud link (opt-in — nothing leaves your
+      browser until you do). After that, <b>every change on this device syncs to that link automatically</b>,
+      so you can open your log on your phone or another computer and it's up to date. The paid Mycro app
+      adds what a link can't: a real <b>account you log into from any device</b> (no link to keep track of),
+      guaranteed long-term history across seasons, and multi-user access for a staffed farm.</p>
 
     <p class="muted" style="margin-top:14px">Prefer a spreadsheet? Grab the free
       <a href="grow-log-template.html">mushroom grow log template (CSV)</a> — the same columns as this log,
@@ -361,7 +363,7 @@ function load(){
   }catch(e){}
   return sampleState();
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} try{ scheduleAutoSync(); }catch(e){} }
 var state = load();
 
 /* ---- ids ---- */
@@ -734,6 +736,30 @@ function cloudId(){ try{ return localStorage.getItem(CLOUD_KEY)||''; }catch(e){ 
 function setCloudId(id){ try{ localStorage.setItem(CLOUD_KEY,id); }catch(e){} }
 function restoreUrl(id){ return 'https://usemycro.com/grow-log.html?log='+id; }
 
+/* ---- Automatic cloud sync ----
+   Once a device is linked to a private backup link (after the first ☁ Back up, an
+   emailed link, or opening a ?log= link), every change auto-pushes to that same link,
+   debounced. Auto-PUSH ONLY — this device stays the single source of truth, so there is
+   no merge/clobber risk. Silent + local-first: if the network fails, the log is still on
+   the device and will sync on the next change. Makes the "open it on your phone" promise
+   real without any account. */
+var _syncTimer=null;
+function setSync(txt,isErr){ var el=$('syncStatus'); if(!el) return;
+  el.textContent=txt; el.style.color=isErr?'#b23b3b':'var(--muted)'; el.style.display=txt?'block':'none'; }
+function autoSync(){
+  var id=cloudId(); if(!id || !state.batches.length) return;
+  setSync('Syncing…');
+  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,data:state})})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){ setSync('All changes synced to your private link ✓'); })
+    .catch(function(){ setSync('Saved on this device — we’ll sync when the connection is back.',true); });
+}
+function scheduleAutoSync(){
+  if(typeof cloudId!=='function' || !cloudId()) return;   // only after the device is linked
+  if(_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(autoSync,1500);
+}
+
 $('cloudBackup').addEventListener('click',function(){
   var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Backing up…';
   var body=JSON.stringify({ id:cloudId()||undefined, data:state });
@@ -784,11 +810,25 @@ $('backupEmailBtn').addEventListener('click',function(){
       s.batches.forEach(normFlushes);
       state=s; setCloudId(id); editingYieldId=null; save(); render();
       $('backupMsg').textContent='Restored from your backup link ✓';
-      $('backupHint').textContent='This device is now linked to that backup. Tap “Back up” to push new changes to the same link.';
+      $('backupHint').innerHTML='This device is now linked to that backup. From now on, <b>every change syncs to this link automatically.</b>';
       $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
       if(window.track) try{ track('growlog_cloud_restore',{}); }catch(_){}
     })
     .catch(function(){ /* silent — keep whatever is on the device */ });
+})();
+
+/* On load, if this device is already linked to a backup (and we're not mid-restore),
+   surface the link + auto-sync status so returning growers see their log is syncing. */
+(function showLinkOnLoad(){
+  if(/[?&]log=/.test(location.search)) return;      // restore flow handles its own UI
+  var id=cloudId(); if(!id) return;
+  try{
+    $('backupMsg').textContent='This device is synced.';
+    $('backupHint').innerHTML='Your log auto-syncs to this private link — open it on any device to pick up where you left off.';
+    $('backupUrl').value=restoreUrl(id);
+    $('backupBox').style.display='block';
+    setSync('All changes synced to your private link ✓');
+  }catch(e){}
 })();
 
 /* ---- aha-moment upgrade bridge (PLG nudge): ONE honest, dismissible, tracked CTA,
