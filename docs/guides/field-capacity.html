@@ -145,8 +145,13 @@
       <p style="margin-left:0">Log each batch — recipe, moisture, spawn rate, contamination, yield — and
         Mycro turns it into your real BE and cost per pound, per strain and substrate. Stop guessing which
         tweaks actually pay.</p>
-      <a href="../index.html#waitlist" class="btn" style="background:var(--brand)">Get early access →</a>
+      <a href="../grow-log.html" class="btn" style="background:var(--brand)">Try the free Grow Log →</a>
       <a href="/#founding" class="btn secondary" style="margin-left:10px">Become a Founding Grower — $99 →</a>
+      <form class="waitlist" style="margin:18px 0 0;justify-content:flex-start" onsubmit="return mycroWaitlist(event)">
+        <input type="email" name="email" placeholder="you@yourfarm.com" required aria-label="Email">
+        <button class="btn" type="submit">Get early access →</button>
+      </form>
+      <p id="wl-msg" style="margin:12px 0 0;display:none"></p>
       <p style="font-size:.82rem;color:#bdb7ab;margin:14px auto 0;max-width:520px">$99 once · lifetime founder pricing · a direct say in what we build first · fully refundable before launch.</p>
     </div>
 
@@ -171,6 +176,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
+  <script src="../waitlist.js"></script>
   <script src="/track.js" defer></script>
 </body>
 </html>
