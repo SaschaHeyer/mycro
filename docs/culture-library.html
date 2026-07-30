@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Mushroom Culture Library — track lineage from source to block | Mycro</title>
+<meta name="description" content="A free mushroom culture library and lineage tracker. Log where a culture came from, follow it through petri dish → liquid culture → grain spawn → block, and trace a contamination back to every culture and batch it touched. No sign-up. Saves on your device.">
+<meta name="keywords" content="mushroom culture library, culture lineage tracking, mushroom strain tracking, liquid culture log, grain spawn tracking, contamination traceback, mushroom genealogy, agar plate records">
+<link rel="canonical" href="https://usemycro.com/culture-library.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Free Mushroom Culture Library — track lineage from source to block">
+<meta property="og:description" content="Log every source, petri dish, liquid culture and grain spawn — and trace a contamination back through the whole chain. Free, no sign-up.">
+<meta property="og:url" content="https://usemycro.com/culture-library.html">
+<meta property="og:image" content="https://usemycro.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#C2702B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom culture library that records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain.","url":"https://usemycro.com/culture-library.html"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is mushroom culture lineage tracking?","acceptedAnswer":{"@type":"Answer","text":"Culture lineage tracking records the parent of every culture you make, so each petri dish, liquid culture, grain spawn jar and finished block can be traced back to the original source — the grower or supplier you bought it from, or the wild collection you took it from. It answers two questions a grow log alone cannot: which source and strain actually produces your best blocks, and, when a contaminant appears, which other cultures came off the same parent and need checking."}},
+{"@type":"Question","name":"What should I record about a mushroom culture source?","acceptedAnswer":{"@type":"Answer","text":"For a purchased or gifted sample: species (scientific or common name), the supplier's batch number if they give one, the name and contact details of the company or individual, the date and time you received it, and your own assigned tracking ID. For a wild field sample: species, the location the sample was taken (GPS coordinates or address), date and time, and an assigned tracking ID. The supplier details matter for two reasons — you can go back for more of a strain that performs, and if there is ever a liability question you have a chain of responsibility."}},
+{"@type":"Question","name":"How do I trace a mushroom contamination back to its source?","acceptedAnswer":{"@type":"Answer","text":"Mark the contaminated culture in your records, then walk the chain in both directions. Downstream: every culture and every block made from that culture is suspect and should be checked or quarantined. Upstream: look at its parent and at the other cultures made from that same parent — if they are clean, the contamination entered at your step; if they are also failing, it came in earlier, possibly with the source itself. The Mycro culture library does both walks automatically and lists the at-risk items."}},
+{"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}}]}
+</script>
+</head>
+<body>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="index.html">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg>
+    Mycro
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="hide-sm">Home</a>
+    <a href="grow-log.html" class="hide-sm">Grow Log</a>
+    <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
+  </div>
+</div></nav>
+
+<header class="wrap" style="padding:40px 20px 6px;max-width:820px">
+  <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:14px">🧬 Free tool · no sign-up · saved on your device</span>
+  <h1>Mushroom Culture Library</h1>
+  <p class="muted" style="font-size:1.12rem">A grow log starts at the block. Production starts much
+    earlier. Log where a culture <b>came from</b>, then follow it down the chain —
+    <b>source → petri dish → liquid culture → grain spawn → block</b>. Every culture gets a tracking
+    code derived from its parent, so when a contaminant turns up you can see, in one click,
+    <b>every culture and every batch that came off it</b>.</p>
+  <p class="muted" style="font-size:.98rem;margin-top:-4px">It shares the same storage as the free
+    <a href="grow-log.html">Grow Log</a>, so a grain spawn jar links straight to the blocks made from
+    it — and the yield those blocks produced. Starts with a sample library so you can see how it
+    works; clear it anytime.</p>
+</header>
+
+<main class="wrap" style="max-width:820px;padding-bottom:10px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 16px;flex-wrap:wrap">
+    <a class="btn secondary" style="padding:8px 14px;font-size:.9rem" href="grow-log.html">← Grow Log</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
+      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Reset to sample</button>
+    </div>
+  </div>
+
+  <div id="syncStatus" class="muted no-print" style="display:none;font-size:.82rem;margin:-8px 0 14px">Synced ✓</div>
+
+  <!-- Contamination traceback: the reason the upper stages are worth logging at all. -->
+  <div id="riskPanel" class="flagbox" style="display:none">
+    <b id="riskHead">Contamination traceback</b>
+    <div id="riskBody"></div>
+  </div>
+
+  <!-- Summary -->
+  <div class="results" style="margin-bottom:18px">
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="k-sources">–</div><div class="l">Sources on file</div></div>
+      <div class="kpi"><div class="v" id="k-live">–</div><div class="l">Live cultures</div></div>
+      <div class="kpi" id="k-contam-card"><div class="v" id="k-contam">–</div><div class="l">Culture loss rate</div></div>
+      <div class="kpi"><div class="v" id="k-traced">–</div><div class="l">Blocks traced to a culture</div></div>
+    </div>
+  </div>
+
+  <!-- Add source -->
+  <div class="panel">
+    <h3><span class="step">+</span> Log a source</h3>
+    <p class="muted" style="margin:-4px 0 12px;font-size:.92rem">A source is where genetics enter your
+      farm: a culture bought or given to you, or a sample you collected in the field. Log it once and
+      everything descended from it carries the trail.</p>
+    <div class="toggle" id="kindToggle" role="group" aria-label="Source kind" style="margin-bottom:14px">
+      <button data-kind="purchased" class="active" type="button">Purchased / given</button>
+      <button data-kind="wild" type="button">Wild field sample</button>
+    </div>
+    <form id="addSourceForm" onsubmit="return addSource(event)">
+      <div class="inline-grid">
+        <div class="field"><label>Species</label>
+          <select id="f-species">
+            <option value="pearl">Blue / Pearl Oyster</option>
+            <option value="pink">Pink / Yellow Oyster</option>
+            <option value="king">King Oyster (Trumpet)</option>
+            <option value="lions">Lion's Mane</option>
+            <option value="shiitake">Shiitake</option>
+            <option value="chestnut">Chestnut</option>
+            <option value="pioppino">Pioppino</option>
+            <option value="nameko">Nameko</option>
+            <option value="reishi">Reishi</option>
+            <option value="other">Other</option>
+          </select></div>
+        <div class="field"><label>Species name <span class="hint">(scientific or common)</span></label>
+          <input id="f-sci" type="text" maxlength="60" placeholder="e.g. Lentinula edodes" autocomplete="off"></div>
+        <div class="field purchased-only"><label>Supplier <span class="hint">(company or individual)</span></label>
+          <input id="f-supplier" type="text" maxlength="60" placeholder="e.g. North Spore" autocomplete="off"></div>
+        <div class="field purchased-only"><label>Their batch number <span class="hint">(if given)</span></label>
+          <input id="f-vbatch" type="text" maxlength="40" placeholder="e.g. NS-4471" autocomplete="off"></div>
+        <div class="field purchased-only"><label>Contact <span class="hint">(email, phone or address)</span></label>
+          <input id="f-contact" type="text" maxlength="90" placeholder="orders@supplier.com" autocomplete="off"></div>
+        <div class="field wild-only" style="display:none"><label>Collection location <span class="hint">(GPS or address)</span></label>
+          <input id="f-loc" type="text" maxlength="90" placeholder="44.5619, -123.2790 — fallen alder" autocomplete="off"></div>
+        <div class="field"><label>Date received / collected</label>
+          <input id="f-date" type="date"></div>
+        <div class="field"><label>Tracking ID <span class="hint">(auto — edit if you have your own)</span></label>
+          <input id="f-code" type="text" maxlength="24" placeholder="SHI-01" autocomplete="off"></div>
+        <div class="field"><label>Notes <span class="hint">(optional)</span></label>
+          <input id="f-notes" type="text" maxlength="120" placeholder="strain, why you picked it…" autocomplete="off"></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn" type="submit" data-track="culture_add_source">Add source →</button></div>
+      <p id="src-msg" class="muted" style="margin:10px 0 0;display:none;font-size:.88rem"></p>
+    </form>
+  </div>
+
+  <!-- Lineage -->
+  <div id="tree"></div>
+  <p id="empty" class="note" style="display:none">No sources yet. Log your first one above — or
+    <a href="#" id="seedLink">load a sample library</a> to see how lineage and traceback work.</p>
+
+  <!-- Aha-moment bridge: same honest capture as the grow log. -->
+  <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
+    <b style="color:var(--ink)" id="nudgeLead">That's on the record.</b>
+    A culture library is only worth keeping if it survives this browser. We'll back your library and
+    grow log up to a private link and email it to you, so you can open it on your phone at the bench.
+    Free, no account.
+    <div id="nudgeEmailRow" style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="nudgeEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@yourfarm.com"
+        aria-label="Email" style="flex:1;min-width:200px;padding:9px 11px;font:inherit;font-size:.92rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
+      <button type="button" id="nudgeEmailBtn" class="btn">Save &amp; email my link</button>
+    </div>
+    <p class="muted" id="nudgeEmailNote" style="margin:8px 0 0;font-size:.82rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    <p class="muted" style="margin:11px 0 0;font-size:.85rem">
+      Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
+      or <a href="/#founding" id="nudgeFounding">become a Founding Grower ($99, refundable)</a>.
+      <button type="button" id="nudgeDismiss" aria-label="Dismiss"
+        style="margin-left:8px;background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline">Dismiss</button>
+    </p>
+  </div>
+
+  <!-- Waitlist CTA -->
+  <div class="note" id="waitlist" style="margin-top:22px">
+    <b style="color:var(--ink)">This library lives in this one browser.</b> Mycro is the full version:
+    a real <b>account</b> you log into from any device, your whole chain from source to pack-out in one
+    place, cost per run against real yield, and contacts you can print on a delivery label. Join the
+    early-access list:
+    <form class="waitlist" style="margin:14px 0 0;justify-content:flex-start" onsubmit="return mycroWaitlist(event)">
+      <input type="email" name="email" placeholder="you@yourfarm.com" required aria-label="Email">
+      <button class="btn" type="submit">Get early access →</button>
+    </form>
+    <p id="wl-msg" class="muted" style="margin-top:12px;display:none"></p>
+    <p class="muted" style="margin-top:14px;font-size:.92rem;border-top:1px solid var(--line);padding-top:14px">
+      Already know you want it? <a href="/#founding"><b>Become a Founding Grower</b></a> — $99 once,
+      lifetime founder pricing, and a direct line to shape what we build first. Fully refundable any
+      time before launch.</p>
+  </div>
+
+  <!-- Methodology / SEO depth -->
+  <section style="padding:30px 0 0">
+    <h2>How culture lineage works</h2>
+    <p class="muted">A grow log tells you what a block did. A culture library tells you <i>why</i> —
+      which genetics, from which source, handled by which method. Here is what this tool records and
+      what it lets you answer.</p>
+
+    <h3 style="margin-top:18px">The chain</h3>
+    <p class="muted">Genetics enter the farm once and then get copied, over and over. Each copy is a
+      chance to gain performance data — and a chance to let something in.</p>
+    <table class="spec">
+      <thead><tr><th>Stage</th><th>What it is</th><th>Why it's tracked</th></tr></thead>
+      <tbody>
+        <tr><td>Source</td><td>A culture bought or gifted, or a wild sample you collected.</td><td>Lets you re-order a strain that performs — or never buy from that lot again.</td></tr>
+        <tr><td>Petri dish</td><td>Agar plate, usually where you clean up and select a strain.</td><td>Isolates are where most strain selection actually happens.</td></tr>
+        <tr><td>Liquid culture</td><td>Sterile nutrient broth grown from a wedge of agar.</td><td>One LC seeds many jars — so one bad LC ruins many jars.</td></tr>
+        <tr><td>Grain spawn</td><td>Colonised grain, the thing you actually mix into substrate.</td><td>The last point where you can catch a problem before it costs you blocks.</td></tr>
+        <tr><td>Block / batch</td><td>Fruiting substrate, tracked in the <a href="grow-log.html">Grow Log</a>.</td><td>Where yield and biological efficiency finally get measured.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:16px">Tracking codes that carry the lineage</h3>
+    <p class="muted">Every item gets a code derived from its parent, so the code alone tells you the
+      chain: <code>SHI-01</code> is a shiitake source, <code>SHI-01-P1</code> is the first plate off
+      it, <code>SHI-01-P1-L1</code> the first liquid culture off that plate, and
+      <code>SHI-01-P1-L1-G2</code> the second grain jar off that LC. Write the code on the jar and the
+      jar explains itself — no lookup needed.</p>
+
+    <h3 style="margin-top:16px">Contamination traceback, in both directions</h3>
+    <p class="muted">Mark anything contaminated and the library walks the chain for you.
+      <b>Downstream</b>: every culture and every block descended from it, listed as at-risk so you can
+      check or quarantine them before the problem spreads. <b>Upstream</b>: the parent it came from and
+      its siblings — if those are clean, the contaminant entered at your step; if they're failing too,
+      it came in earlier, possibly with the source. That distinction is the difference between fixing
+      your technique and returning a bad lot. New to diagnosing what you're looking at? Read the
+      <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
+
+    <h3 style="margin-top:16px">Why record supplier and location at all</h3>
+    <p class="muted">Two reasons, and both are practical. First, repeatability: if a strain performs you
+      want to go back for more of exactly that, and if it doesn't you want to know not to. Second,
+      chain of responsibility: if there is ever a question about what you sold and where it came from,
+      the answer is a lookup, not an archaeology project. For a wild collection the location <i>is</i>
+      the supplier — record the GPS or the address, because you can't re-order from a log you can't
+      find again.</p>
+
+    <h3 style="margin-top:16px">Your data stays on your device</h3>
+    <p class="muted">This free library saves in your browser only — no account, no upload. It shares
+      storage with the <a href="grow-log.html">Grow Log</a>, so backing either one up with
+      <b>☁ Back up</b> in the grow log covers both, and after that every change on this device syncs to
+      your private link automatically. The paid Mycro app adds what a link can't: a real
+      <b>account you log into from any device</b>, long-term history across seasons, cost per run, and
+      multi-user access for a staffed farm.</p>
+
+    <p class="muted" style="margin-top:14px">Comparing tools? Most mushroom apps track blocks but not
+      genetics, and the ones that track genetics don't do grow-ops maths. See the
+      <a href="alternatives/best-mushroom-grow-log-apps.html">honest comparison of mushroom grow log
+      apps</a>.</p>
+
+    <p class="disclaimer">For legal culinary &amp; medicinal mushroom cultivation only. Guidance here
+      reflects common practice, not guarantees.</p>
+  </section>
+
+</main>
+
+<footer><div class="wrap foot-row">
+  <div><a class="brand" href="index.html" style="font-size:1.05rem"><svg viewBox="0 0 32 32" style="width:22px;height:22px" aria-hidden="true"><path d="M16 3.5C8.3 3.5 3 9 3 15.2c0 .8.6 1.3 1.5 1.3h23c.9 0 1.5-.5 1.5-1.3C29 9 23.7 3.5 16 3.5Z" fill="#C2702B"/><rect x="12.2" y="14.5" width="7.6" height="13.5" rx="3.4" fill="#E3D5BE"/></svg> Mycro</a>
+    <p class="disclaimer" style="margin-top:8px;max-width:520px">For legal culinary &amp; medicinal
+      mushroom cultivation only. Your culture library is stored in your browser.</p></div>
+  <div style="text-align:right"><a href="grow-log.html">Grow Log</a> · <a href="culture-library.html">Culture Library</a> · <a href="calculator.html">Grow Calculator</a> · <a href="substrate-calculator.html">Substrate Calculator</a> · <a href="fruiting-conditions.html">Fruiting Conditions</a> · <a href="guides/">Guides</a> · <a href="alternatives/best-mushroom-grow-log-apps.html">Compare</a> · <a href="index.html#pricing">Pricing</a><br>
+    <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
+</div></footer>
+
+<script>
+/* ---------- Mycro Culture Library — no backend, localStorage only ----------
+   SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
+   made from it live in one document: state = { v, batches[], sources[], cultures[] }.
+   Batches gain an optional parentId pointing at a culture. Nothing here mutates the
+   batch shape, so an older grow log keeps loading this state unchanged. */
+var KEY = 'mycro_growlog_v1';
+var LB = 453.59237;
+var $ = function (id){ return document.getElementById(id); };
+
+var SPECIES = {
+  pearl:    {label:'Blue / Pearl Oyster', pre:'PEA', sci:'Pleurotus ostreatus'},
+  pink:     {label:'Pink / Yellow Oyster', pre:'PNK', sci:'Pleurotus djamor'},
+  king:     {label:'King Oyster', pre:'KIN', sci:'Pleurotus eryngii'},
+  lions:    {label:"Lion's Mane", pre:'LIO', sci:'Hericium erinaceus'},
+  shiitake: {label:'Shiitake', pre:'SHI', sci:'Lentinula edodes'},
+  chestnut: {label:'Chestnut', pre:'CHE', sci:'Pholiota adiposa'},
+  pioppino: {label:'Pioppino', pre:'PIO', sci:'Cyclocybe aegerita'},
+  nameko:   {label:'Nameko', pre:'NAM', sci:'Pholiota microspora'},
+  reishi:   {label:'Reishi', pre:'REI', sci:'Ganoderma lucidum'},
+  other:    {label:'Other', pre:'CUL', sci:''}
+};
+/* Culture types, in chain order. `next` = what you can legally make from this one. */
+var CTYPE = {
+  petri: {label:'Petri dish', icon:'🧫', letter:'P', next:['petri','lc','grain']},
+  lc:    {label:'Liquid culture', icon:'💧', letter:'L', next:['lc','grain']},
+  grain: {label:'Grain spawn', icon:'🌾', letter:'G', next:['grain']}
+};
+var CSTATUS = {
+  healthy:      {label:'Healthy', cls:'chip-ok'},
+  used:         {label:'Used up', cls:'chip-used'},
+  contaminated: {label:'Contaminated', cls:'chip-bad'},
+  discarded:    {label:'Discarded', cls:'chip-used'}
+};
+var BATCH_STAGE = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fruiting',harvested:'Harvested',contaminated:'Contaminated'};
+
+var addingUnder = null;   // {parentId, type} while an inline "add culture" form is open
+
+/* ---- date helpers ---- */
+function pad(n){ return (n<10?'0':'')+n; }
+function iso(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function today(){ return iso(new Date()); }
+function daysAgoIso(n){ var d=new Date(); d.setDate(d.getDate()-n); return iso(d); }
+function parseIso(s){ var p=String(s||'').split('-'); return new Date(+p[0],(+p[1]||1)-1,+p[2]||1); }
+function daysSince(s){ if(!s) return 0; var ms=parseIso(today())-parseIso(s); return Math.max(0,Math.round(ms/86400000)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* ---- sample library ----
+   Mirrors the grow log's sample batches: the sample culture ids c3 / c6 are the
+   parents of sample batches s5 and s3 over there. Keep the two in sync. */
+function sampleCultures(){
+  return {
+    sources:[
+      {id:'src1', code:'SHI-01', kind:'purchased', species:'shiitake', sci:'Lentinula edodes',
+       supplier:'North Spore', vendorBatch:'NS-4471', contact:'orders@northspore.example',
+       location:'', acquiredAt:daysAgoIso(180), status:'ok', notes:'Wide-temp commercial strain'},
+      {id:'src2', code:'PEA-01', kind:'wild', species:'pearl', sci:'Pleurotus ostreatus',
+       supplier:'', vendorBatch:'', contact:'',
+       location:'44.5619, -123.2790 — fallen alder, Bald Hill', acquiredAt:daysAgoIso(120),
+       status:'ok', notes:'Wild collection, cool-weather fruiter'}
+    ],
+    cultures:[
+      {id:'c1', code:'SHI-01-P1', type:'petri', parentKind:'source', parentId:'src1',
+       createdAt:daysAgoIso(170), status:'healthy', notes:'Cleaned up from the wedge'},
+      {id:'c2', code:'SHI-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c1',
+       createdAt:daysAgoIso(120), status:'healthy', notes:'Light malt broth'},
+      {id:'c3', code:'SHI-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c2',
+       createdAt:daysAgoIso(95), status:'used', notes:'Rye, 5 jars'},
+      {id:'c4', code:'PEA-01-P1', type:'petri', parentKind:'source', parentId:'src2',
+       createdAt:daysAgoIso(115), status:'healthy', notes:'Tissue clone'},
+      {id:'c5', code:'PEA-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c4',
+       createdAt:daysAgoIso(60), status:'contaminated', notes:'Cloudy at day 5 — bacterial'},
+      {id:'c6', code:'PEA-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c5',
+       createdAt:daysAgoIso(50), status:'used', notes:'Rye, 6 jars — inoculated before the LC turned'}
+    ]
+  };
+}
+
+/* ---- state (resilient; shared with the grow log) ---- */
+function validSource(s){
+  return s && typeof s.id==='string' && typeof s.code==='string' && SPECIES[s.species] &&
+    (s.kind==='purchased'||s.kind==='wild') && typeof s.acquiredAt==='string';
+}
+function validCulture(c){
+  return c && typeof c.id==='string' && typeof c.code==='string' && CTYPE[c.type] &&
+    (c.parentKind==='source'||c.parentKind==='culture') && typeof c.parentId==='string' &&
+    CSTATUS[c.status] && typeof c.createdAt==='string';
+}
+function load(){
+  var s=null;
+  try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!s || typeof s!=='object') s = {v:1, batches:[]};
+  if(!Array.isArray(s.batches)) s.batches=[];
+  if(!Array.isArray(s.sources) || !s.sources.every(validSource)) s.sources=null;
+  if(!Array.isArray(s.cultures) || !s.cultures.every(validCulture)) s.cultures=null;
+  if(s.sources===null || s.cultures===null){
+    // First visit (or a corrupt library): seed the sample chain so traceback is visible.
+    var sm = sampleCultures();
+    if(s.sources===null) s.sources = sm.sources;
+    if(s.cultures===null) s.cultures = sm.cultures;
+  }
+  return s;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} scheduleAutoSync(); }
+var state = load();
+
+function newId(p){ return (p||'c')+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); }
+
+/* ---- lookups ---- */
+function findSource(id){ for(var i=0;i<state.sources.length;i++) if(state.sources[i].id===id) return state.sources[i]; return null; }
+function findCulture(id){ for(var i=0;i<state.cultures.length;i++) if(state.cultures[i].id===id) return state.cultures[i]; return null; }
+function childrenOf(id){ return state.cultures.filter(function(c){ return c.parentId===id; }); }
+function batchesOf(id){ return state.batches.filter(function(b){ return b.parentId===id; }); }
+
+/* Auto tracking codes. A child's code extends its parent's, so the code IS the lineage:
+   SHI-01 -> SHI-01-P1 -> SHI-01-P1-L1 -> SHI-01-P1-L1-G2 */
+function nextSourceCode(species){
+  var pre = (SPECIES[species]||SPECIES.other).pre, n=1;
+  while(state.sources.some(function(s){ return s.code===pre+'-'+pad(n); })) n++;
+  return pre+'-'+pad(n);
+}
+function nextCultureCode(parentCode, type){
+  var letter = CTYPE[type].letter, n=1;
+  while(state.cultures.some(function(c){ return c.code===parentCode+'-'+letter+n; })) n++;
+  return parentCode+'-'+letter+n;
+}
+
+/* ---- traceback ----
+   Downstream: everything descended from an item (cultures + grow-log batches).
+   Upstream: the parent chain back to the source. */
+function descendants(id, out){
+  out = out || {cultures:[], batches:[]};
+  childrenOf(id).forEach(function(c){ out.cultures.push(c); descendants(c.id, out); });
+  batchesOf(id).forEach(function(b){ out.batches.push(b); });
+  return out;
+}
+function ancestry(c){
+  var chain=[], guard=0, cur=c;
+  while(cur && guard++ < 50){
+    if(cur.parentKind==='source'){ var s=findSource(cur.parentId); if(s) chain.push({kind:'source', item:s}); break; }
+    var p=findCulture(cur.parentId); if(!p) break;
+    chain.push({kind:'culture', item:p}); cur=p;
+  }
+  return chain;
+}
+function atRisk(){
+  // Live (not yet written off) items descended from anything marked contaminated.
+  var bad = state.cultures.filter(function(c){ return c.status==='contaminated'; });
+  var seen={}, risky={cultures:[], batches:[], roots:bad};
+  bad.forEach(function(c){
+    var d = descendants(c.id);
+    d.cultures.forEach(function(x){ if(x.status!=='contaminated' && x.status!=='discarded' && !seen['c'+x.id]){ seen['c'+x.id]=1; risky.cultures.push(x); } });
+    d.batches.forEach(function(b){ if(b.stage!=='contaminated' && !seen['b'+b.id]){ seen['b'+b.id]=1; risky.batches.push(b); } });
+  });
+  return risky;
+}
+
+/* ---- render ---- */
+function renderSummary(){
+  var live = state.cultures.filter(function(c){ return c.status==='healthy'; }).length;
+  var finished = state.cultures.filter(function(c){ return c.status==='contaminated'||c.status==='used'||c.status==='discarded'; }).length;
+  var lost = state.cultures.filter(function(c){ return c.status==='contaminated'; }).length;
+  var traced = state.batches.filter(function(b){ return b.parentId && findCulture(b.parentId); })
+    .reduce(function(a,b){ return a + (typeof b.blocks==='number'?b.blocks:0); },0);
+  $('k-sources').textContent = state.sources.length || '–';
+  $('k-live').textContent = live;
+  var rate = finished ? Math.round(lost/finished*100) : null;
+  $('k-contam').textContent = rate==null ? '–' : rate+'%';
+  $('k-contam-card').className = 'kpi' + (rate==null ? '' : (rate<=10 ? ' good' : ' bad'));
+  $('k-traced').textContent = traced || '–';
+}
+function renderRisk(){
+  var r = atRisk(), box=$('riskPanel');
+  if(!r.roots.length){ box.style.display='none'; return; }
+  var n = r.cultures.length + r.batches.length;
+  $('riskHead').textContent = '⚠ Contamination traceback — ' + r.roots.length + ' contaminated culture' +
+    (r.roots.length>1?'s':'') + ', ' + (n ? n + ' item' + (n>1?'s':'') + ' downstream to check' : 'nothing downstream');
+  var h = '';
+  r.roots.forEach(function(c){
+    var up = ancestry(c);
+    var sib = childrenOf(c.parentId).filter(function(x){ return x.id!==c.id; });
+    h += '<div class="riskrow"><b>'+esc(c.code)+'</b> <span class="muted">('+CTYPE[c.type].label+
+      (c.createdAt?', made '+daysSince(c.createdAt)+'d ago':'')+')</span>';
+    var d = descendants(c.id);
+    if(d.cultures.length || d.batches.length){
+      h += '<div class="riskline"><span class="rl">Downstream — check or quarantine:</span> ' +
+        d.cultures.map(function(x){ return '<code>'+esc(x.code)+'</code>'; })
+          .concat(d.batches.map(function(b){ return '<code>'+esc(b.name)+'</code>'+(typeof b.blocks==='number'?' ('+b.blocks+' blocks)':''); }))
+          .join(', ') + '</div>';
+    } else {
+      h += '<div class="riskline"><span class="rl">Downstream:</span> nothing was made from it — the problem stopped here.</div>';
+    }
+    h += '<div class="riskline"><span class="rl">Upstream — where it could have come from:</span> ' +
+      (up.length ? up.map(function(a){ return '<code>'+esc(a.item.code)+'</code>'; }).join(' ← ') : 'unknown') + '</div>';
+    h += '<div class="riskline"><span class="rl">Siblings off the same parent:</span> ' +
+      (sib.length ? sib.map(function(x){ return '<code>'+esc(x.code)+'</code> <span class="muted">'+CSTATUS[x.status].label.toLowerCase()+'</span>'; }).join(', ') +
+        ' — if these are clean, it entered at your step; if they are failing too, it came in earlier.'
+      : 'none — nothing else was made from that parent, so this one tells you nothing on its own yet.') + '</div>';
+    h += '</div>';
+  });
+  $('riskBody').innerHTML = h;
+  box.style.display='block';
+}
+function statusChip(st){ var s=CSTATUS[st]||CSTATUS.healthy; return '<span class="chip '+s.cls+'">'+s.label+'</span>'; }
+
+function cultureNodeHtml(c, depth){
+  var kids = childrenOf(c.id), bts = batchesOf(c.id);
+  var h = '<div class="node" style="margin-left:'+(depth*18)+'px">';
+  h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
+       '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
+       '<span class="nmeta">'+CTYPE[c.type].label+' · made '+esc(c.createdAt)+' ('+daysSince(c.createdAt)+'d ago)</span></div>';
+  if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
+  h += '<div class="nactions">';
+  CTYPE[c.type].next.forEach(function(t){
+    h += '<button class="mini" data-act="new" data-parent="'+c.id+'" data-type="'+t+'">+ '+CTYPE[t].label+'</button>';
+  });
+  if(c.type==='grain') h += '<a class="mini" href="grow-log.html?spawn='+encodeURIComponent(c.id)+'">→ Use in a grow batch</a>';
+  if(c.status!=='contaminated') h += '<button class="mini warn" data-act="contam" data-id="'+c.id+'">⚑ Mark contaminated</button>';
+  else h += '<button class="mini" data-act="ok" data-id="'+c.id+'">↺ Not contaminated</button>';
+  if(c.status==='healthy') h += '<button class="mini" data-act="used" data-id="'+c.id+'">Mark used up</button>';
+  h += '<button class="mini ghosty" data-act="del" data-id="'+c.id+'">Delete</button>';
+  h += '</div>';
+  if(addingUnder && addingUnder.parentId===c.id) h += addFormHtml(c.code, addingUnder.type);
+  bts.forEach(function(b){
+    h += '<div class="node blocknode" style="margin-left:18px">'+
+      '<div class="nhead"><span class="nico">🧱</span><code class="ncode">'+esc(b.name)+'</code>'+
+      '<span class="chip '+(b.stage==='contaminated'?'chip-bad':(b.stage==='harvested'?'chip-ok':'chip-used'))+'">'+
+      esc(BATCH_STAGE[b.stage]||b.stage)+'</span>'+
+      '<span class="nmeta">'+(typeof b.blocks==='number'?b.blocks+' blocks':'')+
+      ' · <a href="grow-log.html">open in grow log</a></span></div></div>';
+  });
+  h += '</div>';
+  kids.forEach(function(k){ h += cultureNodeHtml(k, depth+1); });
+  return h;
+}
+function addFormHtml(parentCode, type){
+  return '<div class="addbox">'+
+    '<div class="abrow"><label>New '+CTYPE[type].label.toLowerCase()+' — code</label>'+
+      '<input id="a-code" type="text" maxlength="30" value="'+esc(nextCultureCode(parentCode,type))+'"></div>'+
+    '<div class="abrow"><label>Date made</label><input id="a-date" type="date" value="'+today()+'"></div>'+
+    '<div class="abrow wide"><label>Notes</label><input id="a-notes" type="text" maxlength="120" placeholder="media, jar count, method…"></div>'+
+    '<div class="abrow"><button class="mini solid" data-act="save">Add</button>'+
+      '<button class="mini ghosty" data-act="cancel">Cancel</button></div></div>';
+}
+function sourceCardHtml(s){
+  var kids = state.cultures.filter(function(c){ return c.parentKind==='source' && c.parentId===s.id; });
+  var d = descendants(s.id);
+  var h = '<div class="srccard">';
+  h += '<div class="shead"><code class="scode">'+esc(s.code)+'</code>'+
+    '<span class="sname">'+esc(s.sci || (SPECIES[s.species]||SPECIES.other).sci || SPECIES[s.species].label)+'</span>'+
+    '<span class="chip '+(s.kind==='wild'?'chip-wild':'chip-buy')+'">'+(s.kind==='wild'?'🌲 Wild sample':'📦 Purchased / given')+'</span></div>';
+  h += '<div class="smeta">'+esc(SPECIES[s.species].label)+' · logged '+esc(s.acquiredAt);
+  if(s.kind==='purchased'){
+    if(s.supplier) h += ' · from <b>'+esc(s.supplier)+'</b>';
+    if(s.vendorBatch) h += ' · their batch <code>'+esc(s.vendorBatch)+'</code>';
+    if(s.contact) h += ' · '+esc(s.contact);
+  } else if(s.location){ h += ' · 📍 '+esc(s.location); }
+  h += '</div>';
+  if(s.notes) h += '<div class="nnotes">'+esc(s.notes)+'</div>';
+  h += '<div class="smeta2">'+d.cultures.length+' culture'+(d.cultures.length===1?'':'s')+
+       ' · '+d.batches.length+' batch'+(d.batches.length===1?'':'es')+' descended from this source</div>';
+  h += '<div class="nactions">';
+  ['petri','lc','grain'].forEach(function(t){
+    h += '<button class="mini" data-act="new" data-parent="'+s.id+'" data-type="'+t+'" data-src="1">+ '+CTYPE[t].label+'</button>';
+  });
+  h += '<button class="mini ghosty" data-act="delsrc" data-id="'+s.id+'">Delete source</button></div>';
+  if(addingUnder && addingUnder.parentId===s.id) h += addFormHtml(s.code, addingUnder.type);
+  kids.forEach(function(k){ h += cultureNodeHtml(k, 0); });
+  h += '</div>';
+  return h;
+}
+function render(){
+  $('tree').innerHTML = state.sources.map(sourceCardHtml).join('');
+  $('empty').style.display = state.sources.length ? 'none' : 'block';
+}
+function paint(){ render(); renderSummary(); renderRisk(); }
+
+/* ---- actions ---- */
+function setKind(k){
+  var purchased = k==='purchased';
+  [].forEach.call(document.querySelectorAll('.purchased-only'), function(el){ el.style.display = purchased?'flex':'none'; });
+  [].forEach.call(document.querySelectorAll('.wild-only'), function(el){ el.style.display = purchased?'none':'flex'; });
+  [].forEach.call(document.querySelectorAll('#kindToggle button'), function(b){ b.classList.toggle('active', b.getAttribute('data-kind')===k); });
+  srcKind = k;
+}
+var srcKind = 'purchased';
+function syncCodeSuggestion(){
+  var el=$('f-code');
+  if(!el.value || el.dataset.auto==='1'){ el.value = nextSourceCode($('f-species').value); el.dataset.auto='1'; }
+}
+function addSource(e){
+  e.preventDefault();
+  var msg=$('src-msg'), sp=$('f-species').value;
+  var code=($('f-code').value||'').trim() || nextSourceCode(sp);
+  if(state.sources.some(function(s){ return s.code.toLowerCase()===code.toLowerCase(); })){
+    msg.style.display='block'; msg.textContent='That tracking ID is already in use — pick another.'; return false;
+  }
+  var s = {
+    id:newId('src'), code:code, kind:srcKind, species:sp,
+    sci:($('f-sci').value||'').trim() || (SPECIES[sp]||SPECIES.other).sci,
+    supplier: srcKind==='purchased' ? ($('f-supplier').value||'').trim() : '',
+    vendorBatch: srcKind==='purchased' ? ($('f-vbatch').value||'').trim() : '',
+    contact: srcKind==='purchased' ? ($('f-contact').value||'').trim() : '',
+    location: srcKind==='wild' ? ($('f-loc').value||'').trim() : '',
+    acquiredAt: $('f-date').value || today(),
+    status:'ok', notes:($('f-notes').value||'').trim()
+  };
+  state.sources.push(s); save(); paint();
+  msg.style.display='none';
+  ['f-sci','f-supplier','f-vbatch','f-contact','f-loc','f-notes'].forEach(function(id){ $(id).value=''; });
+  $('f-code').value=''; $('f-code').dataset.auto='1'; syncCodeSuggestion();
+  if(window.track) try{ track('culture_add_source',{kind:s.kind}); }catch(_){}
+  showNudge('source');
+  return false;
+}
+function addCulture(parentId, isSource, type){
+  var code=($('a-code').value||'').trim();
+  if(!code) return;
+  var c = {
+    id:newId('cul'), code:code, type:type,
+    parentKind: isSource?'source':'culture', parentId:parentId,
+    createdAt: $('a-date').value || today(), status:'healthy',
+    notes:($('a-notes').value||'').trim()
+  };
+  state.cultures.push(c); addingUnder=null; save(); paint();
+  if(window.track) try{ track('culture_add',{type:type}); }catch(_){}
+  showNudge('culture');
+}
+$('tree').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-act]') : null;
+  if(!el) return;
+  var act = el.getAttribute('data-act');
+  if(act==='new'){
+    e.preventDefault();
+    addingUnder = {parentId:el.getAttribute('data-parent'), type:el.getAttribute('data-type'), isSource:el.getAttribute('data-src')==='1'};
+    paint();
+    var f=$('a-code'); if(f) f.focus();
+    return;
+  }
+  if(act==='cancel'){ e.preventDefault(); addingUnder=null; paint(); return; }
+  if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
+  var id = el.getAttribute('data-id');
+  if(act==='contam'){ var c=findCulture(id); if(c){ c.status='contaminated'; save(); paint();
+      if(window.track) try{ track('culture_contaminated',{}); }catch(_){} } return; }
+  if(act==='ok'){ var c2=findCulture(id); if(c2){ c2.status='healthy'; save(); paint(); } return; }
+  if(act==='used'){ var c3=findCulture(id); if(c3){ c3.status='used'; save(); paint(); } return; }
+  if(act==='del'){
+    var d=descendants(id);
+    var warn = (d.cultures.length||d.batches.length)
+      ? 'This culture has '+d.cultures.length+' culture(s) and '+d.batches.length+' batch(es) below it. Deleting it breaks that chain. Delete anyway?'
+      : 'Delete this culture?';
+    if(!confirm(warn)) return;
+    state.cultures = state.cultures.filter(function(x){ return x.id!==id; });
+    save(); paint(); return;
+  }
+  if(act==='delsrc'){
+    var ds=descendants(id);
+    if(ds.cultures.length && !confirm('This source has '+ds.cultures.length+' culture(s) descended from it. Delete the source and leave them orphaned?')) return;
+    if(!ds.cultures.length && !confirm('Delete this source?')) return;
+    state.sources = state.sources.filter(function(x){ return x.id!==id; });
+    save(); paint(); return;
+  }
+});
+
+[].forEach.call(document.querySelectorAll('#kindToggle button'), function(b){
+  b.addEventListener('click', function(){ setKind(b.getAttribute('data-kind')); });
+});
+$('f-species').addEventListener('change', function(){ $('f-code').dataset.auto='1'; syncCodeSuggestion(); });
+$('f-code').addEventListener('input', function(){ this.dataset.auto=''; });
+
+$('resetSample').addEventListener('click', function(){
+  if(!confirm('Replace your culture library with the sample one? Your grow log batches are not touched.')) return;
+  var sm=sampleCultures(); state.sources=sm.sources; state.cultures=sm.cultures; save(); paint();
+});
+$('seedLink').addEventListener('click', function(e){
+  e.preventDefault(); var sm=sampleCultures(); state.sources=sm.sources; state.cultures=sm.cultures; save(); paint();
+});
+
+/* ---- CSV export: one row per culture, with its full chain ---- */
+function chainOf(c){
+  return ancestry(c).map(function(a){ return a.item.code; }).reverse().concat([c.code]).join(' > ');
+}
+$('exportCsv').addEventListener('click', function(){
+  var rows = [['code','type','status','made_on','chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
+  state.cultures.forEach(function(c){
+    var an = ancestry(c), src = null;
+    for(var i=0;i<an.length;i++) if(an[i].kind==='source') src = an[i].item;
+    var bts = batchesOf(c.id).map(function(b){ return b.name; }).join('; ');
+    rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt, chainOf(c),
+      src?src.code:'', src?src.kind:'', src?SPECIES[src.species].label:'', src?src.supplier:'',
+      src?src.vendorBatch:'', src?src.contact:'', src?src.location:'', c.notes||'', bts]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(v){
+    v = String(v==null?'':v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }).join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'mycro-culture-library.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  if(window.track) try{ track('culture_export',{}); }catch(_){}
+  showNudge('export');
+});
+
+/* ---- cloud auto-sync (shared with the grow log; push-only, only once linked) ---- */
+var API='https://mycro-806349486128.us-central1.run.app';
+var CLOUD_KEY='mycro_growlog_cloud_id';
+function cloudId(){ try{ return localStorage.getItem(CLOUD_KEY)||''; }catch(e){ return ''; } }
+function setSync(txt,isErr){ var el=$('syncStatus'); if(!el) return;
+  el.textContent=txt; el.style.color=isErr?'#b23b3b':'var(--muted)'; el.style.display=txt?'block':'none'; }
+var _syncTimer=null;
+function autoSync(){
+  var id=cloudId(); if(!id) return;
+  setSync('Syncing…');
+  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,data:state})})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){ setSync('All changes synced to your private link ✓'); })
+    .catch(function(){ setSync('Saved on this device — we’ll sync when the connection is back.',true); });
+}
+function scheduleAutoSync(){
+  if(!cloudId()) return;                 // never upload from an unlinked device
+  if(_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(autoSync,1500);
+}
+if(cloudId()) setSync('All changes synced to your private link ✓');
+
+/* ---- aha nudge: honest email capture at the moment the library gets real ---- */
+var NUDGE_KEY='mycro_growlog_nudge_off';
+function nudgeOff(){ try{ return localStorage.getItem(NUDGE_KEY)==='1'; }catch(e){ return false; } }
+function showNudge(src){
+  if(nudgeOff()) return;
+  var n=$('ahaNudge'); if(!n || n.style.display==='block') return;
+  $('nudgeLead').textContent = src==='export' ? 'Exporting by hand?' :
+    (src==='source' ? 'Source logged.' : 'That culture is on the record.');
+  n.style.display='block';
+  if(window.track) try{ track('culture_nudge_show',{src:src}); }catch(_){}
+}
+$('nudgeDismiss').addEventListener('click', function(){
+  $('ahaNudge').style.display='none';
+  try{ localStorage.setItem(NUDGE_KEY,'1'); }catch(e){}
+  if(window.track) try{ track('culture_nudge_dismiss',{}); }catch(_){}
+});
+$('nudgeEmailBtn').addEventListener('click', function(){
+  var em=($('nudgeEmail').value||'').trim(), note=$('nudgeEmailNote');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ note.textContent='Please enter a valid email.'; note.style.color='#b23b3b'; return; }
+  if(!state.sources.length && !state.cultures.length){ note.textContent='Log a source first, then we can email your library.'; note.style.color='#b23b3b'; return; }
+  var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
+  if(window.track) try{ track('culture_nudge_email_click',{}); }catch(_){}
+  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(j){
+      try{ localStorage.setItem(CLOUD_KEY, j.id); }catch(e){}
+      setSync('All changes synced to your private link ✓');
+      if(window.track) try{ track('growlog_cloud_backup',{src:'culture-nudge'}); }catch(_){}
+      return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id})});
+    })
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){
+      $('nudgeEmailRow').innerHTML='<p style="margin:0;font-size:.92rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private link — it opens your library and grow log on any device.</p>';
+      note.textContent='From now on every change on this device syncs to that link automatically.';
+      if(window.track) try{ track('growlog_backup_email',{src:'culture-nudge'}); }catch(_){}
+    })
+    .catch(function(){ note.textContent='Could not send just now — please try again in a moment.'; note.style.color='#b23b3b';
+      btn.disabled=false; btn.textContent=prev; });
+});
+
+/* ---- boot ---- */
+$('f-date').value = today();
+syncCodeSuggestion();
+paint();
+</script>
+
+<style>
+/* culture-library specific */
+.srccard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
+.shead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.scode{font-size:1rem;font-weight:800;letter-spacing:.01em;background:var(--brand-soft);color:var(--brand-ink);
+  padding:3px 9px;border-radius:8px}
+.sname{font-weight:700;font-style:italic;font-size:1rem}
+.smeta{color:var(--muted);font-size:.86rem;margin:7px 0 0}
+.smeta2{color:var(--muted);font-size:.82rem;margin:7px 0 0;font-weight:600}
+.node{border-left:2px solid var(--line);padding:10px 0 2px 12px;margin-top:10px}
+.node.blocknode{border-left-style:dashed}
+.nhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nico{font-size:1rem}
+.ncode{font-weight:750;font-size:.93rem;letter-spacing:.01em}
+.nmeta{color:var(--muted);font-size:.82rem}
+.nnotes{font-size:.85rem;color:var(--muted);font-style:italic;margin:5px 0 0}
+.nactions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.chip{display:inline-block;font-size:.7rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+.chip-ok{background:#DCF0E2;color:#1f6b3c}
+.chip-used{background:#EDEAE3;color:#6B6457}
+.chip-bad{background:#F6E0DA;color:#9a3417}
+.chip-wild{background:var(--moss-soft);color:var(--moss)}
+.chip-buy{background:var(--brand-soft);color:var(--brand-ink)}
+.mini{font:inherit;font-size:.82rem;font-weight:700;padding:6px 11px;border-radius:999px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s;text-decoration:none;display:inline-block}
+.mini:hover{background:var(--surface-2);text-decoration:none}
+.mini.solid{background:var(--moss);color:#fff;border-color:transparent}
+.mini.solid:hover{background:#2f5a3c}
+.mini.warn{color:#9a3417}
+.mini.ghosty{color:var(--muted);border-color:transparent;background:transparent}
+.mini.ghosty:hover{color:var(--warn);background:transparent}
+.addbox{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;background:var(--surface-2);
+  border-radius:12px;padding:13px 15px;margin:10px 0 4px}
+.addbox .abrow{display:flex;flex-direction:column;gap:4px}
+.addbox .abrow.wide{grid-column:1/-1}
+.addbox label{font-size:.78rem;font-weight:700;color:var(--muted)}
+.addbox input{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.addbox .abrow:last-child{flex-direction:row;gap:8px;align-items:center}
+.flagbox{background:#FBEDE8;border:1px solid #F0D2C6;border-radius:var(--radius);padding:16px 18px;margin:0 0 18px;font-size:.92rem}
+.flagbox > b{display:block;color:#9a3417;font-size:.98rem;margin-bottom:8px}
+.riskrow{padding:9px 0;border-top:1px dashed #EBC9BB}
+.riskrow:first-child{border-top:0;padding-top:2px}
+.riskline{margin-top:5px;color:var(--ink);font-size:.87rem;line-height:1.5}
+.riskline .rl{font-weight:700;color:#9a3417}
+.flagbox code,.riskline code{background:#fff;border-radius:6px;padding:1px 6px;font-size:.85rem}
+@media(max-width:640px){.addbox{grid-template-columns:1fr}.inline-grid{grid-template-columns:1fr}}
+</style>
+<script src="waitlist.js"></script>
+<script src="/track.js" defer></script>
+</body>
+</html>
