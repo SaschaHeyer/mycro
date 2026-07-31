@@ -25,6 +25,7 @@
 {"@type":"Question","name":"How is biological efficiency calculated?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is fresh mushroom yield divided by dry substrate weight, expressed as a percentage: BE = fresh yield ÷ dry substrate × 100. The grow log computes it automatically once you record a batch's harvest weight."}},
 {"@type":"Question","name":"What is a good contamination rate for mushroom growing?","acceptedAnswer":{"@type":"Answer","text":"Many small farms run 5–15% contamination across blocks; under 5% is excellent and over 20% usually points to a sterilization, spawn or handling problem. Tracking which batches fail and at which stage is the fastest way to find the root cause."}},
 {"@type":"Question","name":"Can I print labels for my mushroom blocks?","acceptedAnswer":{"@type":"Answer","text":"Yes. The free Mycro grow log prints a label card for every batch you are running: species, spawn date, the date it should finish colonising, block count and dry substrate weight, a write-in line for each flush, and a QR code that opens your grow log on a phone. Tape one label to each block or bag so the shelf always matches the log. No sign-up and no cost."}},
+{"@type":"Question","name":"How do I work out my cost per pound of mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Add up what a run cost you — substrate, spawn, supplies and bags, and your labour — then divide by the fresh weight that run actually harvested. Cost per pound = total run cost ÷ fresh yield. Count your failed runs too: a contaminated batch cost real money and produced nothing, so leaving it out flatters the number. The free Mycro grow log does this per batch and then groups it by method and by strain, so you can see which recipe genuinely produces the cheapest pound rather than which one has the cheapest substrate."}},
 {"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 30–60 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
 </script>
 </head>
@@ -62,6 +63,13 @@
     <a href="culture-library.html">Culture Library</a> logs your sources, petri dishes, liquid
     cultures and grain spawn, so a block traces back to the jar, the plate and the supplier it came
     from — and a contamination traces forward to everything it touched.</p>
+
+  <p class="note no-print" style="margin:0 0 16px;border-left:3px solid var(--brand)">
+    <b style="color:var(--ink)">New — what a pound actually costs you.</b> Put what a run cost —
+    substrate, spawn, supplies, labour — on its card with the <b>💵 Costs</b> button, and the log
+    works out your <b>cost per pound, grouped by method and by strain</b>. Failed runs are counted,
+    because they cost real money and produced nothing. Add what you sell for and you get margin per
+    pound too — so a test run tells you something financial, not just that it worked.</p>
 
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 16px;flex-wrap:wrap">
     <div class="toggle" id="unitToggle" role="group" aria-label="Weight units">
@@ -127,6 +135,43 @@
     </p>
   </div>
 
+  <!-- Cost per run → cost per pound (appears once a run has costs on it) -->
+  <div class="results no-print" id="costPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">What a pound actually costs you</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="toggle" id="costGroupToggle" role="group" aria-label="Group costs by">
+          <button data-group="method" class="active">By method</button>
+          <button data-group="species">By strain</button>
+        </div>
+        <select id="curSel" aria-label="Currency" style="font:inherit;font-size:.82rem;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--bg,#fff);color:var(--ink)">
+          <option value="$">$</option><option value="€">€</option><option value="£">£</option><option value="CHF">CHF</option>
+        </select>
+      </div>
+    </div>
+    <div class="kpis" style="margin-bottom:14px">
+      <div class="kpi"><div class="v" id="c-spend">–</div><div class="l">Spend on finished runs</div></div>
+      <div class="kpi"><div class="v" id="c-yield">–</div><div class="l">Fresh yield from them</div></div>
+      <div class="kpi"><div class="v" id="c-perlb">–</div><div class="l" id="c-perlb-l">Cost per lb</div></div>
+      <div class="kpi"><div class="v" id="c-live">–</div><div class="l">Committed, still in production</div></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="costTable">
+        <thead><tr>
+          <th id="costHead">Method</th><th>Runs</th><th>Spend</th><th>Yield</th>
+          <th id="costWt">Cost / lb</th><th>Avg BE</th><th id="costMarginHead">Margin / lb</th>
+        </tr></thead>
+        <tbody id="costBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="costNote" style="display:none;font-size:.84rem;margin:12px 2px 0"></p>
+    <p class="muted strainBridge" style="font-size:.84rem;margin:10px 2px 0">
+      Add costs to any run with the <b>💵 Costs</b> button on its card. Two runs of the same strain
+      on different recipes, and this table tells you which one actually pays.
+      <a href="/#founding">Become a Founding Grower · $99</a>
+    </p>
+  </div>
+
   <!-- Add batch -->
   <div class="panel">
     <h3><span class="step">+</span> Add a batch</h3>
@@ -158,6 +203,16 @@
         <div class="field" id="f-culture-wrap" style="display:none"><label>Spawn from <span class="hint">(culture)</span></label>
           <select id="f-culture"></select>
           <span class="hint">Links this batch to the jar it came from, so a contamination can be traced back.</span></div>
+        <div class="field"><label>Method / recipe <span class="hint">(optional)</span></label>
+          <input id="f-method" type="text" maxlength="48" list="methodList" placeholder="e.g. Master's Mix (50/50)" autocomplete="off">
+          <datalist id="methodList">
+            <option value="Master's Mix (50/50)"></option>
+            <option value="Supplemented sawdust"></option>
+            <option value="Pasteurised straw"></option>
+            <option value="Straw + soy hull"></option>
+            <option value="Coco coir + vermiculite"></option>
+          </datalist>
+          <span class="hint">Groups your cost per pound, so you can compare recipes.</span></div>
         <div class="field"><label>Notes <span class="hint">(optional)</span></label>
           <input id="f-notes" type="text" maxlength="120" placeholder="strain, substrate, room…" autocomplete="off"></div>
       </div>
@@ -318,30 +373,44 @@ function fmtWt(g){ var v = unit==='lb' ? g/LB : g/1000; var d = v<10?2:(v<100?1:
 function sampleState(){
   // A believable healthy small farm: 2 active (one flagged for slow colonization),
   // 5 harvested with real BE, 1 lost → ~17% loss rate, ~81% avg BE.
-  return { v:1, batches:[
+  // Costs & methods (I72) are on the samples too, so the money panel has something to say
+  // on a first visit: straw runs cheaper per lb than master's mix here partly because a
+  // master's-mix run was lost — which is exactly the point the panel makes.
+  return { v:1, cur:'$', batches:[
     {id:'s1', name:"Lion's Mane #4", species:'lions', dryG:4*LB, blocks:12,
      inoculatedOn:daysAgoIso(22), stage:'fruiting', stageSince:daysAgoIso(5), yieldG:null,
+     method:'Supplemented sawdust', costs:{substrate:15,spawn:9,supplies:4,labor:26},
      notes:'Supplemented sawdust'},
     {id:'s2', name:'King Oyster #6', species:'king', dryG:5*LB, blocks:10,
      inoculatedOn:daysAgoIso(24), stage:'colonizing', stageSince:daysAgoIso(24), yieldG:null,
+     method:"Master's Mix (50/50)", costs:{substrate:11,spawn:7,supplies:3,labor:18},
      notes:'Slow — watching for contamination'},
     {id:'s3', name:'Pearl Oyster #11', species:'pearl', dryG:5*LB, blocks:24,
      inoculatedOn:daysAgoIso(34), stage:'harvested', stageSince:daysAgoIso(3), yieldG:90*LB,
-     flushes:[52*LB,38*LB], parentId:'c6', notes:'Two flushes, soy hull masters mix'},
+     flushes:[52*LB,38*LB], parentId:'c6',
+     method:"Master's Mix (50/50)", costs:{substrate:26,spawn:17,supplies:7,labor:40}, priceG:9/LB,
+     notes:'Two flushes, soy hull masters mix'},
     {id:'s4', name:'Blue Oyster #9', species:'pearl', dryG:5*LB, blocks:20,
      inoculatedOn:daysAgoIso(40), stage:'harvested', stageSince:daysAgoIso(8), yieldG:84*LB,
+     method:"Master's Mix (50/50)", costs:{substrate:22,spawn:14,supplies:6,labor:34}, priceG:9/LB,
      notes:''},
     {id:'s5', name:'Shiitake #2', species:'shiitake', dryG:5*LB, blocks:16,
      inoculatedOn:daysAgoIso(75), stage:'harvested', stageSince:daysAgoIso(6), yieldG:72*LB,
-     parentId:'c3', notes:'Long colonization but strong yield'},
+     parentId:'c3',
+     method:'Supplemented sawdust', costs:{substrate:20,spawn:12,supplies:5,labor:44}, priceG:12/LB,
+     notes:'Long colonization but strong yield'},
     {id:'s6', name:'Pink Oyster #7', species:'pink', dryG:4.5*LB, blocks:20,
      inoculatedOn:daysAgoIso(31), stage:'harvested', stageSince:daysAgoIso(4), yieldG:63*LB,
+     method:'Pasteurised straw', costs:{substrate:9,spawn:14,supplies:6,labor:30}, priceG:9/LB,
      notes:''},
     {id:'s7', name:'Pearl Oyster #10', species:'pearl', dryG:5*LB, blocks:24,
      inoculatedOn:daysAgoIso(45), stage:'harvested', stageSince:daysAgoIso(12), yieldG:102*LB,
-     flushes:[48*LB,34*LB,20*LB], notes:''},
+     flushes:[48*LB,34*LB,20*LB],
+     method:'Pasteurised straw', costs:{substrate:11,spawn:17,supplies:7,labor:36}, priceG:9/LB,
+     notes:''},
     {id:'s8', name:'King Oyster #3', species:'king', dryG:5*LB, blocks:10,
      inoculatedOn:daysAgoIso(28), stage:'contaminated', stageSince:daysAgoIso(11), yieldG:null,
+     method:"Master's Mix (50/50)", costs:{substrate:11,spawn:7,supplies:3,labor:18},
      notes:'Green mold at several blocks → tossed batch'}
   ]};
 }
@@ -350,7 +419,10 @@ function validBatch(b){
     SPECIES[b.species] && typeof b.dryG==='number' && typeof b.blocks==='number' &&
     typeof b.inoculatedOn==='string' && STAGE_LABEL[b.stage] && typeof b.stageSince==='string' &&
     (b.flushes==null || Array.isArray(b.flushes)) &&
-    (b.parentId==null || typeof b.parentId==='string');   // optional culture link (I71)
+    (b.parentId==null || typeof b.parentId==='string') &&   // optional culture link (I71)
+    (b.method==null || typeof b.method==='string') &&       // optional method/recipe (I72)
+    (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
+    (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
 // (yieldG set, no flushes) is treated as a single flush so the model stays consistent.
@@ -420,6 +492,132 @@ function overdueNote(b){
   if(b.stage==='inoculated' && daysSince(b.inoculatedOn)>4)
     return 'Still marked inoculated after '+daysSince(b.inoculatedOn)+'d — advance it when mycelium starts running.';
   return null;
+}
+
+/* ---- cost per run → cost per pound (I72) ----
+   Requested by our first paying grower: "dialling in efficient methods is where the money
+   goes — a test run should tell me something financial, not just that it worked."
+   Costs are plain currency amounts on the batch (unit-independent); the sale price is stored
+   per gram so the lb/kg toggle can't corrupt it. Everything here is optional — a batch with
+   no costs is unchanged, and the panel stays hidden until at least one run has costs. */
+var COST_KEYS = [['substrate','Substrate'],['spawn','Spawn'],['supplies','Supplies & bags'],['labor','Labour']];
+var CURRENCIES = {'$':'$','€':'€','£':'£','CHF':'CHF '};
+var costGroup = 'method';     // 'method' | 'species' — how the money panel is grouped
+var editingCostId = null;     // batch id whose cost form is open
+
+function curSym(){ var c = state && state.cur; return CURRENCIES[c] ? CURRENCIES[c] : '$'; }
+function money(n){
+  if(n==null || !isFinite(n)) return '—';
+  var d = Math.abs(n) < 1000 ? 2 : 0;
+  return curSym()+n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+// Per-weight money always keeps cents — it's the number you compare methods on.
+function moneyPerWt(perG){
+  if(perG==null || !isFinite(perG)) return '—';
+  var per = perG * (unit==='lb' ? LB : 1000);
+  return curSym()+per.toFixed(2)+'/'+unit;
+}
+function numOr0(x){ return (typeof x==='number' && isFinite(x) && x>=0) ? x : 0; }
+// Total spend on a run, or null if the grower hasn't recorded any cost for it.
+function costTotal(b){
+  var c=b.costs; if(!c || typeof c!=='object') return null;
+  var any=false, sum=0;
+  COST_KEYS.forEach(function(k){ var v=c[k[0]];
+    if(typeof v==='number' && isFinite(v) && v>=0){ any=true; sum+=v; } });
+  return any ? sum : null;
+}
+function hasCost(b){ return costTotal(b)!=null; }
+function isFinished(b){ return b.stage==='harvested' || b.stage==='contaminated'; }
+function costPerG(b){
+  var t=costTotal(b);
+  return (t!=null && b.stage==='harvested' && b.yieldG>0) ? t/b.yieldG : null;
+}
+function revenueOf(b){
+  return (typeof b.priceG==='number' && b.stage==='harvested' && b.yieldG>0) ? b.priceG*b.yieldG : null;
+}
+function methodOf(b){ return (b.method||'').trim() || 'Unspecified method'; }
+
+/* ---- cost & margin panel ---- */
+function renderCosts(){
+  var panel=$('costPanel'); if(!panel) return;
+  var bs=state.batches;
+  if(!bs.some(hasCost)){ panel.style.display='none'; return; }
+
+  // Only FINISHED runs drive cost/lb: a run still in production has its spend booked but its
+  // yield unknown, and averaging it in would flatter every number. A contaminated run DOES
+  // count — its cost was real and its yield was zero, which is the honest picture.
+  var finished = bs.filter(function(b){ return isFinished(b) && hasCost(b); });
+  var live     = bs.filter(function(b){ return !isFinished(b) && hasCost(b); });
+  var spend    = finished.reduce(function(a,b){ return a+costTotal(b); },0);
+  var yieldG   = finished.reduce(function(a,b){ return a+(b.stage==='harvested'?(b.yieldG||0):0); },0);
+  var committed= live.reduce(function(a,b){ return a+costTotal(b); },0);
+  var blended  = yieldG>0 ? spend/yieldG : null;
+  var lost     = finished.filter(function(b){ return b.stage==='contaminated'; })
+                         .reduce(function(a,b){ return a+costTotal(b); },0);
+
+  $('c-spend').textContent   = finished.length ? money(spend) : '—';
+  $('c-yield').textContent   = yieldG>0 ? fmtWt(yieldG) : '—';
+  $('c-perlb').textContent   = blended!=null ? moneyPerWt(blended) : '—';
+  $('c-perlb-l').textContent = 'Cost per '+unit+' (all finished runs)';
+  $('c-live').textContent    = live.length ? money(committed) : '—';
+
+  // group the finished runs
+  var by={};
+  finished.forEach(function(b){
+    var k = costGroup==='method' ? methodOf(b) : SPECIES[b.species].label;
+    var g = by[k] || (by[k]={key:k,n:0,spend:0,yield:0,bes:[],rev:0,priced:0,contam:0,harv:0});
+    g.n++; g.spend += costTotal(b);
+    if(b.stage==='contaminated') g.contam++;
+    if(b.stage==='harvested'){ g.harv++; g.yield += (b.yieldG||0); }
+    var be=beOf(b); if(be!=null) g.bes.push(be);
+    var r=revenueOf(b); if(r!=null){ g.rev+=r; g.priced++; }
+  });
+  var rows=Object.keys(by).map(function(k){
+    var g=by[k];
+    g.perG  = g.yield>0 ? g.spend/g.yield : null;
+    g.avgBe = g.bes.length ? g.bes.reduce(function(a,x){return a+x;},0)/g.bes.length : null;
+    // Margin needs a price on EVERY harvested run in the group — otherwise the group's full
+    // spend would be charged against partial revenue and the number would read too low.
+    g.marginG = (g.harv>0 && g.priced===g.harv && g.yield>0) ? (g.rev-g.spend)/g.yield : null;
+    return g;
+  });
+  var anyMargin = rows.some(function(g){ return g.marginG!=null; });
+  // cheapest cost/lb first; groups with no yield yet fall to the bottom
+  rows.sort(function(a,b){
+    if((a.perG!=null)!==(b.perG!=null)) return a.perG!=null?-1:1;
+    if(a.perG!=null&&b.perG!=null) return a.perG-b.perG;
+    return b.n-a.n;
+  });
+  var best=null;
+  rows.forEach(function(g){ if(g.perG!=null&&(best==null||g.perG<best)) best=g.perG; });
+
+  $('costHead').textContent = costGroup==='method' ? 'Method' : 'Strain';
+  $('costWt').textContent   = 'Cost / '+unit;
+  var mh=$('costMarginHead'); mh.style.display = anyMargin ? '' : 'none';
+  $('costBody').innerHTML = rows.map(function(g){
+    var crown = (g.perG!=null && g.perG===best && rows.length>1)
+      ? ' <span class="crown" title="Your cheapest pound">🏆</span>' : '';
+    var lossNote = g.contam ? ' <span class="sub">('+g.contam+' lost)</span>' : '';
+    return '<tr>'+
+      '<td class="sname">'+esc(g.key)+crown+'</td>'+
+      '<td>'+g.n+lossNote+'</td>'+
+      '<td>'+money(g.spend)+'</td>'+
+      '<td>'+(g.yield>0?fmtWt(g.yield):'—')+'</td>'+
+      '<td class="'+(g.perG!=null&&g.perG===best&&rows.length>1?'lg':'')+'">'+moneyPerWt(g.perG)+'</td>'+
+      '<td>'+(g.avgBe!=null?Math.round(g.avgBe)+'%':'—')+'</td>'+
+      (anyMargin ? '<td class="'+(g.marginG!=null?(g.marginG>0?'lg':'lb'):'')+'">'+
+        (g.marginG!=null?moneyPerWt(g.marginG):'—')+'</td>' : '')+
+      '</tr>';
+  }).join('');
+
+  var note=$('costNote');
+  if(lost>0){
+    note.style.display='block';
+    note.innerHTML = 'Contaminated runs are counted: '+money(lost)+' of that spend produced nothing. '+
+      'That loss is part of your real cost per '+unit+' — which is why the cheapest substrate '+
+      'is not always the cheapest pound.';
+  } else { note.style.display='none'; }
+  panel.style.display='block';
 }
 
 /* ---- summary ---- */
@@ -504,7 +702,29 @@ function stepperHtml(b){
   return out;
 }
 
+/* The money editor for one run: what it cost to build, and what it sells for. Opened from
+   the card so the add-batch form stays short — costs are often only known afterwards. */
+function costFormHtml(b){
+  var c=b.costs||{};
+  var priceIn = (typeof b.priceG==='number')
+    ? (b.priceG*(unit==='lb'?LB:1000)).toFixed(2) : '';
+  var fields = COST_KEYS.map(function(k){
+    var v = (typeof c[k[0]]==='number' && isFinite(c[k[0]])) ? c[k[0]] : '';
+    return '<label class="yl">'+k[1]+' ('+curSym().trim()+')'+
+      '<input class="costIn" data-k="'+k[0]+'" type="number" step="0.01" min="0" value="'+v+'" autocomplete="off"></label>';
+  }).join('');
+  return '<form class="yieldForm costForm" onsubmit="return saveCost(event,\''+b.id+'\')">'+
+    '<label class="yl" style="min-width:180px">Method / recipe'+
+      '<input id="costMethod" type="text" maxlength="48" list="methodList" value="'+esc(b.method||'')+'" placeholder="e.g. Pasteurised straw" autocomplete="off"></label>'+
+    fields+
+    '<label class="yl">Sells for ('+curSym().trim()+'/'+unit+')'+
+      '<input id="costPrice" type="number" step="0.01" min="0" value="'+priceIn+'" placeholder="optional" autocomplete="off"></label>'+
+    '<button class="mini solid" type="submit">Save costs</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelCost">Cancel</button></form>';
+}
+
 function actionsHtml(b){
+  if(editingCostId===b.id) return costFormHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
     var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
@@ -516,20 +736,21 @@ function actionsHtml(b){
       '<button class="mini solid" type="submit">'+btn+'</button>'+
       '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button></form>';
   }
+  var costBtn = '<button class="mini" data-act="cost" data-id="'+b.id+'">💵 Costs</button>';
   if(b.stage==='contaminated' || b.stage==='harvested'){
     var extra='';
     if(b.stage==='harvested'){
       extra = '<button class="mini solid" data-act="logflush" data-id="'+b.id+'">+ Log another flush</button>'+
               '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>';
     }
-    return extra+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
+    return extra+costBtn+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
   }
   var next = {inoculated:['colonizing','Start colonizing'],colonizing:['fruiting','Move to fruiting'],fruiting:['harvest','Record harvest']};
   var n=next[b.stage];
   var advance = n[0]==='harvest'
     ? '<button class="mini solid" data-act="harvest" data-id="'+b.id+'">'+n[1]+'</button>'
     : '<button class="mini solid" data-act="advance" data-id="'+b.id+'" data-to="'+n[0]+'">'+n[1]+'</button>';
-  return advance+
+  return advance+costBtn+
     '<button class="mini" data-act="contam" data-id="'+b.id+'">Mark contaminated</button>'+
     '<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
 }
@@ -549,6 +770,18 @@ function batchHtml(b){
     ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry</div>'+flushLine
     : '';
   var odLine = od ? '<div class="flag">⚠ '+esc(od)+'</div>' : '';
+  // Money line: what this run cost, and — once it's harvested and priced — what it made.
+  var ct=costTotal(b), cpg=costPerG(b), rev=revenueOf(b);
+  var costLine='';
+  if(ct!=null || b.method){
+    var bits=[];
+    if(b.method) bits.push(esc(b.method));
+    if(ct!=null) bits.push('<b>'+money(ct)+'</b>'+(isFinished(b)?' spent':' committed'));
+    if(cpg!=null) bits.push(moneyPerWt(cpg)+' to grow');
+    if(rev!=null && ct!=null) bits.push((rev-ct>=0?'+':'')+money(rev-ct)+' margin');
+    if(b.stage==='contaminated' && ct!=null) bits.push('lost with the batch');
+    costLine = '<div class="costline">💵 '+bits.join(' · ')+'</div>';
+  }
   var notes = b.notes ? '<div class="bnotes">'+esc(b.notes)+'</div>' : '';
   var cul = b.parentId ? cultureOf(b.parentId) : null;
   var flag = cul ? flaggedAncestor(cul.id) : null;
@@ -563,7 +796,7 @@ function batchHtml(b){
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
       '<span class="bsp">'+esc(sp.label)+'</span></div>'+
     '<div class="bmeta">'+meta+'</div>'+
-    stepperHtml(b)+ culLine + beLine + odLine + notes +
+    stepperHtml(b)+ culLine + beLine + costLine + odLine + notes +
     '<div class="bactions">'+actionsHtml(b)+'</div>'+
   '</div>';
 }
@@ -577,6 +810,7 @@ function paint(){
   setUnitLabels();
   renderSummary();
   renderStrains();
+  renderCosts();
   renderCultureSelect();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
@@ -605,6 +839,7 @@ function addBatch(e){
     species:$('f-species').value, dryG:gFromInput(dry), blocks:blocks,
     inoculatedOn:d, stage:'inoculated', stageSince:d, yieldG:null,
     parentId:parentId,
+    method:($('f-method').value||'').trim()||null,
     notes:($('f-notes').value||'').trim()
   });
   save(); render();
@@ -635,6 +870,26 @@ function saveYield(e,id){
   return false;
 }
 
+function saveCost(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b) return false;
+  var costs={}, any=false;
+  document.querySelectorAll('.costForm .costIn').forEach(function(inp){
+    var v=parseFloat(inp.value);
+    if(isFinite(v) && v>=0){ costs[inp.getAttribute('data-k')]=v; any=true; }
+  });
+  b.costs = any ? costs : null;
+  var m=($('costMethod').value||'').trim();
+  b.method = m || null;
+  var p=parseFloat($('costPrice').value);
+  // price is entered per displayed unit but stored per gram, so the lb/kg toggle is safe
+  b.priceG = (isFinite(p) && p>0) ? p/(unit==='lb'?LB:1000) : null;
+  editingCostId=null; save(); render();
+  if(window.track) try{ track('growlog_cost_save',{priced:b.priceG!=null?1:0}); }catch(_){}
+  if(any) showNudge('cost');
+  return false;
+}
+
 document.addEventListener('click',function(e){
   var el=e.target.closest && e.target.closest('[data-act]');
   if(!el) return;
@@ -644,9 +899,28 @@ document.addEventListener('click',function(e){
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='edityield' && b){ editingYieldId=id; yieldMode='edit'; render(); }
   else if(act==='cancelYield'){ editingYieldId=null; yieldMode='append'; render(); }
+  else if(act==='cost' && b){ editingCostId=(editingCostId===id?null:id); editingYieldId=null; render(); }
+  else if(act==='cancelCost'){ editingCostId=null; render(); }
   else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='delete' && b){ state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render(); }
 });
+
+/* ---- cost panel controls ---- */
+document.querySelectorAll('#costGroupToggle button').forEach(function(bt){
+  bt.addEventListener('click',function(){
+    var g=this.dataset.group; if(g===costGroup) return; costGroup=g;
+    document.querySelectorAll('#costGroupToggle button').forEach(function(x){
+      x.classList.toggle('active',x.dataset.group===costGroup); });
+    renderCosts();
+  });
+});
+(function wireCurrency(){
+  var sel=$('curSel'); if(!sel) return;
+  if(state.cur && CURRENCIES[state.cur]) sel.value=state.cur;
+  sel.addEventListener('change',function(){
+    state.cur=this.value; save(); render();
+  });
+})();
 
 /* ---- unit toggle ---- */
 function setUnitLabels(){ $('u-dry').textContent='('+unit+')'; }
@@ -672,17 +946,23 @@ function download(name,text,type){
   a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 $('exportCsv').addEventListener('click',function(){
-  var rows=[['label','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','notes']];
+  var per = unit==='lb'? LB : 1000;
+  var rows=[['label','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
+  var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
     var dry = unit==='lb'? b.dryG/LB : b.dryG/1000;
     var y = b.yieldG!=null ? toU(b.yieldG) : '';
     var flu = (b.flushes||[]).map(function(x){return toU(x).toFixed(2);}).join('; ');
     var be=beOf(b);
     var cul = b.parentId ? cultureOf(b.parentId) : null;
+    var c=b.costs||{}, cpg=costPerG(b);
     rows.push([b.name,SPECIES[b.species].label,b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
-      cul?cul.code:'', (b.notes||'').replace(/"/g,'""')]);
+      cul?cul.code:'', (b.method||'').replace(/"/g,'""'),
+      m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
+      m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
+      (b.notes||'').replace(/"/g,'""')]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
   download('mycro-grow-log.csv',csv,'text/csv');
@@ -892,7 +1172,8 @@ function showNudge(src){
   var n=$('ahaNudge'); if(!n || n.style.display!=='none') return;   // show once
   var lead=$('nudgeLead');
   if(lead) lead.textContent = (src==='export') ? "Exporting by hand?"
-    : (src==='labels') ? "Labels on the blocks?" : "Nice — that's logged.";
+    : (src==='labels') ? "Labels on the blocks?"
+    : (src==='cost') ? "That's your cost per pound." : "Nice — that's logged.";
   n.style.display='block';
   if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
 }
@@ -974,6 +1255,11 @@ render();
 .culline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .culline code{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-size:.82rem}
 .culline .culbad{color:#9a3417}
+.costline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
+.costline b{color:var(--ink)}
+.costForm input[type=number]{width:104px}
+.costForm input[type=text]{width:100%;font:inherit;font-size:.95rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line)}
+#costGroupToggle button{font-size:.8rem;padding:5px 11px}
 .flag{font-size:.86rem;color:var(--warn);background:#FBEDE8;border-radius:10px;padding:8px 12px;margin:2px 0 8px}
 .bnotes{font-size:.88rem;color:var(--muted);margin:2px 0 8px;font-style:italic}
 .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
