@@ -128,6 +128,9 @@
           </select></div>
         <div class="field"><label>Species name <span class="hint">(scientific or common)</span></label>
           <input id="f-sci" type="text" maxlength="60" placeholder="e.g. Lentinula edodes" autocomplete="off"></div>
+        <div class="field purchased-only" id="f-book-wrap" style="display:none"><label>From your address book</label>
+          <select id="f-book"></select>
+          <span class="hint">Fills the two fields below. Change their number once in the address book and every source you got from them shows the new one.</span></div>
         <div class="field purchased-only"><label>Supplier <span class="hint">(company or individual)</span></label>
           <input id="f-supplier" type="text" maxlength="60" placeholder="e.g. North Spore" autocomplete="off"></div>
         <div class="field purchased-only"><label>Their batch number <span class="hint">(if given)</span></label>
@@ -710,9 +713,13 @@ function sourceCardHtml(s){
     '<span class="chip '+(s.kind==='wild'?'chip-wild':'chip-buy')+'">'+(s.kind==='wild'?'🌲 Wild sample':'📦 Purchased / given')+'</span></div>';
   h += '<div class="smeta">'+esc(SPECIES[s.species].label)+' · logged '+esc(s.acquiredAt);
   if(s.kind==='purchased'){
-    if(s.supplier) h += ' · from <b>'+esc(s.supplier)+'</b>';
+    // A linked address-book entry is the live truth; the typed fields are the fallback.
+    var bk = s.contactId ? contactOf(s.contactId) : null;
+    var who = bk ? bk.name : s.supplier;
+    var how = bk ? [bk.phone, bk.email].filter(Boolean).join(' · ') : s.contact;
+    if(who) h += ' · from <b>'+esc(who)+'</b>';
     if(s.vendorBatch) h += ' · their batch <code>'+esc(s.vendorBatch)+'</code>';
-    if(s.contact) h += ' · '+esc(s.contact);
+    if(how) h += ' · '+esc(how);
   } else if(s.location){ h += ' · 📍 '+esc(s.location); }
   h += '</div>';
   if(s.notes) h += '<div class="nnotes">'+esc(s.notes)+'</div>';
@@ -732,7 +739,35 @@ function render(){
   $('tree').innerHTML = state.sources.map(sourceCardHtml).join('');
   $('empty').style.display = state.sources.length ? 'none' : 'block';
 }
-function paint(){ render(); renderSummary(); renderRisk(); renderStrains(); }
+/* ---- the shared address book (I74) ----
+   Contacts are created and edited in the Grow Log's Deliveries panel; this page only reads
+   them, so there is one editor and no divergence. Purely additive: a library with no address
+   book behaves exactly as it did, and a source can still be typed in free-hand. */
+function contacts(){ return Array.isArray(state.contacts) ? state.contacts : []; }
+function contactOf(id){ var cs=contacts(); for(var i=0;i<cs.length;i++) if(cs[i].id===id) return cs[i]; return null; }
+function supplierContacts(){
+  return contacts().filter(function(c){ return c.role==='supplier' || c.role==='other'; });
+}
+function renderBook(){
+  var sel=$('f-book'), wrap=$('f-book-wrap'); if(!sel) return;
+  var list=supplierContacts();
+  wrap.style.display = list.length ? '' : 'none';   // no book yet → don't show an empty picker
+  var keep=sel.value;
+  sel.innerHTML = '<option value="">— type the supplier below —</option>'+list.map(function(c){
+    return '<option value="'+c.id+'">'+esc(c.name)+'</option>';
+  }).join('');
+  if(keep && contactOf(keep)) sel.value=keep;
+}
+(function wireBook(){
+  var sel=$('f-book'); if(!sel) return;
+  sel.addEventListener('change',function(){
+    var c=contactOf(this.value);
+    if(!c) return;
+    $('f-supplier').value=c.name||'';
+    $('f-contact').value=[c.phone,c.email].filter(Boolean).join(' · ');
+  });
+})();
+function paint(){ render(); renderSummary(); renderRisk(); renderStrains(); renderBook(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -760,6 +795,9 @@ function addSource(e){
     supplier: srcKind==='purchased' ? ($('f-supplier').value||'').trim() : '',
     vendorBatch: srcKind==='purchased' ? ($('f-vbatch').value||'').trim() : '',
     contact: srcKind==='purchased' ? ($('f-contact').value||'').trim() : '',
+    // Optional link into the shared address book. The typed fields above stay authoritative
+    // for a one-off supplier; when this is set, the book's current details win on display.
+    contactId: (srcKind==='purchased' && $('f-book').value) ? $('f-book').value : null,
     location: srcKind==='wild' ? ($('f-loc').value||'').trim() : '',
     acquiredAt: $('f-date').value || today(),
     status:'ok', notes:($('f-notes').value||'').trim()
@@ -767,6 +805,7 @@ function addSource(e){
   state.sources.push(s); save(); paint();
   msg.style.display='none';
   ['f-sci','f-supplier','f-vbatch','f-contact','f-loc','f-notes'].forEach(function(id){ $(id).value=''; });
+  if($('f-book')) $('f-book').value='';
   $('f-code').value=''; $('f-code').dataset.auto='1'; syncCodeSuggestion();
   if(window.track) try{ track('culture_add_source',{kind:s.kind}); }catch(_){}
   showNudge('source');
