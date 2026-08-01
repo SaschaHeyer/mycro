@@ -85,6 +85,8 @@
     </div>
   </div>
 
+  <div id="acctBar" class="acctBar no-print"></div>
+
   <!-- Strain strength: performance ABOVE the block — days to full colonisation + growth
        thickness per source, joined to what those genetics went on to yield. -->
   <div class="results" id="strainPanel" style="display:none;margin-bottom:18px">
@@ -276,6 +278,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
+<script src="/account.js"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -397,7 +400,8 @@ function load(){
   }
   return s;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} scheduleAutoSync(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} scheduleAutoSync();
+  try{ if(window.MycroAccount && MycroAccount.signedIn()) MycroAccount.scheduleSync(); }catch(e){} }
 var state = load();
 
 function newId(p){ return (p||'c')+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); }
@@ -998,6 +1002,30 @@ $('nudgeEmailBtn').addEventListener('click', function(){
 $('f-date').value = today();
 syncCodeSuggestion();
 paint();
+
+/* ---- account wiring (same shared document as the Grow Log) ---- */
+function isSampleOnly(){
+  var sm = sampleCultures();
+  var ids = (state.cultures||[]).map(function(c){ return c.id; });
+  var sids = sm.cultures.map(function(c){ return c.id; });
+  return ids.length===sids.length && ids.every(function(id,i){ return id===sids[i]; });
+}
+(function initAccount(){
+  if(!window.MycroAccount) return;
+  MycroAccount.init({
+    getState:   function(){ return state; },
+    countLocal: function(){ return isSampleOnly() ? 0 : (state.cultures||[]).length; },
+    countOf:    function(doc){ return (doc && Array.isArray(doc.cultures)) ? doc.cultures.length : 0; },
+    setState:   function(doc){
+      if(!doc || !Array.isArray(doc.batches)) return;
+      if(!Array.isArray(doc.sources) || !doc.sources.every(validSource)) return;
+      if(!Array.isArray(doc.cultures) || !doc.cultures.every(validCulture)) return;
+      state = doc; recordingOn=null;
+      try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+      paint();
+    }
+  });
+})();
 </script>
 
 <style>
@@ -1062,6 +1090,17 @@ table.strain .crown{font-size:.85rem}
 .riskline .rl{font-weight:700;color:#9a3417}
 .flagbox code,.riskline code{background:#fff;border-radius:6px;padding:1px 6px;font-size:.85rem}
 @media(max-width:640px){.addbox{grid-template-columns:1fr}.inline-grid{grid-template-columns:1fr}}
+.acctBar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:13px 16px;margin:0 0 16px;box-shadow:var(--shadow)}
+.acctRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.acctLbl,.acctWho{font-size:.92rem;font-weight:600;color:var(--ink)}
+.acctActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.acctActions input{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--line);background:var(--bg,#fff);color:var(--ink);min-width:190px}
+.acctBadge{display:inline-block;background:var(--brand-soft);color:var(--brand-ink);
+  font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+.acctHint{margin:7px 0 0;font-size:.82rem;color:var(--muted)}
+.acctStatus{margin-top:7px;font-size:.84rem;color:var(--muted)}
 </style>
 <script src="waitlist.js"></script>
 <script src="/track.js" defer></script>
