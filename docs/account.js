@@ -128,6 +128,7 @@
     if (!EMAIL_RE.test(em)) { setStatus('Please enter a valid email.', true); inp.focus(); return; }
     var btn = el('acctGo'), prev = btn.textContent;
     btn.disabled = true; btn.textContent = 'Sending…';
+    ls(EMAIL_HINT, em);        // so opening the link on this device needs no retyping
     post('/api/auth/request', { email: em })
       .then(function (j) {
         if (j && j.gated) {
@@ -188,6 +189,61 @@
     });
   }
 
+  /* ---- Firebase sign-in link ----
+     Firebase issues and verifies the identity; we exchange its ID token for a Mycro
+     session so everything downstream (the gate, the account, the log) is unchanged.
+     Loaded from the CDN only when a sign-in link is actually being opened, so a normal
+     visit to a free tool still downloads nothing extra. */
+  var FB = {
+    apiKey: 'AIzaSyBd3BuSaAeaUqEX-ex6VZrzcxbveLXsD3k',
+    authDomain: 'niche-ceo-3.firebaseapp.com',
+    projectId: 'niche-ceo-3',
+    appId: '1:806349486128:web:d496c1590d712289c215f5'
+  };
+  var EMAIL_HINT = 'mycro_signin_email';
+
+  function isFirebaseLink() {
+    return /[?&]mode=signIn/.test(w.location.search) && /[?&]oobCode=/.test(w.location.search);
+  }
+
+  /* Redeem the link through the Identity Toolkit REST API rather than the full SDK — one
+     small request instead of ~150KB of JavaScript on a page that is mostly used offline. */
+  function completeFirebaseLink() {
+    var oob = (/[?&]oobCode=([^&]+)/.exec(w.location.search) || [])[1];
+    if (!oob) return Promise.resolve(false);
+    var email = ls(EMAIL_HINT) || ls(EMAIL_KEY);
+    if (!email) {
+      email = w.prompt('Please confirm the email you asked for the sign-in link with:') || '';
+    }
+    if (!EMAIL_RE.test(email)) { setStatus('That sign-in link needs the email it was sent to.', true); return Promise.resolve(false); }
+    try { history.replaceState({}, '', w.location.pathname + w.location.hash); } catch (e) {}
+
+    return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailLink?key=' + FB.apiKey, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, oobCode: decodeURIComponent(oob) })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.idToken) throw new Error((j.error && j.error.message) || 'link failed');
+        return post('/api/auth/firebase', { idToken: j.idToken });
+      })
+      .then(function (j) {
+        ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null);
+        state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
+        render();
+        setStatus('Signed in as ' + j.email + '.');
+        if (w.track) try { w.track('account_signin', { via: 'firebase', founder: j.founder ? 1 : 0 }); } catch (e) {}
+        return pull(false).then(function () { return true; });
+      })
+      .catch(function (e) {
+        render();
+        setStatus(/EXPIRED|INVALID/i.test(e.message)
+          ? 'That sign-in link has expired or was already used — ask for a new one.'
+          : 'Could not complete sign-in. Ask for a fresh link and try again.', true);
+        return false;
+      });
+  }
+
   /* A ?login=<token> in the URL is the one-time link being opened. */
   function consumeLoginToken() {
     var m = /[?&]login=([a-f0-9]{16,64})/.exec(w.location.search);
@@ -218,7 +274,8 @@
       var em = ls(EMAIL_KEY);
       if (token() && em) { state.email = em; }
       render();
-      consumeLoginToken().then(function (didLogin) {
+      var first = isFirebaseLink() ? completeFirebaseLink() : consumeLoginToken();
+      first.then(function (didLogin) {
         if (!didLogin && signedIn()) pull(false);   // refresh badge + adopt newer server copy
         state.ready = true;
       });
