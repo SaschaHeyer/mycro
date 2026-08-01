@@ -110,14 +110,19 @@
         '<div class="acctRow">' +
           '<label class="acctLbl" for="acctEmail">Sign in to your Mycro account</label>' +
           '<span class="acctActions">' +
+            '<button type="button" class="mini gbtn" id="acctGoogle">' +
+              '<svg viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.6 9.2c0-.6-.1-1.2-.2-1.8H9v3.4h4.8a4.1 4.1 0 0 1-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.5z"/><path fill="#34A853" d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H.9v2.3A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.9 10.7a5.4 5.4 0 0 1 0-3.4V5H.9a9 9 0 0 0 0 8l3-2.3z"/><path fill="#EA4335" d="M9 3.6c1.3 0 2.5.5 3.4 1.3l2.6-2.6A9 9 0 0 0 .9 5l3 2.3C4.6 5.2 6.6 3.6 9 3.6z"/></svg>' +
+              'Continue with Google</button>' +
+            '<span class="acctOr">or</span>' +
             '<input id="acctEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@farm.com">' +
-            '<button type="button" class="mini solid" id="acctGo">Email me a sign-in link</button>' +
+            '<button type="button" class="mini solid" id="acctGo">Email me a link</button>' +
           '</span>' +
         '</div>' +
         '<p class="acctHint">No password — we email you a one-time link. Accounts are currently ' +
         '<b>Founding Grower early access</b>; the grow log itself stays free and uncapped without one.</p>' +
         '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
       el('acctGo').addEventListener('click', requestLink);
+      el('acctGoogle').addEventListener('click', googleSignIn);
       el('acctEmail').addEventListener('keydown', function (e) { if (e.key === 'Enter') requestLink(); });
     }
     if (hooks.onChange) try { hooks.onChange(state); } catch (e) {}
@@ -202,6 +207,80 @@
   };
   var EMAIL_HINT = 'mycro_signin_email';
 
+  /* ---- Continue with Google ----
+     The SDK is loaded ONLY when someone actually clicks the button — a grower who never
+     signs in downloads none of it. The popup goes through the Firebase auth domain, which
+     is what makes this work without adding our own domain to an OAuth client we cannot
+     edit. Popups are unreliable on phones, so a blocked popup falls back to a redirect. */
+  var FB_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  var _fb = null;
+  function loadFirebase() {
+    if (_fb) return _fb;
+    _fb = Promise.all([
+      import(FB_SDK + 'firebase-app.js'),
+      import(FB_SDK + 'firebase-auth.js')
+    ]).then(function (mods) {
+      var app = mods[0], auth = mods[1];
+      var a = app.getApps().length ? app.getApp() : app.initializeApp(FB);
+      return { app: a, auth: auth, instance: auth.getAuth(a) };
+    });
+    return _fb;
+  }
+
+  function exchangeIdToken(idToken, via) {
+    return post('/api/auth/firebase', { idToken: idToken }).then(function (j) {
+      if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
+      ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null);
+      state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
+      render();
+      setStatus('Signed in as ' + j.email + '.');
+      if (w.track) try { w.track('account_signin', { via: via, founder: j.founder ? 1 : 0 }); } catch (e) {}
+      return pull(false).then(function () { return true; });
+    });
+  }
+
+  function googleSignIn() {
+    setStatus('Opening Google…');
+    var btn = el('acctGoogle'); if (btn) btn.disabled = true;
+    return loadFirebase().then(function (fb) {
+      var provider = new fb.auth.GoogleAuthProvider();
+      return fb.auth.signInWithPopup(fb.instance, provider)
+        .catch(function (e) {
+          // phones block popups routinely; a redirect is the reliable path there
+          if (/popup|not-supported|cancelled-popup/i.test(e.code || e.message || '')) {
+            try { sessionStorage.setItem('mycro_google_redirect', '1'); } catch (x) {}
+            return fb.auth.signInWithRedirect(fb.instance, provider).then(function () { return null; });
+          }
+          throw e;
+        })
+        .then(function (cred) {
+          if (!cred) return false;                       // redirect took over
+          return cred.user.getIdToken().then(function (t) { return exchangeIdToken(t, 'google'); });
+        });
+    }).catch(function (e) {
+      if (btn) btn.disabled = false;
+      setStatus(/not a founding grower|gated/i.test(e.message)
+        ? 'That Google account is not a Founding Grower yet.'
+        : 'Google sign-in did not complete. You can use the email link instead.', true);
+      return false;
+    });
+  }
+
+  /* If we sent the browser away to Google, pick the result up when it comes back. */
+  function completeGoogleRedirect() {
+    var pending = false;
+    try { pending = sessionStorage.getItem('mycro_google_redirect') === '1'; } catch (e) {}
+    if (!pending) return Promise.resolve(false);
+    try { sessionStorage.removeItem('mycro_google_redirect'); } catch (e) {}
+    return loadFirebase()
+      .then(function (fb) { return fb.auth.getRedirectResult(fb.instance); })
+      .then(function (cred) {
+        if (!cred || !cred.user) return false;
+        return cred.user.getIdToken().then(function (t) { return exchangeIdToken(t, 'google-redirect'); });
+      })
+      .catch(function () { setStatus('Google sign-in did not complete — try again.', true); return false; });
+  }
+
   function isFirebaseLink() {
     return /[?&]mode=signIn/.test(w.location.search) && /[?&]oobCode=/.test(w.location.search);
   }
@@ -225,24 +304,15 @@
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j.idToken) throw new Error((j.error && j.error.message) || 'link failed');
-        return post('/api/auth/firebase', { idToken: j.idToken });
-      })
-      .then(function (j) {
-        // Adopt a session only if it really is one. A half-answer must not leave the bar
-        // reading "Signed in as undefined" with a broken token stored behind it.
-        if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
-        ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null);
-        state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
-        render();
-        setStatus('Signed in as ' + j.email + '.');
-        if (w.track) try { w.track('account_signin', { via: 'firebase', founder: j.founder ? 1 : 0 }); } catch (e) {}
-        return pull(false).then(function () { return true; });
+        return exchangeIdToken(j.idToken, 'email-link');   // one exchange path for both routes
       })
       .catch(function (e) {
         render();
-        setStatus(/EXPIRED|INVALID/i.test(e.message)
-          ? 'That sign-in link has expired or was already used — ask for a new one.'
-          : 'Could not complete sign-in. Ask for a fresh link and try again.', true);
+        setStatus(/not a founding grower|gated/i.test(e.message)
+            ? 'That account is not a Founding Grower yet.'
+          : /EXPIRED|INVALID/i.test(e.message)
+            ? 'That sign-in link has expired or was already used — ask for a new one.'
+            : 'Could not complete sign-in. Ask for a fresh link and try again.', true);
         return false;
       });
   }
@@ -278,7 +348,8 @@
       var em = ls(EMAIL_KEY);
       if (token() && em) { state.email = em; }
       render();
-      var first = isFirebaseLink() ? completeFirebaseLink() : consumeLoginToken();
+      var first = isFirebaseLink() ? completeFirebaseLink()
+                : (/[?&]login=/.test(w.location.search) ? consumeLoginToken() : completeGoogleRedirect());
       first.then(function (didLogin) {
         if (!didLogin && signedIn()) pull(false);   // refresh badge + adopt newer server copy
         state.ready = true;

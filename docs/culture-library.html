@@ -278,7 +278,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
-<script src="/account.js?v=2"></script>
+<script src="/account.js?v=3"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -1101,6 +1101,18 @@ table.strain .crown{font-size:.85rem}
   font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
 .acctHint{margin:7px 0 0;font-size:.82rem;color:var(--muted)}
 .acctStatus{margin-top:7px;font-size:.84rem;color:var(--muted)}
+.acctActions .gbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;
+  border:1px solid var(--line);font-weight:700}
+.acctActions .gbtn svg{width:16px;height:16px;flex:0 0 auto}
+.acctActions .gbtn:disabled{opacity:.6;cursor:default}
+.acctOr{color:var(--muted);font-size:.82rem}
+@media (max-width:560px){
+  .acctRow{align-items:flex-start}
+  .acctActions{width:100%}
+  .acctActions .gbtn,.acctActions input,.acctActions #acctGo{width:100%;justify-content:center}
+  .acctOr{width:100%;text-align:center}
+}
+
 </style>
 <script src="waitlist.js"></script>
 <script src="/track.js" defer></script>
