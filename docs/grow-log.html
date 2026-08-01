@@ -26,6 +26,8 @@
 {"@type":"Question","name":"What is a good contamination rate for mushroom growing?","acceptedAnswer":{"@type":"Answer","text":"Many small farms run 5–15% contamination across blocks; under 5% is excellent and over 20% usually points to a sterilization, spawn or handling problem. Tracking which batches fail and at which stage is the fastest way to find the root cause."}},
 {"@type":"Question","name":"Can I print labels for my mushroom blocks?","acceptedAnswer":{"@type":"Answer","text":"Yes. The free Mycro grow log prints a label card for every batch you are running: species, spawn date, the date it should finish colonising, block count and dry substrate weight, a write-in line for each flush, and a QR code that opens your grow log on a phone. Tape one label to each block or bag so the shelf always matches the log. No sign-up and no cost."}},
 {"@type":"Question","name":"How do I work out my cost per pound of mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Add up what a run cost you — substrate, spawn, supplies and bags, and your labour — then divide by the fresh weight that run actually harvested. Cost per pound = total run cost ÷ fresh yield. Count your failed runs too: a contaminated batch cost real money and produced nothing, so leaving it out flatters the number. The free Mycro grow log does this per batch and then groups it by method and by strain, so you can see which recipe genuinely produces the cheapest pound rather than which one has the cheapest substrate."}},
+{"@type":"Question","name":"What should go on a mushroom delivery label?","acceptedAnswer":{"@type":"Answer","text":"A delivery label for fresh mushrooms should carry the buyer's name, the delivery address, the species, the weight in the box, your batch or lot number, and a contact number the buyer can reach you on. The batch number is the part growers most often leave off, and it is the one that matters: if a buyer calls about a delivery, the batch number is what lets you trace it back to the block, the spawn jar and the culture it came from. The free Mycro grow log prints all six on a label from a delivery you log, and adds a QR code the buyer can scan to call you or to text you about that batch."}},
+{"@type":"Question","name":"How do I keep track of who I sold mushrooms to?","acceptedAnswer":{"@type":"Answer","text":"Keep an address book of buyers and suppliers, and record each delivery against the batch it came out of — date, buyer, weight. That gives you two things a sales spreadsheet does not: you can see how much of a harvest has actually gone out and how much is still on the shelf, and if a buyer reports a problem you can trace that exact delivery back to the batch and its culture. The free Mycro grow log does this in the browser with no sign-up, and exports the deliveries to CSV."}},
 {"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 30–60 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
 </script>
 </head>
@@ -65,6 +67,13 @@
     from — and a contamination traces forward to everything it touched.</p>
 
   <p class="note no-print" style="margin:0 0 16px;border-left:3px solid var(--brand)">
+    <b style="color:var(--ink)">New — delivery labels and an address book.</b> Keep your buyers and
+    suppliers in <b>📦 Deliveries</b>, log what weight went to whom, and print the label that goes on
+    the box: buyer, address, species, weight, batch number and your own contact number — plus a QR
+    the buyer can scan to call you, or to text you about that exact batch. Because the batch number
+    is on it, a question about a delivery still leads back to the block, the jar and the source.</p>
+
+  <p class="note no-print" style="margin:0 0 16px;border-left:3px solid var(--brand)">
     <b style="color:var(--ink)">New — what a pound actually costs you.</b> Put what a run cost —
     substrate, spawn, supplies, labour — on its card with the <b>💵 Costs</b> button, and the log
     works out your <b>cost per pound, grouped by method and by strain</b>. Failed runs are counted,
@@ -78,6 +87,7 @@
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="printLabels">🏷 Print labels</button>
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="deliveryBtn">📦 Deliveries</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
@@ -172,6 +182,74 @@
     </p>
   </div>
 
+  <!-- Deliveries & contacts (I74): who you sell to, what went out, and the label that goes with it -->
+  <div class="results no-print" id="deliveryPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">Deliveries &amp; contacts</h3>
+      <span class="muted" style="font-size:.82rem">Log what went to which buyer, then print the label that goes on the box</span>
+    </div>
+
+    <div class="dsec">
+      <h4>Your details <span class="muted">— printed on every label so a buyer can reach you</span></h4>
+      <form class="dform" id="sellerForm" onsubmit="return saveSeller(event)">
+        <label class="yl">Farm / seller name<input id="s-name" type="text" maxlength="60" placeholder="e.g. Ridgeline Mushrooms" autocomplete="off"></label>
+        <label class="yl">Contact number<input id="s-phone" type="tel" maxlength="32" placeholder="e.g. +1 555 123 4567" autocomplete="off"></label>
+        <button class="mini solid" type="submit">Save my details</button>
+        <span class="muted dnote" id="sellerNote"></span>
+      </form>
+    </div>
+
+    <div class="dsec">
+      <h4>Address book</h4>
+      <div style="overflow-x:auto"><table class="strain" id="contactTable">
+        <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Address</th><th></th></tr></thead>
+        <tbody id="contactBody"></tbody>
+      </table></div>
+      <p class="muted dempty" id="contactEmpty" style="display:none">No contacts yet — add the buyers you deliver to and the suppliers you buy culture from.</p>
+      <form class="dform" id="contactForm" onsubmit="return saveContact(event)" style="margin-top:12px">
+        <label class="yl">Name<input id="c-name" type="text" maxlength="60" required autocomplete="off"></label>
+        <label class="yl">Role<select id="c-role"><option value="buyer">Buyer</option><option value="supplier">Supplier</option><option value="other">Other</option></select></label>
+        <label class="yl">Phone<input id="c-phone" type="tel" maxlength="32" autocomplete="off"></label>
+        <label class="yl">Email<input id="c-email" type="email" maxlength="80" autocomplete="off"></label>
+        <label class="yl wide">Address<textarea id="c-addr" rows="2" maxlength="200" placeholder="Street, city, postcode"></textarea></label>
+        <label class="yl wide">Notes<input id="c-notes" type="text" maxlength="120" placeholder="delivery day, gate code, what they buy…" autocomplete="off"></label>
+        <button class="mini solid" type="submit" id="contactSaveBtn">Add contact</button>
+        <button class="mini ghosty" type="button" id="contactCancel" style="display:none">Cancel</button>
+      </form>
+    </div>
+
+    <div class="dsec">
+      <h4>Deliveries</h4>
+      <form class="dform" id="deliveryForm" onsubmit="return saveDelivery(event)">
+        <label class="yl">Batch<select id="d-batch"></select></label>
+        <label class="yl">Buyer<select id="d-buyer"></select></label>
+        <label class="yl"><span>Weight <span id="u-del" class="muted"></span></span><input id="d-weight" type="number" step="0.1" min="0" required autocomplete="off"></label>
+        <label class="yl">Date<input id="d-date" type="date"></label>
+        <label class="yl">Batch number<input id="d-code" type="text" maxlength="24" placeholder="your lot code" autocomplete="off"></label>
+        <button class="mini solid" type="submit">Log delivery</button>
+        <span class="muted dnote" id="deliveryNote"></span>
+      </form>
+      <div style="overflow-x:auto;margin-top:12px"><table class="strain" id="deliveryTable">
+        <thead><tr><th>Date</th><th>Buyer</th><th>Batch</th><th>Weight</th><th></th></tr></thead>
+        <tbody id="deliveryBody"></tbody>
+      </table></div>
+      <p class="muted dempty" id="deliveryEmpty" style="display:none">Nothing delivered yet. Log a delivery and the label prints from it.</p>
+      <div class="dbar">
+        <label class="yl" style="flex-direction:row;align-items:center;gap:7px">QR on the label
+          <select id="d-qr">
+            <option value="contact">Saves your contact — buyer taps to call</option>
+            <option value="text">Texts you about that batch</option>
+          </select></label>
+        <button class="mini solid" type="button" id="printDeliveries">🏷 Print delivery labels</button>
+        <button class="mini" type="button" id="exportDeliveries">⬇ CSV</button>
+      </div>
+      <p class="muted" style="font-size:.82rem;margin:10px 2px 0">The label carries buyer, address,
+        species, weight, batch number and your contact number — plus a QR the buyer can scan if they
+        have a question, so a call about a delivery still leads back to the block, the jar and the
+        source behind it.</p>
+    </div>
+  </div>
+
   <!-- Add batch -->
   <div class="panel">
     <h3><span class="step">+</span> Add a batch</h3>
@@ -213,6 +291,9 @@
             <option value="Coco coir + vermiculite"></option>
           </datalist>
           <span class="hint">Groups your cost per pound, so you can compare recipes.</span></div>
+        <div class="field"><label>Batch number <span class="hint">(optional)</span></label>
+          <input id="f-code" type="text" maxlength="24" placeholder="e.g. SHI-24-07" autocomplete="off">
+          <span class="hint">Your own lot code. Goes on the delivery label a buyer keeps.</span></div>
         <div class="field"><label>Notes <span class="hint">(optional)</span></label>
           <input id="f-notes" type="text" maxlength="120" placeholder="strain, substrate, room…" autocomplete="off"></div>
       </div>
@@ -387,7 +468,7 @@ function sampleState(){
      notes:'Slow — watching for contamination'},
     {id:'s3', name:'Pearl Oyster #11', species:'pearl', dryG:5*LB, blocks:24,
      inoculatedOn:daysAgoIso(34), stage:'harvested', stageSince:daysAgoIso(3), yieldG:90*LB,
-     flushes:[52*LB,38*LB], parentId:'c6',
+     flushes:[52*LB,38*LB], parentId:'c6', code:'PEA-11',
      method:"Master's Mix (50/50)", costs:{substrate:26,spawn:17,supplies:7,labor:40}, priceG:9/LB,
      notes:'Two flushes, soy hull masters mix'},
     {id:'s4', name:'Blue Oyster #9', species:'pearl', dryG:5*LB, blocks:20,
@@ -396,7 +477,7 @@ function sampleState(){
      notes:''},
     {id:'s5', name:'Shiitake #2', species:'shiitake', dryG:5*LB, blocks:16,
      inoculatedOn:daysAgoIso(75), stage:'harvested', stageSince:daysAgoIso(6), yieldG:72*LB,
-     parentId:'c3',
+     parentId:'c3', code:'SHI-02',
      method:'Supplemented sawdust', costs:{substrate:20,spawn:12,supplies:5,labor:44}, priceG:12/LB,
      notes:'Long colonization but strong yield'},
     {id:'s6', name:'Pink Oyster #7', species:'pink', dryG:4.5*LB, blocks:20,
@@ -412,6 +493,21 @@ function sampleState(){
      inoculatedOn:daysAgoIso(28), stage:'contaminated', stageSince:daysAgoIso(11), yieldG:null,
      method:"Master's Mix (50/50)", costs:{substrate:11,spawn:7,supplies:3,labor:18},
      notes:'Green mold at several blocks → tossed batch'}
+  ],
+  // A buyer and a supplier, and two deliveries off the harvested batches, so the delivery
+  // label has something real to print on a first visit. Your own details stay blank on
+  // purpose — a label must never go out with someone else's phone number on it.
+  contacts:[
+    {id:'k1', name:'Harvest Lane Grocery', role:'buyer', phone:'+1 555 0134',
+     email:'produce@harvestlane.example', addr:'214 Harvest Lane\nAsheville, NC 28801',
+     notes:'Delivers Tuesday mornings, back door'},
+    {id:'k2', name:'North Ridge Spawn Co.', role:'supplier', phone:'+1 555 0177',
+     email:'orders@northridgespawn.example', addr:'88 Mill Road\nBurnsville, NC 28714',
+     notes:'Shiitake grain spawn'}
+  ],
+  deliveries:[
+    {id:'d1', batchId:'s3', contactId:'k1', weightG:32*LB, date:daysAgoIso(2), printedAt:null},
+    {id:'d2', batchId:'s5', contactId:'k1', weightG:24*LB, date:daysAgoIso(5), printedAt:null}
   ]};
 }
 function validBatch(b){
@@ -421,6 +517,7 @@ function validBatch(b){
     (b.flushes==null || Array.isArray(b.flushes)) &&
     (b.parentId==null || typeof b.parentId==='string') &&   // optional culture link (I71)
     (b.method==null || typeof b.method==='string') &&       // optional method/recipe (I72)
+    (b.code==null || typeof b.code==='string') &&           // optional lot / batch number (I74)
     (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
     (b.priceG==null || typeof b.priceG==='number');
 }
@@ -434,13 +531,30 @@ function normFlushes(b){
     b.flushes = [b.yieldG];
   }
 }
+/* Contacts, deliveries and the grower's own details (I74) are optional side-arrays on the
+   same document. They are sanitised rather than trusted, and a log that has none of them
+   loads and renders exactly as before. */
+function validContact(c){
+  return c && typeof c.id==='string' && typeof c.name==='string' && c.name.length>0;
+}
+function validDelivery(d){
+  return d && typeof d.id==='string' && typeof d.batchId==='string' &&
+    typeof d.weightG==='number' && isFinite(d.weightG) && d.weightG>=0 &&
+    typeof d.date==='string';
+}
+function normAux(s){
+  s.contacts   = Array.isArray(s.contacts)   ? s.contacts.filter(validContact)    : undefined;
+  s.deliveries = Array.isArray(s.deliveries) ? s.deliveries.filter(validDelivery) : undefined;
+  if(!s.seller || typeof s.seller!=='object' || Array.isArray(s.seller)) s.seller = undefined;
+  return s;
+}
 function load(){
   try{
     var s = JSON.parse(localStorage.getItem(KEY));
     if(s && Array.isArray(s.batches) && s.batches.every(validBatch)){
       s.batches.forEach(function(b){ if(typeof b.yieldG!=='number') b.yieldG = b.yieldG==null?null:null;
         if(typeof b.notes!=='string') b.notes=''; normFlushes(b); });
-      return s;
+      return normAux(s);
     }
   }catch(e){}
   return sampleState();
@@ -741,7 +855,8 @@ function actionsHtml(b){
     var extra='';
     if(b.stage==='harvested'){
       extra = '<button class="mini solid" data-act="logflush" data-id="'+b.id+'">+ Log another flush</button>'+
-              '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>';
+              '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>'+
+              '<button class="mini" data-act="deliver" data-id="'+b.id+'">📦 Deliver</button>';
     }
     return extra+costBtn+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
   }
@@ -782,6 +897,16 @@ function batchHtml(b){
     if(b.stage==='contaminated' && ct!=null) bits.push('lost with the batch');
     costLine = '<div class="costline">💵 '+bits.join(' · ')+'</div>';
   }
+  // What has actually left the farm off this batch, and what is still on the shelf.
+  var dels=deliveriesFor(b.id), delLine='';
+  if(dels.length){
+    var out=deliveredG(b.id), rem=remainingG(b);
+    var buyers={}; dels.forEach(function(d){ if(d.contactId) buyers[d.contactId]=1; });
+    var nb=Object.keys(buyers).length;
+    delLine = '<div class="delline">📦 '+fmtWt(out)+' delivered'+
+      (nb?' to '+nb+' buyer'+(nb===1?'':'s'):'')+
+      (rem!=null && rem>0 ? ' · '+fmtWt(rem)+' still to go out' : '')+'</div>';
+  }
   var notes = b.notes ? '<div class="bnotes">'+esc(b.notes)+'</div>' : '';
   var cul = b.parentId ? cultureOf(b.parentId) : null;
   var flag = cul ? flaggedAncestor(cul.id) : null;
@@ -796,7 +921,7 @@ function batchHtml(b){
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
       '<span class="bsp">'+esc(sp.label)+'</span></div>'+
     '<div class="bmeta">'+meta+'</div>'+
-    stepperHtml(b)+ culLine + beLine + costLine + odLine + notes +
+    stepperHtml(b)+ culLine + beLine + costLine + delLine + odLine + notes +
     '<div class="bactions">'+actionsHtml(b)+'</div>'+
   '</div>';
 }
@@ -812,6 +937,7 @@ function paint(){
   renderStrains();
   renderCosts();
   renderCultureSelect();
+  renderDelivery();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
   $('empty').style.display='none';
@@ -840,10 +966,11 @@ function addBatch(e){
     inoculatedOn:d, stage:'inoculated', stageSince:d, yieldG:null,
     parentId:parentId,
     method:($('f-method').value||'').trim()||null,
+    code:($('f-code').value||'').trim()||null,
     notes:($('f-notes').value||'').trim()
   });
   save(); render();
-  $('f-name').value=''; $('f-notes').value=''; $('f-date').value=today();
+  $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; $('f-date').value=today();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value}); }catch(_){}
   showNudge('add');
   return false;
@@ -903,6 +1030,26 @@ document.addEventListener('click',function(e){
   else if(act==='cancelCost'){ editingCostId=null; render(); }
   else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='delete' && b){ state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render(); }
+  /* deliveries & contacts (I74) */
+  else if(act==='deliver' && b){
+    var p=$('deliveryPanel'); p.style.display='block';
+    renderDelivery();
+    $('d-batch').value=id; syncDeliveryDefaults();
+    if(!$('d-date').value) $('d-date').value=today();
+    p.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  else if(act==='editContact'){ editContact(id); }
+  else if(act==='delContact'){
+    if(!confirm('Delete this contact? Deliveries already logged to them keep their record.')) return;
+    state.contacts=contacts().filter(function(x){return x.id!==id;});
+    if(editingContactId===id) clearContactForm();
+    save(); render();
+  }
+  else if(act==='labelDelivery'){ var d=deliveryOf(id); if(d) printDeliveryList([d]); }
+  else if(act==='delDelivery'){
+    state.deliveries=deliveries().filter(function(x){return x.id!==id;});
+    save(); render();
+  }
 });
 
 /* ---- cost panel controls ---- */
@@ -947,7 +1094,7 @@ function download(name,text,type){
 }
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
-  var rows=[['label','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'notes']];
+  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
@@ -957,11 +1104,13 @@ $('exportCsv').addEventListener('click',function(){
     var be=beOf(b);
     var cul = b.parentId ? cultureOf(b.parentId) : null;
     var c=b.costs||{}, cpg=costPerG(b);
-    rows.push([b.name,SPECIES[b.species].label,b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
+    var dlv=deliveredG(b.id);
+    rows.push([b.name,b.code||'',SPECIES[b.species].label,b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
       cul?cul.code:'', (b.method||'').replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
+      dlv>0 ? toU(dlv).toFixed(2) : '',
       (b.notes||'').replace(/"/g,'""')]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
@@ -974,6 +1123,274 @@ $('exportJson').addEventListener('click',function(){
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
   showNudge('export');
 });
+
+/* ---- contacts, deliveries & delivery labels (I74) ------------------------------------
+   Requested by a Founding Grower, and the label carries exactly the six things he said it
+   has to carry: buyer, address, species, weight, batch number, seller contact number —
+   plus the QR he'd never seen anywhere, so a buyer holding the box can reach the grower
+   about that specific batch. Client-side like the rest; contacts and deliveries are
+   optional side-arrays on the same document, so a log without them is unchanged. ---- */
+var ROLE_LABEL = {buyer:'Buyer', supplier:'Supplier', other:'Other'};
+var editingContactId = null;
+
+function contacts(){ return Array.isArray(state.contacts) ? state.contacts : []; }
+function deliveries(){ return Array.isArray(state.deliveries) ? state.deliveries : []; }
+function seller(){ return (state.seller && typeof state.seller==='object') ? state.seller : {}; }
+function contactOf(id){ var cs=contacts(); for(var i=0;i<cs.length;i++) if(cs[i].id===id) return cs[i]; return null; }
+function deliveryOf(id){ var ds=deliveries(); for(var i=0;i<ds.length;i++) if(ds[i].id===id) return ds[i]; return null; }
+function deliveriesFor(bid){ return deliveries().filter(function(d){ return d.batchId===bid; }); }
+function deliveredG(bid){ return deliveriesFor(bid).reduce(function(a,d){ return a+d.weightG; },0); }
+/* What's left of a harvest that hasn't gone out yet — the default weight for the next delivery. */
+function remainingG(b){
+  if(typeof b.yieldG!=='number') return null;
+  return Math.max(0, b.yieldG - deliveredG(b.id));
+}
+function batchNumber(b){ return (b && b.code) ? b.code : (b ? b.name : ''); }
+
+/* ---- your own details (printed on every label) ---- */
+function saveSeller(e){
+  e.preventDefault();
+  var n=($('s-name').value||'').trim(), p=($('s-phone').value||'').trim();
+  state.seller = (n||p) ? {name:n, phone:p} : undefined;
+  save(); renderDelivery();
+  var note=$('sellerNote');
+  note.textContent = (n&&p) ? 'Saved ✓' : 'Saved — a label needs both a name and a number.';
+  note.style.color = (n&&p) ? '' : '#b23b3b';
+  setTimeout(function(){ if(note) note.textContent=''; }, 4000);
+  return false;
+}
+
+/* ---- address book ---- */
+function saveContact(e){
+  e.preventDefault();
+  var name=($('c-name').value||'').trim();
+  if(!name) return false;
+  var rec = {
+    name:name,
+    role:$('c-role').value,
+    phone:($('c-phone').value||'').trim(),
+    email:($('c-email').value||'').trim(),
+    addr:($('c-addr').value||'').trim(),
+    notes:($('c-notes').value||'').trim()
+  };
+  if(!Array.isArray(state.contacts)) state.contacts=[];
+  if(editingContactId){
+    var c=contactOf(editingContactId);
+    if(c){ for(var k in rec) c[k]=rec[k]; }
+  } else {
+    rec.id = 'k'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+    state.contacts.push(rec);
+  }
+  editingContactId=null; save(); render(); clearContactForm();
+  if(window.track) try{ track('growlog_contact_save',{role:rec.role}); }catch(_){}
+  return false;
+}
+function clearContactForm(){
+  ['c-name','c-phone','c-email','c-addr','c-notes'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  $('c-role').value='buyer';
+  $('contactSaveBtn').textContent='Add contact';
+  $('contactCancel').style.display='none';
+  editingContactId=null;
+}
+function editContact(id){
+  var c=contactOf(id); if(!c) return;
+  editingContactId=id;
+  $('c-name').value=c.name||''; $('c-role').value=c.role||'buyer';
+  $('c-phone').value=c.phone||''; $('c-email').value=c.email||'';
+  $('c-addr').value=c.addr||''; $('c-notes').value=c.notes||'';
+  $('contactSaveBtn').textContent='Save contact';
+  $('contactCancel').style.display='';
+  $('c-name').focus();
+}
+
+/* ---- deliveries ---- */
+function saveDelivery(e){
+  e.preventDefault();
+  var bid=$('d-batch').value, b=find(bid);
+  var note=$('deliveryNote');
+  if(!b){ note.textContent='Add a batch first.'; note.style.color='#b23b3b'; return false; }
+  var w=parseFloat($('d-weight').value);
+  if(!isFinite(w) || w<=0){ note.textContent='Enter the weight that went out.'; note.style.color='#b23b3b'; return false; }
+  if(!Array.isArray(state.deliveries)) state.deliveries=[];
+  var code=($('d-code').value||'').trim();
+  if(code) b.code=code;              // the lot code lives on the batch, not the delivery
+  state.deliveries.push({
+    id:'d'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    batchId:bid, contactId:$('d-buyer').value||null,
+    weightG:gFromInput(w), date:$('d-date').value||today(), printedAt:null
+  });
+  save(); render();
+  note.textContent='Logged ✓ — print its label below.'; note.style.color='';
+  setTimeout(function(){ if(note) note.textContent=''; }, 4000);
+  if(window.track) try{ track('growlog_delivery_save',{}); }catch(_){}
+  showNudge('delivery');
+  return false;
+}
+
+/* ---- rendering ---- */
+function renderContacts(){
+  var cs=contacts();
+  $('contactEmpty').style.display = cs.length ? 'none' : 'block';
+  $('contactTable').style.display = cs.length ? '' : 'none';
+  $('contactBody').innerHTML = cs.map(function(c){
+    return '<tr>'+
+      '<td class="sname">'+esc(c.name)+'</td>'+
+      '<td>'+esc(ROLE_LABEL[c.role]||'Other')+'</td>'+
+      '<td>'+esc(c.phone||'—')+'</td>'+
+      '<td class="daddr">'+(c.addr?esc(c.addr).replace(/\n/g,', '):'—')+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="mini" data-act="editContact" data-id="'+c.id+'">Edit</button> '+
+        '<button class="mini ghosty" data-act="delContact" data-id="'+c.id+'">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+}
+function renderDeliverySelects(){
+  var bsel=$('d-batch'), keep=bsel.value;
+  var order={harvested:0,fruiting:1,inoculated:2,colonizing:2,contaminated:3};
+  var rank=function(m,k){ return m[k]==null ? 2 : m[k]; };   // 0 is a real rank, not a miss
+  var bs=state.batches.slice().sort(function(a,b){ return rank(order,a.stage)-rank(order,b.stage); });
+  bsel.innerHTML = bs.map(function(b){
+    return '<option value="'+b.id+'">'+esc(b.name)+(b.code?' ('+esc(b.code)+')':'')+'</option>';
+  }).join('');
+  if(keep && find(keep)) bsel.value=keep;
+
+  var csel=$('d-buyer'), keepC=csel.value;
+  var r={buyer:0,other:1,supplier:2};
+  var cs=contacts().slice().sort(function(a,b){ return rank(r,a.role)-rank(r,b.role); });
+  csel.innerHTML = '<option value="">— no buyer —</option>'+cs.map(function(c){
+    return '<option value="'+c.id+'">'+esc(c.name)+(c.role!=='buyer'?' ('+esc(ROLE_LABEL[c.role]||'Other')+')':'')+'</option>';
+  }).join('');
+  if(keepC && contactOf(keepC)) csel.value=keepC;
+  $('u-del').textContent='('+unit+')';
+}
+function renderDeliveryList(){
+  var ds=deliveries().slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+  $('deliveryEmpty').style.display = ds.length ? 'none' : 'block';
+  $('deliveryTable').style.display = ds.length ? '' : 'none';
+  $('deliveryBody').innerHTML = ds.map(function(d){
+    var b=find(d.batchId), c=d.contactId?contactOf(d.contactId):null;
+    return '<tr>'+
+      '<td>'+esc(d.date)+'</td>'+
+      '<td class="sname">'+esc(c?c.name:'—')+'</td>'+
+      '<td>'+esc(b?batchNumber(b):'(deleted batch)')+'</td>'+
+      '<td>'+fmtWt(d.weightG)+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="mini" data-act="labelDelivery" data-id="'+d.id+'">🏷 Label</button> '+
+        '<button class="mini ghosty" data-act="delDelivery" data-id="'+d.id+'">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+  var n=unprintedDeliveries().length;
+  $('printDeliveries').textContent = n ? '🏷 Print '+n+' new label'+(n===1?'':'s') : '🏷 Print delivery labels';
+}
+function renderDelivery(){
+  var panel=$('deliveryPanel');
+  if(!panel || panel.style.display==='none') return;
+  var sv=seller();
+  if(document.activeElement!==$('s-name')) $('s-name').value = sv.name||'';
+  if(document.activeElement!==$('s-phone')) $('s-phone').value = sv.phone||'';
+  renderContacts(); renderDeliverySelects(); renderDeliveryList();
+}
+function unprintedDeliveries(){
+  return deliveries().filter(function(d){ return !d.printedAt && find(d.batchId); });
+}
+
+/* ---- the delivery label ---- */
+function telDigits(p){ return String(p||'').replace(/[^\d+]/g,''); }
+function mecardEsc(s){ return String(s||'').replace(/([\\;:,])/g,'\\$1'); }
+/* Two honest options, both offline: a contact card the phone offers to save/call, or a
+   pre-addressed text about that exact batch. Nothing is sent to us either way. */
+function deliveryQrPayload(d,b){
+  var sv=seller(), tel=telDigits(sv.phone);
+  if(!tel) return null;
+  if(($('d-qr')&&$('d-qr').value)==='text'){
+    var sp=b?SPECIES[b.species].label:'', code=b?batchNumber(b):'';
+    return 'SMSTO:'+tel+':Question about batch '+code+(sp?' ('+sp+')':'')+' — ';
+  }
+  return 'MECARD:N:'+mecardEsc(sv.name||'')+';TEL:'+tel+';;';
+}
+function deliveryQrCaption(){
+  return ($('d-qr')&&$('d-qr').value)==='text'
+    ? 'Scan to text us about this batch' : 'Scan to save our number';
+}
+function deliveryLabelHtml(d){
+  var b=find(d.batchId), c=d.contactId?contactOf(d.contactId):null, sv=seller();
+  var payload=deliveryQrPayload(d,b);
+  var qr = (payload && window.QR) ? QR.svg(payload,150) : '';
+  var addr = c && c.addr ? esc(c.addr).replace(/\n/g,'<br>') : '';
+  return '<div class="lbl">'+
+    '<div class="lmain">'+
+      '<div class="leyebrow">Delivery</div>'+
+      '<div class="lname">'+esc(c?c.name:'—')+'</div>'+
+      (addr ? '<div class="laddr">'+addr+'</div>' : '')+
+      '<table class="lfacts"><tbody>'+
+        '<tr><th>Species</th><td>'+esc(b?SPECIES[b.species].label:'—')+'</td></tr>'+
+        '<tr><th>Weight</th><td>'+fmtWt(d.weightG)+'</td></tr>'+
+        '<tr><th>Batch no.</th><td>'+esc(b?batchNumber(b):'—')+'</td></tr>'+
+      '</tbody></table>'+
+      '<div class="lseller"><b>'+esc(sv.name||'')+'</b> · '+esc(sv.phone||'')+'</div>'+
+    '</div>'+
+    (qr ? '<div class="lqr">'+qr+'<div class="lcap">'+esc(deliveryQrCaption())+'</div></div>' : '')+
+  '</div>';
+}
+function buildDeliverySheet(list){
+  var body=list.map(deliveryLabelHtml).join('');
+  return labelDoc('Mycro delivery labels', list.length,
+    'cut along the cards and tape one to each box or crate.', body);
+}
+function printDeliveryList(list){
+  var sv=seller();
+  if(!sv.name || !sv.phone){
+    alert('Add your farm name and contact number first — they go on every label so a buyer can reach you.');
+    $('s-name').focus();
+    return;
+  }
+  if(!list.length){ alert('No new deliveries to label. Use the 🏷 Label button on a row to print one again.'); return; }
+  var w=window.open('','mycroDeliveryLabels');
+  if(!w){ alert('Your browser blocked the label window. Allow pop-ups for usemycro.com and try again.'); return; }
+  var html=buildDeliverySheet(list);
+  if(window.track) try{ track('growlog_delivery_labels',{n:list.length,qr:($('d-qr')||{}).value}); }catch(_){}
+  showNudge('delivery');
+  list.forEach(function(d){ d.printedAt=today(); });
+  save(); render();
+  w.document.open(); w.document.write(html); w.document.close();
+}
+$('printDeliveries').addEventListener('click',function(){ printDeliveryList(unprintedDeliveries()); });
+$('exportDeliveries').addEventListener('click',function(){
+  var rows=[['date','buyer','address','phone','species','weight_'+unit,'batch_number','batch_label']];
+  deliveries().forEach(function(d){
+    var b=find(d.batchId), c=d.contactId?contactOf(d.contactId):null;
+    rows.push([d.date, c?c.name:'', c?(c.addr||'').replace(/\n/g,', '):'', c?(c.phone||''):'',
+      b?SPECIES[b.species].label:'', (unit==='lb'? d.weightG/LB : d.weightG/1000).toFixed(2),
+      b?batchNumber(b):'', b?b.name:'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  download('mycro-deliveries.csv',csv,'text/csv');
+});
+$('contactCancel').addEventListener('click',clearContactForm);
+$('deliveryBtn').addEventListener('click',function(){
+  var p=$('deliveryPanel'), open = p.style.display==='none';
+  p.style.display = open ? 'block' : 'none';
+  if(open){
+    var dd=$('d-date'); if(!dd.value) dd.value=today();
+    renderDelivery(); syncDeliveryDefaults();
+    p.scrollIntoView({behavior:'smooth',block:'start'});
+    if(window.track) try{ track('growlog_delivery_open',{}); }catch(_){}
+  }
+});
+/* Default the weight to what's left of that batch's harvest, and show its lot code. */
+function syncDeliveryDefaults(){
+  var b=find($('d-batch').value); if(!b) return;
+  $('d-code').value = b.code||'';
+  var rem=remainingG(b);
+  $('d-weight').value = (rem!=null && rem>0) ? (unit==='lb'? rem/LB : rem/1000).toFixed(1) : '';
+}
+$('d-batch').addEventListener('change',syncDeliveryDefaults);
+$('d-qr').addEventListener('change',function(){
+  try{ state.labelQr=this.value; save(); }catch(e){}
+});
+(function initQrChoice(){
+  if(state.labelQr && $('d-qr')) $('d-qr').value=state.labelQr;
+})();
 
 /* ---- printable block labels (FREE): the paper bridge between the log and the shelf.
         One label per active batch — species, spawn date, expected colonisation date, blocks,
@@ -1015,8 +1432,14 @@ function buildLabelSheet(){
   var url=labelQrUrl(), qr=window.QR ? QR.svg(url,150) : '';
   var scanNote = cloudId() ? 'Scan → your grow log' : 'Scan → free grow log';
   var body=list.map(function(b){ return labelHtml(b,qr,scanNote); }).join('');
+  return labelDoc('Mycro block labels', list.length,
+    'cut along the cards and tape one to each block or bag.', body);
+}
+/* The shared print document for both label sheets (block labels and delivery labels).
+   Standalone window, so this page's own layout and print rules stay untouched. */
+function labelDoc(title, n, hint, body){
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
-    '<title>Mycro block labels</title><meta name="robots" content="noindex">'+
+    '<title>'+title+'</title><meta name="robots" content="noindex">'+
     '<style>'+
     '*{box-sizing:border-box}body{margin:0;padding:14px;background:#f6f5f2;'+
       'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#1a1a17}'+
@@ -1037,10 +1460,14 @@ function buildLabelSheet(){
     '.lqr{text-align:center;flex:0 0 auto}'+
     '.lqr svg{display:block;width:104px;height:104px}'+
     '.lcap{font-size:.66rem;color:#6B6457;margin-top:4px;max-width:110px;line-height:1.3}'+
+    '.leyebrow{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#C0562C;margin-bottom:2px}'+
+    '.laddr{font-size:.95rem;line-height:1.4;margin:2px 0 9px;white-space:pre-line}'+
+    '.lseller{margin-top:10px;padding-top:8px;border-top:1px dashed #cfcabf;font-size:.85rem;color:#6B6457}'+
+    '.lseller b{color:#1a1a17}'+
     '.foot{max-width:760px;margin:8px auto 0;font-size:.72rem;color:#8b8578;text-align:center}'+
     '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}}'+
     '</style></head><body>'+
-    '<div class="bar"><span><b>'+list.length+' label'+(list.length===1?'':'s')+'</b> · cut along the cards and tape one to each block or bag.</span>'+
+    '<div class="bar"><span><b>'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
     '<button type="button" onclick="window.print()">Print</button></div>'+
     '<div class="sheet">'+body+'</div>'+
     '<div class="foot">Mycro Grow Log · usemycro.com/grow-log.html</div>'+
@@ -1173,7 +1600,8 @@ function showNudge(src){
   var lead=$('nudgeLead');
   if(lead) lead.textContent = (src==='export') ? "Exporting by hand?"
     : (src==='labels') ? "Labels on the blocks?"
-    : (src==='cost') ? "That's your cost per pound." : "Nice — that's logged.";
+    : (src==='cost') ? "That's your cost per pound."
+    : (src==='delivery') ? "Out the door and on paper." : "Nice — that's logged.";
   n.style.display='block';
   if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
 }
@@ -1284,6 +1712,25 @@ table.strain .sub{color:var(--muted);font-weight:600;font-size:.82rem}
 table.strain td.lg{color:#1f6b3c;font-weight:700}
 table.strain td.lb{color:#9a3417;font-weight:700}
 table.strain .crown{font-size:.85rem}
+/* deliveries & contacts panel */
+.delline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
+#deliveryPanel .dsec{padding-top:14px;margin-top:14px;border-top:1px solid var(--line)}
+#deliveryPanel .dsec:first-of-type{padding-top:0;margin-top:0;border-top:none}
+#deliveryPanel h4{margin:0 0 10px;font-size:.9rem;letter-spacing:-.005em}
+#deliveryPanel h4 .muted{font-weight:500}
+.dform{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.dform .yl{font-size:.8rem;font-weight:700;display:flex;flex-direction:column;gap:4px}
+.dform .yl.wide{flex:1 1 240px}
+.dform input,.dform select,.dform textarea{font:inherit;font-size:.92rem;padding:7px 10px;
+  border-radius:8px;border:1px solid var(--line);background:var(--bg,#fff);color:var(--ink);width:170px}
+.dform .yl.wide input,.dform .yl.wide textarea{width:100%}
+.dform textarea{resize:vertical;line-height:1.4}
+.dform .mini{margin-bottom:1px}
+.dnote{font-size:.82rem;align-self:center;margin-bottom:8px}
+.dempty{font-size:.86rem;margin:4px 2px 0}
+.dbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:13px}
+.dbar select{font:inherit;font-size:.85rem;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg,#fff);color:var(--ink)}
+table.strain td.daddr{white-space:normal;min-width:170px;color:var(--muted)}
 </style>
 <script src="waitlist.js"></script>
 <script src="/track.js" defer></script>
