@@ -24,7 +24,9 @@
 {"@type":"Question","name":"What is mushroom culture lineage tracking?","acceptedAnswer":{"@type":"Answer","text":"Culture lineage tracking records the parent of every culture you make, so each petri dish, liquid culture, grain spawn jar and finished block can be traced back to the original source — the grower or supplier you bought it from, or the wild collection you took it from. It answers two questions a grow log alone cannot: which source and strain actually produces your best blocks, and, when a contaminant appears, which other cultures came off the same parent and need checking."}},
 {"@type":"Question","name":"What should I record about a mushroom culture source?","acceptedAnswer":{"@type":"Answer","text":"For a purchased or gifted sample: species (scientific or common name), the supplier's batch number if they give one, the name and contact details of the company or individual, the date and time you received it, and your own assigned tracking ID. For a wild field sample: species, the location the sample was taken (GPS coordinates or address), date and time, and an assigned tracking ID. The supplier details matter for two reasons — you can go back for more of a strain that performs, and if there is ever a liability question you have a chain of responsibility."}},
 {"@type":"Question","name":"How do I trace a mushroom contamination back to its source?","acceptedAnswer":{"@type":"Answer","text":"Mark the contaminated culture in your records, then walk the chain in both directions. Downstream: every culture and every block made from that culture is suspect and should be checked or quarantined. Upstream: look at its parent and at the other cultures made from that same parent — if they are clean, the contamination entered at your step; if they are also failing, it came in earlier, possibly with the source itself. The Mycro culture library does both walks automatically and lists the at-risk items."}},
-{"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}}]}
+{"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}},
+{"@type":"Question","name":"How do you measure the strength of a mushroom strain?","acceptedAnswer":{"@type":"Answer","text":"The two practical measures growers use on a petri dish are how many days it takes to fully colonise the plate and how thick the growth is — fast, thick, rhizomorphic growth indicates a vigorous strain, while slow or wispy growth suggests a weak or ageing culture. Those signals are only meaningful within a species, because shiitake naturally colonises far slower than oyster. The strongest confirmation comes later: the biological efficiency of the blocks grown from that culture. The free Mycro culture library records days to colonisation and growth thickness on any culture and shows them per source alongside the loss rate and the biological efficiency of the blocks descended from it."}},
+{"@type":"Question","name":"Why track the number of grain spawn jars?","acceptedAnswer":{"@type":"Answer","text":"One grain spawn jar usually inoculates several grow bags, so the jar count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six jars came off it — and how many blocks those jars went into — tells you the size of the problem and how much to quarantine. The free Mycro culture library stores an optional jar count on grain spawn and totals the affected jars and blocks in its traceback."}}]}
 </script>
 </head>
 <body>
@@ -81,6 +83,22 @@
       <div class="kpi" id="k-contam-card"><div class="v" id="k-contam">–</div><div class="l">Culture loss rate</div></div>
       <div class="kpi"><div class="v" id="k-traced">–</div><div class="l">Blocks traced to a culture</div></div>
     </div>
+  </div>
+
+  <!-- Strain strength: performance ABOVE the block — days to full colonisation + growth
+       thickness per source, joined to what those genetics went on to yield. -->
+  <div class="results" id="strainPanel" style="display:none;margin-bottom:18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">Strain strength — how each source performs</h3>
+      <span class="muted" style="font-size:.82rem">From your own plates: how fast they run, how thick they grow, what they yielded</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="strainTable">
+        <thead><tr><th>Source</th><th>Measured</th><th>Days to colonise</th><th>Growth</th><th>Cultures lost</th><th>Blocks</th><th>Avg BE</th></tr></thead>
+        <tbody id="strainBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="strainNote" style="font-size:.84rem;margin:12px 2px 0"></p>
   </div>
 
   <!-- Add source -->
@@ -208,6 +226,17 @@
       it came in earlier, possibly with the source. That distinction is the difference between fixing
       your technique and returning a bad lot. New to diagnosing what you're looking at? Read the
       <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
+    <p class="muted">Because a grain jar can inoculate several bags, grain spawn carries an optional
+      <b>jar count</b> — so the traceback tells you <i>how much</i> is affected ("6 jars and 24 blocks"),
+      not just which batch to go and look at.</p>
+
+    <h3 style="margin-top:16px">Strain strength: what a plate tells you before the block does</h3>
+    <p class="muted">Two things a grower already judges a culture on are <b>how long it takes to fully
+      colonise</b> and <b>how thick the growth is</b>. Record either on any culture and they roll up per
+      source, next to the loss rate of that lineage and the biological efficiency of the blocks that came
+      off it — so a plate that ran fast and thick can be checked against what it actually yielded months
+      later. Days to colonise are only comparable within a species (shiitake is naturally slower than
+      oyster), so the library only ranks sources of the same species against each other.</p>
 
     <h3 style="margin-top:16px">Why record supplier and location at all</h3>
     <p class="muted">Two reasons, and both are practical. First, repeatability: if a strain performs you
@@ -272,6 +301,14 @@ var CTYPE = {
   lc:    {label:'Liquid culture', icon:'💧', letter:'L', next:['lc','grain']},
   grain: {label:'Grain spawn', icon:'🌾', letter:'G', next:['grain']}
 };
+/* Growth thickness on a plate — the grower's own judgement, scored only so it can be averaged.
+   Michael (Founding Grower #1): "how long does it take to fully colonize the dish and the
+   thickness of growth. These are indicators of strain strength." */
+var VIGOR = {
+  thin:   {label:'Thin / wispy', short:'thin', score:1},
+  medium: {label:'Medium', short:'medium', score:2},
+  thick:  {label:'Thick / rhizomorphic', short:'thick', score:3}
+};
 var CSTATUS = {
   healthy:      {label:'Healthy', cls:'chip-ok'},
   used:         {label:'Used up', cls:'chip-used'},
@@ -281,6 +318,7 @@ var CSTATUS = {
 var BATCH_STAGE = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fruiting',harvested:'Harvested',contaminated:'Contaminated'};
 
 var addingUnder = null;   // {parentId, type} while an inline "add culture" form is open
+var recordingOn = null;   // culture id while its colonisation-performance form is open
 
 /* ---- date helpers ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -308,17 +346,22 @@ function sampleCultures(){
     ],
     cultures:[
       {id:'c1', code:'SHI-01-P1', type:'petri', parentKind:'source', parentId:'src1',
-       createdAt:daysAgoIso(170), status:'healthy', notes:'Cleaned up from the wedge'},
+       createdAt:daysAgoIso(170), colonisedAt:daysAgoIso(158), vigor:'thick',
+       status:'healthy', notes:'Cleaned up from the wedge'},
       {id:'c2', code:'SHI-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c1',
        createdAt:daysAgoIso(120), status:'healthy', notes:'Light malt broth'},
       {id:'c3', code:'SHI-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c2',
-       createdAt:daysAgoIso(95), status:'used', notes:'Rye, 5 jars'},
+       createdAt:daysAgoIso(95), jars:5, status:'used', notes:'Rye'},
+      {id:'c7', code:'SHI-01-P2', type:'petri', parentKind:'source', parentId:'src1',
+       createdAt:daysAgoIso(84), colonisedAt:daysAgoIso(71), vigor:'thick',
+       status:'healthy', notes:'Second plate off the same source'},
       {id:'c4', code:'PEA-01-P1', type:'petri', parentKind:'source', parentId:'src2',
-       createdAt:daysAgoIso(115), status:'healthy', notes:'Tissue clone'},
+       createdAt:daysAgoIso(115), colonisedAt:daysAgoIso(109), vigor:'medium',
+       status:'healthy', notes:'Tissue clone'},
       {id:'c5', code:'PEA-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c4',
        createdAt:daysAgoIso(60), status:'contaminated', notes:'Cloudy at day 5 — bacterial'},
       {id:'c6', code:'PEA-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c5',
-       createdAt:daysAgoIso(50), status:'used', notes:'Rye, 6 jars — inoculated before the LC turned'}
+       createdAt:daysAgoIso(50), jars:6, status:'used', notes:'Rye — inoculated before the LC turned'}
     ]
   };
 }
@@ -331,7 +374,10 @@ function validSource(s){
 function validCulture(c){
   return c && typeof c.id==='string' && typeof c.code==='string' && CTYPE[c.type] &&
     (c.parentKind==='source'||c.parentKind==='culture') && typeof c.parentId==='string' &&
-    CSTATUS[c.status] && typeof c.createdAt==='string';
+    CSTATUS[c.status] && typeof c.createdAt==='string' &&
+    (c.jars==null || typeof c.jars==='number') &&            // jar count on grain spawn (I73)
+    (c.colonisedAt==null || typeof c.colonisedAt==='string') && // fully-colonised date (I73)
+    (c.vigor==null || !!VIGOR[c.vigor]);                     // growth thickness (I73)
 }
 function load(){
   var s=null;
@@ -390,6 +436,24 @@ function ancestry(c){
   }
   return chain;
 }
+/* ---- performance + scale helpers (I73) ----
+   Jars: a grain jar can inoculate several bags, so a traceback that counts jars tells you
+   how much is affected, not just which batch. Colonisation days + growth thickness are the
+   two things a grower already judges a plate on. */
+function daysBetween(a,b){
+  if(!a||!b) return null;
+  var d = Math.round((parseIso(b)-parseIso(a))/86400000);
+  return (isFinite(d) && d>=0) ? d : null;
+}
+function colonisedDays(c){ return c.colonisedAt ? daysBetween(c.createdAt, c.colonisedAt) : null; }
+function jarsOf(c){ return (c.type==='grain' && typeof c.jars==='number' && c.jars>0) ? Math.round(c.jars) : 0; }
+function countJars(list){ return list.reduce(function(a,c){ return a+jarsOf(c); },0); }
+function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
+function beOf(b){
+  var totalDry = (typeof b.dryG==='number'?b.dryG:0) * (typeof b.blocks==='number'?b.blocks:0);
+  return (b.stage==='harvested' && typeof b.yieldG==='number' && b.yieldG>0 && totalDry>0)
+    ? (b.yieldG/totalDry*100) : null;
+}
 function atRisk(){
   // Live (not yet written off) items descended from anything marked contaminated.
   var bad = state.cultures.filter(function(c){ return c.status==='contaminated'; });
@@ -420,8 +484,13 @@ function renderRisk(){
   var r = atRisk(), box=$('riskPanel');
   if(!r.roots.length){ box.style.display='none'; return; }
   var n = r.cultures.length + r.batches.length;
+  var scale = [];
+  var rj = countJars(r.cultures), rb = countBlocks(r.batches);
+  if(rj) scale.push(rj + ' jar' + (rj>1?'s':''));
+  if(rb) scale.push(rb + ' block' + (rb>1?'s':''));
   $('riskHead').textContent = '⚠ Contamination traceback — ' + r.roots.length + ' contaminated culture' +
-    (r.roots.length>1?'s':'') + ', ' + (n ? n + ' item' + (n>1?'s':'') + ' downstream to check' : 'nothing downstream');
+    (r.roots.length>1?'s':'') + ', ' + (n ? n + ' item' + (n>1?'s':'') + ' downstream to check' +
+    (scale.length ? ' (' + scale.join(' and ') + ')' : '') : 'nothing downstream');
   var h = '';
   r.roots.forEach(function(c){
     var up = ancestry(c);
@@ -430,10 +499,14 @@ function renderRisk(){
       (c.createdAt?', made '+daysSince(c.createdAt)+'d ago':'')+')</span>';
     var d = descendants(c.id);
     if(d.cultures.length || d.batches.length){
+      var dj = countJars(d.cultures), db = countBlocks(d.batches), tot = [];
+      if(dj) tot.push(dj + ' jar' + (dj>1?'s':''));
+      if(db) tot.push(db + ' block' + (db>1?'s':''));
       h += '<div class="riskline"><span class="rl">Downstream — check or quarantine:</span> ' +
-        d.cultures.map(function(x){ return '<code>'+esc(x.code)+'</code>'; })
+        d.cultures.map(function(x){ var j=jarsOf(x); return '<code>'+esc(x.code)+'</code>'+(j?' ('+j+' jar'+(j>1?'s':'')+')':''); })
           .concat(d.batches.map(function(b){ return '<code>'+esc(b.name)+'</code>'+(typeof b.blocks==='number'?' ('+b.blocks+' blocks)':''); }))
-          .join(', ') + '</div>';
+          .join(', ') +
+        (tot.length ? ' <b>— ' + tot.join(' and ') + ' affected.</b>' : '') + '</div>';
     } else {
       h += '<div class="riskline"><span class="rl">Downstream:</span> nothing was made from it — the problem stopped here.</div>';
     }
@@ -448,16 +521,104 @@ function renderRisk(){
   $('riskBody').innerHTML = h;
   box.style.display='block';
 }
+/* Strain strength (I73) — performance ABOVE the block, per source.
+   Days to full colonisation and growth thickness are what a grower already judges a plate on;
+   joining them to the biological efficiency of the blocks that came off those genetics is the
+   part no spreadsheet does. Days are only comparable WITHIN a species, so the trophy is only
+   ever awarded between two measured sources of the same species. */
+function strainRows(){
+  return state.sources.map(function(s){
+    var d = descendants(s.id);
+    var measured = d.cultures.filter(function(c){ return colonisedDays(c)!=null; });
+    var days = measured.map(colonisedDays);
+    var vig = measured.filter(function(c){ return c.vigor; }).map(function(c){ return VIGOR[c.vigor].score; });
+    var finished = d.cultures.filter(function(c){ return c.status==='contaminated'||c.status==='used'||c.status==='discarded'; });
+    var lost = d.cultures.filter(function(c){ return c.status==='contaminated'; });
+    var bes = d.batches.map(beOf).filter(function(v){ return v!=null; });
+    return {
+      src:s, n:measured.length,
+      avgDays: days.length ? days.reduce(function(a,b){return a+b;},0)/days.length : null,
+      vigor:   vig.length  ? vig.reduce(function(a,b){return a+b;},0)/vig.length   : null,
+      lossPct: finished.length ? lost.length/finished.length*100 : null,
+      blocks:  countBlocks(d.batches),
+      avgBe:   bes.length ? bes.reduce(function(a,b){return a+b;},0)/bes.length : null
+    };
+  });
+}
+function vigorWord(score){
+  if(score==null) return null;
+  var k = score<1.67 ? 'thin' : (score<2.34 ? 'medium' : 'thick');
+  return VIGOR[k].short;
+}
+function renderStrains(){
+  var rows = strainRows(), panel = $('strainPanel');
+  if(!rows.some(function(r){ return r.n>0; })){ panel.style.display='none'; return; }
+
+  // Trophy: fastest measured source within a species, only where there is something to compare to.
+  var bySpecies = {};
+  rows.forEach(function(r){ if(r.n){ (bySpecies[r.src.species]=bySpecies[r.src.species]||[]).push(r); } });
+  var best = {};
+  Object.keys(bySpecies).forEach(function(sp){
+    var g = bySpecies[sp];
+    if(g.length < 2) return;
+    var win = g.slice().sort(function(a,b){
+      if(a.avgDays!==b.avgDays) return a.avgDays-b.avgDays;
+      return (b.vigor||0)-(a.vigor||0);
+    })[0];
+    best[win.src.id] = 1;
+  });
+
+  rows.sort(function(a,b){
+    var sa=SPECIES[a.src.species].label, sb=SPECIES[b.src.species].label;
+    if(sa!==sb) return sa<sb?-1:1;
+    if(a.avgDays==null) return b.avgDays==null?0:1;
+    if(b.avgDays==null) return -1;
+    return a.avgDays-b.avgDays;
+  });
+
+  $('strainBody').innerHTML = rows.map(function(r){
+    var vw = vigorWord(r.vigor);
+    return '<tr>'+
+      '<td class="sname">'+(best[r.src.id]?'<span class="crown">🏆</span> ':'')+esc(r.src.code)+
+        '<div class="sub">'+esc(SPECIES[r.src.species].label)+
+        (r.src.supplier ? ' · '+esc(r.src.supplier) : (r.src.kind==='wild' ? ' · wild' : ''))+'</div></td>'+
+      '<td>'+(r.n ? r.n+' culture'+(r.n>1?'s':'') : '<span class="sub">—</span>')+'</td>'+
+      '<td'+(r.avgDays!=null?' class="lg"':'')+'>'+(r.avgDays!=null ? Math.round(r.avgDays)+'d' : '<span class="sub">not recorded</span>')+'</td>'+
+      '<td>'+(vw ? esc(vw) : '<span class="sub">—</span>')+'</td>'+
+      '<td'+(r.lossPct!=null ? (r.lossPct<=10?' class="lg"':' class="lb"') : '')+'>'+
+        (r.lossPct!=null ? Math.round(r.lossPct)+'%' : '<span class="sub">—</span>')+'</td>'+
+      '<td>'+(r.blocks || '<span class="sub">—</span>')+'</td>'+
+      '<td'+(r.avgBe!=null?' class="lg"':'')+'>'+(r.avgBe!=null ? Math.round(r.avgBe)+'%' : '<span class="sub">—</span>')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var multi = Object.keys(bySpecies).some(function(sp){ return bySpecies[sp].length>1; });
+  $('strainNote').innerHTML = 'Colonisation speed and growth thickness are strain-strength signals, so they sit '+
+    'next to what those genetics actually yielded downstream. <b>Days are only comparable between sources of the '+
+    'same species</b> — shiitake naturally runs slower than oyster — so a 🏆 is only awarded where two measured '+
+    'sources of one species can be compared'+(multi?'':'; log a second source of the same species to get one')+'. '+
+    'Avg BE is the biological efficiency of the harvested blocks descended from that source.';
+  panel.style.display='block';
+}
 function statusChip(st){ var s=CSTATUS[st]||CSTATUS.healthy; return '<span class="chip '+s.cls+'">'+s.label+'</span>'; }
 
 function cultureNodeHtml(c, depth){
   var kids = childrenOf(c.id), bts = batchesOf(c.id);
+  var jars = jarsOf(c);
   var h = '<div class="node" style="margin-left:'+(depth*18)+'px">';
   h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
        '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
+       (jars ? '<span class="chip chip-jars">'+jars+' jar'+(jars>1?'s':'')+'</span>' : '')+
        '<span class="nmeta">'+CTYPE[c.type].label+' · made '+esc(c.createdAt)+' ('+daysSince(c.createdAt)+'d ago)</span></div>';
+  var cd = colonisedDays(c);
+  if(cd!=null){
+    h += '<div class="perfline">✓ Fully colonised in <b>'+cd+' day'+(cd===1?'':'s')+'</b>'+
+      (c.vigor ? ' · <b>'+esc(VIGOR[c.vigor].short)+'</b> growth' : '')+'</div>';
+  }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   h += '<div class="nactions">';
+  if(c.status!=='contaminated')
+    h += '<button class="mini" data-act="perf" data-id="'+c.id+'">'+(cd!=null?'✎ Edit colonisation':'✓ Record colonisation')+'</button>';
   CTYPE[c.type].next.forEach(function(t){
     h += '<button class="mini" data-act="new" data-parent="'+c.id+'" data-type="'+t+'">+ '+CTYPE[t].label+'</button>';
   });
@@ -467,6 +628,7 @@ function cultureNodeHtml(c, depth){
   if(c.status==='healthy') h += '<button class="mini" data-act="used" data-id="'+c.id+'">Mark used up</button>';
   h += '<button class="mini ghosty" data-act="del" data-id="'+c.id+'">Delete</button>';
   h += '</div>';
+  if(recordingOn===c.id) h += perfFormHtml(c);
   if(addingUnder && addingUnder.parentId===c.id) h += addFormHtml(c.code, addingUnder.type);
   bts.forEach(function(b){
     h += '<div class="node blocknode" style="margin-left:18px">'+
@@ -481,13 +643,39 @@ function cultureNodeHtml(c, depth){
   return h;
 }
 function addFormHtml(parentCode, type){
-  return '<div class="addbox">'+
+  var h = '<div class="addbox">'+
     '<div class="abrow"><label>New '+CTYPE[type].label.toLowerCase()+' — code</label>'+
       '<input id="a-code" type="text" maxlength="30" value="'+esc(nextCultureCode(parentCode,type))+'"></div>'+
-    '<div class="abrow"><label>Date made</label><input id="a-date" type="date" value="'+today()+'"></div>'+
-    '<div class="abrow wide"><label>Notes</label><input id="a-notes" type="text" maxlength="120" placeholder="media, jar count, method…"></div>'+
-    '<div class="abrow"><button class="mini solid" data-act="save">Add</button>'+
+    '<div class="abrow"><label>Date made</label><input id="a-date" type="date" value="'+today()+'"></div>';
+  /* Jar count, grain only: one jar can inoculate several bags, so the count is what makes a
+     traceback say how much is affected rather than just which batch. */
+  if(type==='grain')
+    h += '<div class="abrow"><label>Jars made <span class="opt">optional</span></label>'+
+      '<input id="a-jars" type="number" min="1" max="999" step="1" inputmode="numeric" placeholder="e.g. 6"></div>';
+  h += '<div class="abrow'+(type==='grain'?'':' wide')+'"><label>Notes</label>'+
+      '<input id="a-notes" type="text" maxlength="120" placeholder="'+(type==='grain'?'grain type, method…':'media, method…')+'"></div>'+
+    '<div class="abrow wide"><button class="mini solid" data-act="save">Add</button>'+
       '<button class="mini ghosty" data-act="cancel">Cancel</button></div></div>';
+  return h;
+}
+/* Colonisation performance: the two things a grower already judges a plate on — how long it
+   took to run the dish, and how thick the growth was. Both are optional. */
+function perfFormHtml(c){
+  var h = '<div class="addbox">'+
+    '<div class="abrow"><label>Fully colonised on</label>'+
+      '<input id="p-date" type="date" value="'+esc(c.colonisedAt||today())+'" min="'+esc(c.createdAt)+'"></div>'+
+    '<div class="abrow"><label>Growth thickness</label><select id="p-vigor">'+
+      '<option value="">— not judged —</option>';
+  ['thin','medium','thick'].forEach(function(k){
+    h += '<option value="'+k+'"'+(c.vigor===k?' selected':'')+'>'+VIGOR[k].label+'</option>';
+  });
+  h += '</select></div>'+
+    '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Made '+esc(c.createdAt)+
+      '. Days to full colonisation and thickness are your strain-strength signals — they show up per source below.</p></div>'+
+    '<div class="abrow wide"><button class="mini solid" data-act="savePerf" data-id="'+c.id+'">Save</button>'+
+      (c.colonisedAt ? '<button class="mini ghosty" data-act="clearPerf" data-id="'+c.id+'">Clear</button>' : '')+
+      '<button class="mini ghosty" data-act="cancelPerf">Cancel</button></div></div>';
+  return h;
 }
 function sourceCardHtml(s){
   var kids = state.cultures.filter(function(c){ return c.parentKind==='source' && c.parentId===s.id; });
@@ -520,7 +708,7 @@ function render(){
   $('tree').innerHTML = state.sources.map(sourceCardHtml).join('');
   $('empty').style.display = state.sources.length ? 'none' : 'block';
 }
-function paint(){ render(); renderSummary(); renderRisk(); }
+function paint(){ render(); renderSummary(); renderRisk(); renderStrains(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -569,8 +757,12 @@ function addCulture(parentId, isSource, type){
     createdAt: $('a-date').value || today(), status:'healthy',
     notes:($('a-notes').value||'').trim()
   };
-  state.cultures.push(c); addingUnder=null; save(); paint();
-  if(window.track) try{ track('culture_add',{type:type}); }catch(_){}
+  if(type==='grain' && $('a-jars')){
+    var j = Math.round(parseFloat($('a-jars').value));
+    if(isFinite(j) && j>0) c.jars = Math.min(j, 999);
+  }
+  state.cultures.push(c); addingUnder=null; recordingOn=null; save(); paint();
+  if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0}); }catch(_){}
   showNudge('culture');
 }
 $('tree').addEventListener('click', function(e){
@@ -580,11 +772,35 @@ $('tree').addEventListener('click', function(e){
   if(act==='new'){
     e.preventDefault();
     addingUnder = {parentId:el.getAttribute('data-parent'), type:el.getAttribute('data-type'), isSource:el.getAttribute('data-src')==='1'};
+    recordingOn = null;
     paint();
     var f=$('a-code'); if(f) f.focus();
     return;
   }
   if(act==='cancel'){ e.preventDefault(); addingUnder=null; paint(); return; }
+  if(act==='perf'){ e.preventDefault(); recordingOn=el.getAttribute('data-id'); addingUnder=null; paint();
+    var pf=$('p-date'); if(pf) pf.focus(); return; }
+  if(act==='cancelPerf'){ e.preventDefault(); recordingOn=null; paint(); return; }
+  if(act==='savePerf'){
+    e.preventDefault();
+    var pc = findCulture(el.getAttribute('data-id'));
+    if(pc){
+      var d = $('p-date').value, v = $('p-vigor').value;
+      // A plate can't finish before it was started — ignore an impossible date rather than store it.
+      if(d && daysBetween(pc.createdAt, d)!=null) pc.colonisedAt = d;
+      pc.vigor = VIGOR[v] ? v : null;
+      recordingOn=null; save(); paint();
+      if(window.track) try{ track('culture_colonised',{type:pc.type, vigor:pc.vigor||''}); }catch(_){}
+      showNudge('perf');
+    }
+    return;
+  }
+  if(act==='clearPerf'){
+    e.preventDefault();
+    var qc = findCulture(el.getAttribute('data-id'));
+    if(qc){ qc.colonisedAt=null; qc.vigor=null; recordingOn=null; save(); paint(); }
+    return;
+  }
   if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
   var id = el.getAttribute('data-id');
   if(act==='contam'){ var c=findCulture(id); if(c){ c.status='contaminated'; save(); paint();
@@ -628,12 +844,16 @@ function chainOf(c){
   return ancestry(c).map(function(a){ return a.item.code; }).reverse().concat([c.code]).join(' > ');
 }
 $('exportCsv').addEventListener('click', function(){
-  var rows = [['code','type','status','made_on','chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
+  var rows = [['code','type','status','made_on','jars','colonised_on','days_to_colonise','growth',
+    'chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
   state.cultures.forEach(function(c){
     var an = ancestry(c), src = null;
     for(var i=0;i<an.length;i++) if(an[i].kind==='source') src = an[i].item;
     var bts = batchesOf(c.id).map(function(b){ return b.name; }).join('; ');
-    rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt, chainOf(c),
+    var cd = colonisedDays(c);
+    rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt,
+      jarsOf(c)||'', c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
+      chainOf(c),
       src?src.code:'', src?src.kind:'', src?SPECIES[src.species].label:'', src?src.supplier:'',
       src?src.vendorBatch:'', src?src.contact:'', src?src.location:'', c.notes||'', bts]);
   });
@@ -677,7 +897,8 @@ function showNudge(src){
   if(nudgeOff()) return;
   var n=$('ahaNudge'); if(!n || n.style.display==='block') return;
   $('nudgeLead').textContent = src==='export' ? 'Exporting by hand?' :
-    (src==='source' ? 'Source logged.' : 'That culture is on the record.');
+    (src==='source' ? 'Source logged.' :
+    (src==='perf' ? "That's a performance record on the plate." : 'That culture is on the record.'));
   n.style.display='block';
   if(window.track) try{ track('culture_nudge_show',{src:src}); }catch(_){}
 }
@@ -739,6 +960,21 @@ paint();
 .chip-used{background:#EDEAE3;color:#6B6457}
 .chip-bad{background:#F6E0DA;color:#9a3417}
 .chip-wild{background:var(--moss-soft);color:var(--moss)}
+.chip-jars{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.perfline{font-size:.85rem;color:#1f6b3c;margin:6px 0 0}
+.addbox .opt{font-weight:600;color:var(--muted);opacity:.75}
+.addbox select{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.addbox .abrow.wide:last-child{flex-direction:row;gap:8px;align-items:center}
+.strainHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+table.strain{width:100%;border-collapse:collapse;font-size:.9rem}
+table.strain th{text-align:left;font-size:.74rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:0 12px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.strain td{padding:9px 12px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+table.strain tr:last-child td{border-bottom:none}
+table.strain td.sname{font-weight:700;color:var(--ink)}
+table.strain .sub{color:var(--muted);font-weight:600;font-size:.82rem}
+table.strain td.lg{color:#1f6b3c;font-weight:700}
+table.strain td.lb{color:#9a3417;font-weight:700}
+table.strain .crown{font-size:.85rem}
 .chip-buy{background:var(--brand-soft);color:var(--brand-ink)}
 .mini{font:inherit;font-size:.82rem;font-weight:700;padding:6px 11px;border-radius:999px;
   border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s;text-decoration:none;display:inline-block}
