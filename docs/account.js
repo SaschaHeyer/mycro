@@ -228,6 +228,9 @@
         return post('/api/auth/firebase', { idToken: j.idToken });
       })
       .then(function (j) {
+        // Adopt a session only if it really is one. A half-answer must not leave the bar
+        // reading "Signed in as undefined" with a broken token stored behind it.
+        if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
         ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null);
         state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
         render();
@@ -252,6 +255,7 @@
     // Strip it from the address bar immediately — a one-time token should not sit in history.
     try { history.replaceState({}, '', w.location.pathname + w.location.hash); } catch (e) {}
     return post('/api/auth/verify', { token: t }).then(function (j) {
+      if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
       ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email);
       state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
       render();
