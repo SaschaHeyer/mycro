@@ -45,6 +45,11 @@
   }
 
   var state = { email: '', founder: false, plan: '', ready: false };
+  function badge() {
+    if (state.founder) return '<span class="acctBadge">★ Founding Grower</span> ';
+    if (state.plan === 'comp') return '<span class="acctBadge comp">Test access</span> ';
+    return '';
+  }
   var hooks = { getState: null, setState: null, onChange: null };
   var syncTimer = null, syncing = false;
 
@@ -92,7 +97,7 @@
       box.innerHTML =
         '<div class="acctRow">' +
           '<span class="acctWho">' +
-            (state.founder ? '<span class="acctBadge">★ Founding Grower</span> ' : '') +
+            badge() +
             'Signed in as <b>' + esc(state.email) + '</b>' +
           '</span>' +
           '<span class="acctActions">' +
