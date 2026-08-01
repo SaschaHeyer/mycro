@@ -290,12 +290,48 @@
   function completeFirebaseLink() {
     var oob = (/[?&]oobCode=([^&]+)/.exec(w.location.search) || [])[1];
     if (!oob) return Promise.resolve(false);
-    var email = ls(EMAIL_HINT) || ls(EMAIL_KEY);
-    if (!email) {
-      email = w.prompt('Please confirm the email you asked for the sign-in link with:') || '';
-    }
-    if (!EMAIL_RE.test(email)) { setStatus('That sign-in link needs the email it was sent to.', true); return Promise.resolve(false); }
+    // Strip the code from the address bar straight away — it is a credential, and it
+    // should not sit in history or get copied into a message.
     try { history.replaceState({}, '', w.location.pathname + w.location.hash); } catch (e) {}
+
+    var email = ls(EMAIL_HINT) || ls(EMAIL_KEY);
+    if (EMAIL_RE.test(email)) return redeem(oob, email);
+
+    // Opened on a different device from the one that asked (a link requested on a laptop
+    // and opened on a phone is the normal case). Firebase requires the address to be
+    // confirmed; ask for it properly rather than throwing a browser prompt at someone who
+    // has just paid us.
+    return askForEmail(oob);
+  }
+
+  function askForEmail(oob) {
+    var box = el('acctBar');
+    box.innerHTML =
+      '<div class="acctRow">' +
+        '<label class="acctLbl" for="acctConfirm">Confirm your email to finish signing in</label>' +
+        '<span class="acctActions">' +
+          '<input id="acctConfirm" type="email" inputmode="email" autocomplete="email" placeholder="you@farm.com">' +
+          '<button type="button" class="mini solid" id="acctConfirmGo">Sign me in</button>' +
+        '</span>' +
+      '</div>' +
+      '<p class="acctHint">You asked for this link on another device, so we need the address it ' +
+      'was sent to. Nothing else is needed — there is no password.</p>' +
+      '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
+    var inp = el('acctConfirm');
+    try { inp.focus(); } catch (e) {}
+    return new Promise(function (resolve) {
+      var go = function () {
+        var em = (inp.value || '').trim();
+        if (!EMAIL_RE.test(em)) { setStatus('Please enter the email the link was sent to.', true); return; }
+        el('acctConfirmGo').disabled = true;
+        redeem(oob, em).then(resolve);
+      };
+      el('acctConfirmGo').addEventListener('click', go);
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+    });
+  }
+
+  function redeem(oob, email) {
 
     return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailLink?key=' + FB.apiKey, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -307,6 +343,7 @@
         return exchangeIdToken(j.idToken, 'email-link');   // one exchange path for both routes
       })
       .catch(function (e) {
+        // Re-render so the grower has the sign-in controls back and can ask for a fresh link.
         render();
         setStatus(/not a founding grower|gated/i.test(e.message)
             ? 'That account is not a Founding Grower yet.'
