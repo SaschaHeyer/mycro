@@ -94,7 +94,7 @@
     </div>
     <div style="overflow-x:auto">
       <table class="strain" id="strainTable">
-        <thead><tr><th>Source</th><th>Measured</th><th>Days to colonise</th><th>Growth</th><th>Cultures lost</th><th>Blocks</th><th>Avg BE</th></tr></thead>
+        <thead><tr><th>Source</th><th>Measured</th><th>Days to colonise</th><th>vs your species average</th><th>Growth</th><th>Cultures lost</th><th>Blocks</th><th>Avg BE</th></tr></thead>
         <tbody id="strainBody"></tbody>
       </table>
     </div>
@@ -550,6 +550,11 @@ function vigorWord(score){
   var k = score<1.67 ? 'thin' : (score<2.34 ? 'medium' : 'thick');
   return VIGOR[k].short;
 }
+function relWord(rel){
+  if(rel==null) return '<span class="sub">—</span>';
+  if(Math.abs(rel) < 2) return '<span class="sub">on your average</span>';
+  return Math.round(Math.abs(rel))+'% '+(rel<0 ? 'faster' : 'slower');
+}
 function renderStrains(){
   var rows = strainRows(), panel = $('strainPanel');
   if(!rows.some(function(r){ return r.n>0; })){ panel.style.display='none'; return; }
@@ -568,6 +573,21 @@ function renderStrains(){
     best[win.src.id] = 1;
   });
 
+  /* Raw days can't be compared across species. Expressed as a percentage of YOUR OWN average
+     for that species, they can — a shiitake source 20% faster than your shiitake norm really is
+     outperforming an oyster source 5% faster than your oyster norm. The baseline is your data
+     only, never a published figure, so it needs two measured sources of that species to exist. */
+  var normOf = {};
+  Object.keys(bySpecies).forEach(function(sp){
+    var g = bySpecies[sp].filter(function(r){ return r.avgDays!=null; });
+    if(g.length < 2) return;
+    normOf[sp] = g.reduce(function(a,r){ return a+r.avgDays; },0)/g.length;
+  });
+  rows.forEach(function(r){
+    var base = normOf[r.src.species];
+    r.rel = (base && r.avgDays!=null && base>0) ? (r.avgDays-base)/base*100 : null;
+  });
+
   rows.sort(function(a,b){
     var sa=SPECIES[a.src.species].label, sb=SPECIES[b.src.species].label;
     if(sa!==sb) return sa<sb?-1:1;
@@ -584,6 +604,7 @@ function renderStrains(){
         (r.src.supplier ? ' · '+esc(r.src.supplier) : (r.src.kind==='wild' ? ' · wild' : ''))+'</div></td>'+
       '<td>'+(r.n ? r.n+' culture'+(r.n>1?'s':'') : '<span class="sub">—</span>')+'</td>'+
       '<td'+(r.avgDays!=null?' class="lg"':'')+'>'+(r.avgDays!=null ? Math.round(r.avgDays)+'d' : '<span class="sub">not recorded</span>')+'</td>'+
+      '<td'+(r.rel==null?'':(r.rel<-2?' class="lg"':(r.rel>2?' class="lb"':'')))+'>'+relWord(r.rel)+'</td>'+
       '<td>'+(vw ? esc(vw) : '<span class="sub">—</span>')+'</td>'+
       '<td'+(r.lossPct!=null ? (r.lossPct<=10?' class="lg"':' class="lb"') : '')+'>'+
         (r.lossPct!=null ? Math.round(r.lossPct)+'%' : '<span class="sub">—</span>')+'</td>'+
@@ -597,6 +618,9 @@ function renderStrains(){
     'next to what those genetics actually yielded downstream. <b>Days are only comparable between sources of the '+
     'same species</b> — shiitake naturally runs slower than oyster — so a 🏆 is only awarded where two measured '+
     'sources of one species can be compared'+(multi?'':'; log a second source of the same species to get one')+'. '+
+    '<b>To compare across species, read the “vs your species average” column instead</b> — each source measured '+
+    'against your own norm for its species, which is the only baseline here that isn’t guessed. It appears once '+
+    'you have two measured sources of a species to average. '+
     'Avg BE is the biological efficiency of the harvested blocks descended from that source.';
   panel.style.display='block';
 }
