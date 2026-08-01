@@ -21,3 +21,8 @@ tools/
 
 # Pinterest/marketing pin working files (backed up to private repo, not the public site)
 assets/
+
+# test tooling (runs locally + in the private backup; not part of the public site)
+node_modules/
+test-results/
+playwright-report/

@@ -108,14 +108,14 @@
     } else {
       box.innerHTML =
         '<div class="acctRow">' +
-          '<label class="acctLbl" for="acctEmail">Save this log to an account</label>' +
+          '<label class="acctLbl" for="acctEmail">Sign in to your Mycro account</label>' +
           '<span class="acctActions">' +
             '<input id="acctEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@farm.com">' +
             '<button type="button" class="mini solid" id="acctGo">Email me a sign-in link</button>' +
           '</span>' +
         '</div>' +
-        '<p class="acctHint">No password. We email you a one-time link; after that your log syncs ' +
-        'to your account on every change, and you can open it on any device.</p>' +
+        '<p class="acctHint">No password — we email you a one-time link. Accounts are currently ' +
+        '<b>Founding Grower early access</b>; the grow log itself stays free and uncapped without one.</p>' +
         '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
       el('acctGo').addEventListener('click', requestLink);
       el('acctEmail').addEventListener('keydown', function (e) { if (e.key === 'Enter') requestLink(); });
@@ -129,7 +129,17 @@
     var btn = el('acctGo'), prev = btn.textContent;
     btn.disabled = true; btn.textContent = 'Sending…';
     post('/api/auth/request', { email: em })
-      .then(function () {
+      .then(function (j) {
+        if (j && j.gated) {
+          // Not a Founding Grower yet — say so here, not only in the email.
+          setStatus('');
+          el('acctBar').insertAdjacentHTML('beforeend',
+            '<p class="acctHint" style="color:var(--ink)"><b>Accounts are Founding Grower early access.</b> ' +
+            'We\'ve emailed you the details — everything you\'re using stays free and uncapped either way. ' +
+            '<a href="/#founding">Become a Founding Grower · $99</a></p>');
+          if (w.track) try { w.track('account_gated', {}); } catch (e) {}
+          return;
+        }
         setStatus('Check ' + em + ' — the link works once and expires in 30 minutes.');
         if (w.track) try { w.track('account_link_requested', {}); } catch (e) {}
       })
