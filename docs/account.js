@@ -123,8 +123,9 @@
             '<button type="button" class="mini solid" id="acctGo">Email me a link</button>' +
           '</span>' +
         '</div>' +
-        '<p class="acctHint">No password — we email you a one-time link. Accounts are currently ' +
-        '<b>Founding Grower early access</b>; the grow log itself stays free and uncapped without one.</p>' +
+        '<p class="acctHint">No password — we email you a one-time link. Just paid? Use ' +
+        '<b>the same email you paid with</b>. Accounts are opened by a <b>Founding Grower</b> spot; ' +
+        'the grow log itself stays free and uncapped without one.</p>' +
         '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
       el('acctGo').addEventListener('click', requestLink);
       el('acctGoogle').addEventListener('click', googleSignIn);
