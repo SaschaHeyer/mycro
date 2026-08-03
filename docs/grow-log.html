@@ -923,7 +923,7 @@ function batchHtml(b){
   var be=beOf(b);
   var od=overdueNote(b);
   var chipCls = {inoculated:'chip-inoc',colonizing:'chip-col',fruiting:'chip-fruit',harvested:'chip-harv',contaminated:'chip-contam'}[b.stage];
-  var meta = fmtWt(b.dryG)+' dry/block · '+b.blocks+' blocks · inoculated '+esc(b.inoculatedOn)+
+  var meta = fmtWt(b.dryG)+' dry/block · '+b.blocks+' block'+(b.blocks===1?'':'s')+' · inoculated '+esc(b.inoculatedOn)+
              ' ('+daysSince(b.inoculatedOn)+'d ago)';
   var fl=(b.flushes||[]);
   var flushLine = fl.length>1
@@ -1467,7 +1467,7 @@ function labelHtml(b,qr,scanNote){
       '<table class="lfacts"><tbody>'+
         '<tr><th>Spawned</th><td>'+esc(b.inoculatedOn)+' <span class="dim">(day '+daysSince(b.inoculatedOn)+')</span></td></tr>'+
         '<tr><th>Colonised by</th><td>'+esc(expectedIso(b))+' <span class="dim">(~'+sp.colonize+'d typical)</span></td></tr>'+
-        '<tr><th>Batch</th><td>'+b.blocks+' blocks · '+dry.toFixed(1)+' '+unit+' dry each</td></tr>'+
+        '<tr><th>Batch</th><td>'+b.blocks+' block'+(b.blocks===1?'':'s')+' · '+dry.toFixed(1)+' '+unit+' dry each</td></tr>'+
         '<tr><th>Stage</th><td>'+esc(STAGE_LABEL[b.stage])+'</td></tr>'+
       '</tbody></table>'+
       (b.notes ? '<div class="lnotes">'+esc(b.notes)+'</div>' : '')+
