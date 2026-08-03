@@ -26,7 +26,8 @@
 {"@type":"Question","name":"How do I trace a mushroom contamination back to its source?","acceptedAnswer":{"@type":"Answer","text":"Mark the contaminated culture in your records, then walk the chain in both directions. Downstream: every culture and every block made from that culture is suspect and should be checked or quarantined. Upstream: look at its parent and at the other cultures made from that same parent — if they are clean, the contamination entered at your step; if they are also failing, it came in earlier, possibly with the source itself. The Mycro culture library does both walks automatically and lists the at-risk items."}},
 {"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}},
 {"@type":"Question","name":"How do you measure the strength of a mushroom strain?","acceptedAnswer":{"@type":"Answer","text":"The two practical measures growers use on a petri dish are how many days it takes to fully colonise the plate and how thick the growth is — fast, thick, rhizomorphic growth indicates a vigorous strain, while slow or wispy growth suggests a weak or ageing culture. Those signals are only meaningful within a species, because shiitake naturally colonises far slower than oyster. The strongest confirmation comes later: the biological efficiency of the blocks grown from that culture. The free Mycro culture library records days to colonisation and growth thickness on any culture and shows them per source alongside the loss rate and the biological efficiency of the blocks descended from it."}},
-{"@type":"Question","name":"Why track the number of grain spawn jars?","acceptedAnswer":{"@type":"Answer","text":"One grain spawn jar usually inoculates several grow bags, so the jar count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six jars came off it — and how many blocks those jars went into — tells you the size of the problem and how much to quarantine. The free Mycro culture library stores an optional jar count on grain spawn and totals the affected jars and blocks in its traceback."}}]}
+{"@type":"Question","name":"Why track the number of grain spawn jars?","acceptedAnswer":{"@type":"Answer","text":"One grain spawn jar usually inoculates several grow bags, so the jar count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six jars came off it — and how many blocks those jars went into — tells you the size of the problem and how much to quarantine. The free Mycro culture library stores an optional jar count on grain spawn and totals the affected jars and blocks in its traceback."}},
+{"@type":"Question","name":"How long should a petri dish, liquid culture or grain spawn jar take to colonise?","acceptedAnswer":{"@type":"Answer","text":"As a rough orientation, a petri dish or a liquid culture is usually fully colonised in about 7 to 14 days and a grain spawn jar in about 14 to 21 days, but the real answer depends heavily on species, temperature and how well the culture was agitated — shiitake runs far slower than oyster. That is why the free Mycro culture library treats those windows as orientation only and never calls a culture late against them: it lists every live culture with a day count running from the date you made it, and once you have recorded the finish date of two cultures of the same species and type it starts flagging a slow one against your own average instead of a published figure."}}]}
 </script>
 </head>
 <body>
@@ -75,6 +76,9 @@
     <div id="riskBody"></div>
   </div>
 
+  <!-- The seeded examples keep counting once a grower has their own. -->
+  <div id="sampleNote" class="samplebar" style="display:none"></div>
+
   <!-- Summary -->
   <div class="results" style="margin-bottom:18px">
     <div class="kpis">
@@ -83,6 +87,22 @@
       <div class="kpi" id="k-contam-card"><div class="v" id="k-contam">–</div><div class="l">Culture loss rate</div></div>
       <div class="kpi"><div class="v" id="k-traced">–</div><div class="l">Blocks traced to a culture</div></div>
     </div>
+  </div>
+
+  <!-- Working cultures: the day count and the "this is going long" flag the Grow Log has
+       and this page did not. -->
+  <div class="results" id="workPanel" style="display:none;margin-bottom:18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">⏳ Working cultures — what is still running</h3>
+      <span class="muted" style="font-size:.82rem">Every live culture with no colonisation date yet, oldest first</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="workTable">
+        <thead><tr><th>Culture</th><th>Type</th><th>Running</th><th>Against</th><th></th></tr></thead>
+        <tbody id="workBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="workNote" style="font-size:.84rem;margin:12px 2px 0"></p>
   </div>
 
   <div id="acctBar" class="acctBar no-print"></div>
@@ -235,6 +255,17 @@
     <p class="muted">Because a grain jar can inoculate several bags, grain spawn carries an optional
       <b>jar count</b> — so the traceback tells you <i>how much</i> is affected ("6 jars and 24 blocks"),
       not just which batch to go and look at.</p>
+
+    <h3 style="margin-top:16px">What is still running right now</h3>
+    <p class="muted">A lineage tree tells you where things came from; it does not tell you what needs
+      looking at today. <b>Working cultures</b> lists every live culture you haven't yet marked fully
+      colonised, oldest first, with the day count running from the date you made it — so a plate you
+      poured five weeks ago and forgot is at the top of the list rather than buried three levels down
+      the tree. Typical windows (a petri dish or liquid culture in roughly 7–14 days, grain spawn in
+      14–21) are shown for orientation only. <b>Nothing is ever called late against a published
+      number</b>: once you have recorded two cultures of the same species and type, the list starts
+      flagging <b>against your own pace</b> instead, because how fast a culture runs is a property of
+      your conditions, not of a textbook.</p>
 
     <h3 style="margin-top:16px">Strain strength: what a plate tells you before the block does</h3>
     <p class="muted">Two things a grower already judges a culture on are <b>how long it takes to fully
@@ -454,6 +485,62 @@ function daysBetween(a,b){
   return (isFinite(d) && d>=0) ? d : null;
 }
 function colonisedDays(c){ return c.colonisedAt ? daysBetween(c.createdAt, c.colonisedAt) : null; }
+
+/* ---- the working clock (I78) ----
+   The Grow Log counts the days a batch has been running and flags one that has gone long.
+   This page did not, so Founding Grower #1 logged his liquid-culture jars as grow-log
+   BATCHES purely to get a day count — the same jars then existed in both tools, and he had
+   to invent a dry weight for each because the batch form demanded one. This gives the
+   library its own clock so the workaround stops being necessary.
+
+   Typical windows are shown for orientation and are NEVER used to call a culture late.
+   The "running long" flag needs your own average for that species and culture type — the
+   same rule the strain panel already follows, for the same reason: a published figure is a
+   guess wearing a benchmark's clothes, and a plate's pace is a property of your conditions. */
+var TYPICAL = { petri:[7,14], lc:[7,14], grain:[14,21] };
+
+function sourceOf(c){
+  var chain = ancestry(c), last = chain[chain.length-1];
+  return (last && last.kind==='source') ? last.item : null;
+}
+function speciesOf(c){ var s = sourceOf(c); return s ? s.species : null; }
+
+/* Your own pace for this species + culture type. Two recorded ones minimum: one culture is
+   trivially its own average and would end up flagging itself. */
+function ownPace(species, type){
+  if(!species) return null;
+  var d = state.cultures.filter(function(c){
+    return c.type===type && colonisedDays(c)!=null && speciesOf(c)===species;
+  }).map(colonisedDays);
+  if(d.length < 2) return null;
+  return d.reduce(function(a,b){ return a+b; },0)/d.length;
+}
+function workingCultures(){
+  return state.cultures.filter(function(c){
+    return c.status==='healthy' && !c.colonisedAt;
+  }).map(function(c){
+    var sp = speciesOf(c), pace = ownPace(sp, c.type), days = daysSince(c.createdAt);
+    return {c:c, sp:sp, days:days, pace:pace, long: pace!=null && days > Math.round(pace*1.5)};
+  }).sort(function(a,b){ return b.days - a.days; });
+}
+
+/* ---- the seeded examples (I78) ----
+   The library seeds two example sources so the traceback has something to show on a first
+   visit. Once a grower logs their own they keep counting: the paying customer's strain
+   table was ranking OUR fictional North Spore source against his real backyard collection. */
+var SAMPLE_IDS = {src1:1,src2:1,c1:1,c2:1,c3:1,c4:1,c5:1,c6:1,c7:1,
+                  s1:1,s2:1,s3:1,s4:1,s5:1,s6:1,s7:1,s8:1};
+function isSample(id){ return SAMPLE_IDS[id]===1; }
+function sampleSources(){ return state.sources.filter(function(s){ return isSample(s.id); }); }
+function hasOwnData(){
+  return state.sources.some(function(s){ return !isSample(s.id); }) ||
+         state.cultures.some(function(c){ return !isSample(c.id); });
+}
+function holdsOwnWork(id){
+  var d = descendants(id);
+  return d.cultures.some(function(x){ return !isSample(x.id); }) ||
+         d.batches.some(function(b){ return !isSample(b.id); });
+}
 function jarsOf(c){ return (c.type==='grain' && typeof c.jars==='number' && c.jars>0) ? Math.round(c.jars) : 0; }
 function countJars(list){ return list.reduce(function(a,c){ return a+jarsOf(c); },0); }
 function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
@@ -487,6 +574,60 @@ function renderSummary(){
   $('k-contam').textContent = rate==null ? '–' : rate+'%';
   $('k-contam-card').className = 'kpi' + (rate==null ? '' : (rate<=10 ? ' good' : ' bad'));
   $('k-traced').textContent = traced || '–';
+}
+function renderWork(){
+  var rows = workingCultures(), panel = $('workPanel');
+  if(!rows.length){ panel.style.display='none'; return; }
+  $('workBody').innerHTML = rows.map(function(r){
+    var t = TYPICAL[r.c.type];
+    var against = r.pace!=null
+      ? 'your average <b>'+Math.round(r.pace)+'d</b>'
+      : (t ? '<span class="sub">typical '+t[0]+'–'+t[1]+'d</span>' : '<span class="sub">—</span>');
+    return '<tr>'+
+      '<td class="sname">'+esc(r.c.code)+
+        '<div class="sub">'+esc(r.sp ? SPECIES[r.sp].label : 'unknown species')+
+        (r.c.notes ? ' · '+esc(r.c.notes) : '')+'</div></td>'+
+      '<td><span class="sub">'+CTYPE[r.c.type].icon+' '+esc(CTYPE[r.c.type].label)+'</span></td>'+
+      '<td'+(r.long?' class="wklong"':'')+'>day '+r.days+(r.long?' · running long':'')+'</td>'+
+      '<td>'+against+'</td>'+
+      '<td><button class="mini" data-act="goperf" data-id="'+esc(r.c.id)+'">✓ Record colonisation</button></td>'+
+    '</tr>';
+  }).join('');
+  $('workNote').innerHTML = 'Counted from the day you made it. Recording the day one finished takes it off '+
+    'this list and feeds the strain-strength table below. ' +
+    (rows.some(function(r){ return r.pace!=null; })
+      ? '<b>“Running long”</b> is measured against <b>your own</b> average for that species and culture type — never a published number.'
+      : 'The typical windows are orientation only and nothing is called late against them: record <b>two</b> '+
+        'cultures of the same species and type and this list starts flagging against <b>your own</b> pace instead.');
+  panel.style.display='block';
+}
+function renderSampleNote(){
+  var box = $('sampleNote'), smp = sampleSources();
+  if(!smp.length || !hasOwnData()){ box.style.display='none'; return; }
+  box.innerHTML = '<span>This library still holds the <b>'+smp.length+' example source'+(smp.length>1?'s':'')+
+    '</b> we seeded on your first visit ('+smp.map(function(s){ return '<b>'+esc(s.code)+'</b>'; }).join(', ')+
+    ') — they are counted in the panels above alongside your own.</span>'+
+    '<button class="mini" id="clearSamples">Remove the examples</button>';
+  box.style.display='flex';
+}
+function clearSamples(){
+  // Keep any example an own culture or batch still hangs off — deleting it would break a real chain.
+  var blocked = {}, kept = 0;
+  state.cultures.forEach(function(c){ if(isSample(c.id) && holdsOwnWork(c.id)){ blocked[c.id]=1; kept++; } });
+  state.cultures = state.cultures.filter(function(c){ return !isSample(c.id) || blocked[c.id]; });
+  state.sources = state.sources.filter(function(s){
+    if(!isSample(s.id)) return true;
+    var d = descendants(s.id);              // recomputed after the culture sweep
+    if(d.cultures.length || d.batches.length){ kept++; return true; }
+    return false;
+  });
+  // Don't leave a batch pointing at a culture that no longer exists: a dead link reads as
+  // "not linked" on the card while still being there in the data.
+  state.batches.forEach(function(b){ if(b.parentId && !findCulture(b.parentId)) b.parentId = null; });
+  save(); paint();
+  if(window.track) try{ track('culture_samples_clear',{}); }catch(_){}
+  if(kept) alert('Removed the examples, except '+kept+' your own cultures or batches still hang off — '+
+    'deleting those would have broken your chain.');
 }
 function renderRisk(){
   var r = atRisk(), box=$('riskPanel');
@@ -637,7 +778,7 @@ function statusChip(st){ var s=CSTATUS[st]||CSTATUS.healthy; return '<span class
 function cultureNodeHtml(c, depth){
   var kids = childrenOf(c.id), bts = batchesOf(c.id);
   var jars = jarsOf(c);
-  var h = '<div class="node" style="margin-left:'+(depth*18)+'px">';
+  var h = '<div class="node" id="node-'+esc(c.id)+'" style="margin-left:'+(depth*18)+'px">';
   h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
        '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
        (jars ? '<span class="chip chip-jars">'+jars+' jar'+(jars>1?'s':'')+'</span>' : '')+
@@ -772,7 +913,7 @@ function renderBook(){
     $('f-contact').value=[c.phone,c.email].filter(Boolean).join(' · ');
   });
 })();
-function paint(){ render(); renderSummary(); renderRisk(); renderStrains(); renderBook(); }
+function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderStrains(); renderBook(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -833,6 +974,25 @@ function addCulture(parentId, isSource, type){
   if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0}); }catch(_){}
   showNudge('culture');
 }
+/* The work queue is a shortcut into the tree, not a second editor: it opens the same
+   colonisation form on the same node, so there is one place the value is written. */
+$('workPanel').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-act="goperf"]') : null;
+  if(!el) return;
+  e.preventDefault();
+  var id = el.getAttribute('data-id');
+  if(!findCulture(id)) return;
+  recordingOn = id; addingUnder = null; paint();
+  var pf = $('p-date');
+  if(pf){ try{ pf.focus({preventScroll:true}); }catch(_){ pf.focus(); } }
+  var n = document.getElementById('node-'+id);
+  if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
+});
+$('sampleNote').addEventListener('click', function(e){
+  if(!e.target || e.target.id!=='clearSamples') return;
+  e.preventDefault();
+  if(confirm('Remove the example sources and cultures we seeded? Your own stay exactly as they are.')) clearSamples();
+});
 $('tree').addEventListener('click', function(e){
   var el = e.target.closest ? e.target.closest('[data-act]') : null;
   if(!el) return;
@@ -1054,6 +1214,11 @@ function isSampleOnly(){
 .chip-wild{background:var(--moss-soft);color:var(--moss)}
 .chip-jars{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
 .perfline{font-size:.85rem;color:#1f6b3c;margin:6px 0 0}
+.samplebar{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 16px;margin:0 0 16px;font-size:.88rem;color:var(--muted);
+  gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.samplebar b{color:var(--ink)}
+table.strain td.wklong{color:#9a3417;font-weight:700}
 .addbox .opt{font-weight:600;color:var(--muted);opacity:.75}
 .addbox select{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
 .addbox .abrow.wide:last-child{flex-direction:row;gap:8px;align-items:center}
