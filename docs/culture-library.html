@@ -512,7 +512,7 @@ function renderRisk(){
       if(db) tot.push(db + ' block' + (db>1?'s':''));
       h += '<div class="riskline"><span class="rl">Downstream — check or quarantine:</span> ' +
         d.cultures.map(function(x){ var j=jarsOf(x); return '<code>'+esc(x.code)+'</code>'+(j?' ('+j+' jar'+(j>1?'s':'')+')':''); })
-          .concat(d.batches.map(function(b){ return '<code>'+esc(b.name)+'</code>'+(typeof b.blocks==='number'?' ('+b.blocks+' blocks)':''); }))
+          .concat(d.batches.map(function(b){ return '<code>'+esc(b.name)+'</code>'+(typeof b.blocks==='number'?' ('+b.blocks+' block'+(b.blocks===1?'':'s')+')':''); }))
           .join(', ') +
         (tot.length ? ' <b>— ' + tot.join(' and ') + ' affected.</b>' : '') + '</div>';
     } else {
@@ -667,7 +667,7 @@ function cultureNodeHtml(c, depth){
       '<div class="nhead"><span class="nico">🧱</span><code class="ncode">'+esc(b.name)+'</code>'+
       '<span class="chip '+(b.stage==='contaminated'?'chip-bad':(b.stage==='harvested'?'chip-ok':'chip-used'))+'">'+
       esc(BATCH_STAGE[b.stage]||b.stage)+'</span>'+
-      '<span class="nmeta">'+(typeof b.blocks==='number'?b.blocks+' blocks':'')+
+      '<span class="nmeta">'+(typeof b.blocks==='number'?b.blocks+' block'+(b.blocks===1?'':'s'):'')+
       ' · <a href="grow-log.html">open in grow log</a></span></div></div>';
   });
   h += '</div>';

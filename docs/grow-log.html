@@ -580,6 +580,10 @@ function newId(){ return 'b'+Date.now().toString(36)+Math.floor(Math.random()*1e
    optional and read-only from this page's point of view: a log with no cultures behaves
    exactly as before, and an unlinked batch renders unchanged. */
 function cultures(){ return Array.isArray(state.cultures) ? state.cultures : []; }
+// Mirrors CTYPE in culture-library.html — only the labels, so a picker here reads the same
+// as the chain over there ("SHI-02-P1-L2 · Liquid culture").
+var CULTURE_LABEL = {petri:'Petri dish', lc:'Liquid culture', grain:'Grain spawn'};
+var editingLinkId = null;     // batch id whose lineage picker is open
 function cultureOf(id){ var cs=cultures(); for(var i=0;i<cs.length;i++) if(cs[i].id===id) return cs[i]; return null; }
 /* The nearest contaminated culture at or above this one, so a block can warn that it
    came off a flagged line even when its own jar looked fine. */
@@ -846,8 +850,38 @@ function costFormHtml(b){
     '<button class="mini ghosty" type="button" data-act="cancelCost">Cancel</button></form>';
 }
 
+/* Link a batch that ALREADY EXISTS to the culture it came off (I77).
+   Until now `parentId` could only be set on the add-batch form, so the ordinary order of
+   events — log your blocks first, build the lineage afterwards — left every block unlinked
+   with no way back except deleting and re-typing it. That silently breaks the one thing the
+   Culture Library was built for: flag a contaminated jar and the traceback can only find
+   blocks that carry the link, so it reports "0 blocks affected" and looks fine. */
+function linkFormHtml(b){
+  var cs=cultures();
+  return '<form class="yieldForm" onsubmit="return saveLink(event,\''+b.id+'\')">'+
+    '<label class="yl" style="min-width:200px">Spawned from'+
+      '<select id="linkSel">'+
+        '<option value="">— not linked —</option>'+
+        cs.map(function(c){
+          return '<option value="'+esc(c.id)+'"'+(b.parentId===c.id?' selected':'')+'>'+
+            esc(c.code)+' · '+esc(CULTURE_LABEL[c.type]||c.type)+'</option>'; }).join('')+
+      '</select></label>'+
+    '<button class="mini solid" type="submit">Save lineage</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelLink">Cancel</button></form>';
+}
+function saveLink(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b) return false;
+  var v=($('linkSel').value||'').trim();
+  b.parentId = (v && cultureOf(v)) ? v : null;
+  editingLinkId=null; save(); render();
+  if(window.track) try{ track('growlog_link_culture',{linked:b.parentId?1:0}); }catch(_){}
+  return false;
+}
+
 function actionsHtml(b){
   if(editingCostId===b.id) return costFormHtml(b);
+  if(editingLinkId===b.id) return linkFormHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
     var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
@@ -860,6 +894,11 @@ function actionsHtml(b){
       '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button></form>';
   }
   var costBtn = '<button class="mini" data-act="cost" data-id="'+b.id+'">💵 Costs</button>';
+  // Only offered once there is something to link to — an empty picker is worse than no button.
+  var linkBtn = cultures().length
+    ? '<button class="mini" data-act="link" data-id="'+b.id+'">🧬 '+(b.parentId?'Change lineage':'Link lineage')+'</button>'
+    : '';
+  costBtn += linkBtn;
   if(b.stage==='contaminated' || b.stage==='harvested'){
     var extra='';
     if(b.stage==='harvested'){
@@ -1035,8 +1074,10 @@ document.addEventListener('click',function(e){
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='edityield' && b){ editingYieldId=id; yieldMode='edit'; render(); }
   else if(act==='cancelYield'){ editingYieldId=null; yieldMode='append'; render(); }
-  else if(act==='cost' && b){ editingCostId=(editingCostId===id?null:id); editingYieldId=null; render(); }
+  else if(act==='cost' && b){ editingCostId=(editingCostId===id?null:id); editingYieldId=null; editingLinkId=null; render(); }
   else if(act==='cancelCost'){ editingCostId=null; render(); }
+  else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; render(); }
+  else if(act==='cancelLink'){ editingLinkId=null; render(); }
   else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='delete' && b){ state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render(); }
   /* deliveries & contacts (I74) */
@@ -1585,7 +1626,7 @@ function isSampleOnly(){
     setState:   function(doc){
       if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return;
       doc.batches.forEach(normFlushes);
-      state = normAux(doc); editingYieldId=null; editingCostId=null;
+      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
     }
