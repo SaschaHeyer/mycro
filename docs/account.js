@@ -18,7 +18,17 @@
   var API = 'https://mycro-806349486128.us-central1.run.app';
   var TOKEN_KEY = 'mycro_session';
   var EMAIL_KEY = 'mycro_email';
-  var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  // Mirrors the server's rule. ":" is excluded on purpose — "mailto:you@farm.com" used to
+  // pass as a valid address, and a paying grower was told he wasn't one because of it.
+  // Apostrophes stay legal: o'brien@example.ie is a real address.
+  var EMAIL_RE = /^[^@\s:,;<>\\]+@[^@\s:,;<>\\]+\.[^@\s:,;<>\\]+$/;
+  // Absorb what people actually paste out of mail clients and contact cards.
+  function cleanEmail(v) {
+    var s = String(v == null ? '' : v).slice(0, 200).trim();
+    var angled = s.match(/<([^<>]+)>\s*$/);        // "Michael Jones <m@farm.com>"
+    if (angled) s = angled[1].trim();
+    return s.replace(/^mailto:\s*/i, '').replace(/^["'<]+|["'>]+$/g, '').trim().toLowerCase();
+  }
 
   function ls(k, v) {
     try {
@@ -135,7 +145,7 @@
   }
 
   function requestLink() {
-    var inp = el('acctEmail'), em = (inp.value || '').trim();
+    var inp = el('acctEmail'), em = cleanEmail(inp.value);
     if (!EMAIL_RE.test(em)) { setStatus('Please enter a valid email.', true); inp.focus(); return; }
     var btn = el('acctGo'), prev = btn.textContent;
     btn.disabled = true; btn.textContent = 'Sending…';
@@ -327,7 +337,7 @@
     try { inp.focus(); } catch (e) {}
     return new Promise(function (resolve) {
       var go = function () {
-        var em = (inp.value || '').trim();
+        var em = cleanEmail(inp.value);
         if (!EMAIL_RE.test(em)) { setStatus('Please enter the email the link was sent to.', true); return; }
         el('acctConfirmGo').disabled = true;
         redeem(oob, em).then(resolve);

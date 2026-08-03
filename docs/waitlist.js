@@ -3,14 +3,25 @@
    asset converted them. Message colour is left to CSS (.cta-band p is light on the
    dark bands; .muted is dark on light blocks) so this works on every page. */
 window.MYCRO_API = window.MYCRO_API || "https://mycro-806349486128.us-central1.run.app";
+
+/* Same email rule as the server: ":" is excluded so a pasted "mailto:you@farm.com" can't be
+   accepted as an address, and paste artifacts are absorbed rather than bounced back at the
+   grower. Apostrophes stay legal. */
+var MYCRO_EMAIL_RE=/^[^@\s:,;<>\\]+@[^@\s:,;<>\\]+\.[^@\s:,;<>\\]+$/;
+function mycroCleanEmail(v){
+  var s=String(v==null?'':v).slice(0,200).trim();
+  var a=s.match(/<([^<>]+)>\s*$/); if(a) s=a[1].trim();
+  return s.replace(/^mailto:\s*/i,'').replace(/^["'<]+|["'>]+$/g,'').trim().toLowerCase();
+}
+
 function mycroWaitlist(e){
   e.preventDefault();
   var f=e.target, msg=document.getElementById('wl-msg');
   var input=f.querySelector('input[type=email]');
   var btn=f.querySelector('button');
-  var email=(input.value||'').trim();
+  var email=mycroCleanEmail(input.value);
   msg.style.display='block';
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+  if(!MYCRO_EMAIL_RE.test(email)){
     msg.textContent="Please enter a valid email address."; return false;
   }
   var orig=btn.textContent; btn.disabled=true; btn.textContent="Joining…";
@@ -43,9 +54,9 @@ function mycroFounding(e){
   var f=e.target, msg=document.getElementById('fnd-msg');
   var input=f.querySelector('input[type=email]');
   var btn=f.querySelector('button');
-  var email=(input.value||'').trim();
+  var email=mycroCleanEmail(input.value);
   if(msg) msg.style.display='block';
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+  if(!MYCRO_EMAIL_RE.test(email)){
     if(msg) msg.textContent="Please enter a valid email address."; return false;
   }
   var orig=btn.textContent; btn.disabled=true; btn.textContent="Taking you to checkout…";
