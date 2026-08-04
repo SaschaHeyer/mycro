@@ -414,7 +414,7 @@
 </div></footer>
 
 <script src="/qr.js"></script>
-<script src="/account.js?v=7"></script>
+<script src="/account.js?v=8"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render
@@ -1623,12 +1623,15 @@ function isSampleOnly(){
     // 8 batches?" about batches the grower never created.
     countLocal: function(){ return isSampleOnly() ? 0 : state.batches.length; },
     countOf:    function(doc){ return (doc && Array.isArray(doc.batches)) ? doc.batches.length : 0; },
+    // Returns false when the document is not usable, so a restore reports failure
+    // instead of quietly doing nothing (I79).
     setState:   function(doc){
-      if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return;
+      if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return false;
       doc.batches.forEach(normFlushes);
       state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
+      return true;
     }
   });
 })();
@@ -1820,6 +1823,14 @@ table.strain td.daddr{white-space:normal;min-width:170px;color:var(--muted)}
   font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
 .acctHint{margin:7px 0 0;font-size:.82rem;color:var(--muted)}
 .acctStatus{margin-top:7px;font-size:.84rem;color:var(--muted)}
+/* version history (I79) */
+.acctHist{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.acctRevs{list-style:none;margin:6px 0 0;padding:0;max-height:260px;overflow-y:auto}
+.acctRevs li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:7px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+.acctRevs li:last-child{border-bottom:0}
+.revWhen{min-width:190px;color:var(--ink)}
+.revWhat{flex:1;color:var(--muted)}
 .acctActions .gbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;
   border:1px solid var(--line);font-weight:700}
 .acctActions .gbtn svg{width:16px;height:16px;flex:0 0 auto}

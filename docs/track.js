@@ -15,12 +15,19 @@
   // drawn from a pool polluted with it (hundreds of grow-log views in a week were ours).
   // Open any page once with ?dev=1 to mark this browser as ours for good; ?dev=0 clears it.
   // Flagged events are still stored, just kept out of the real/human numbers server-side.
-  var DEV = false;
+  // A local origin is ALWAYS ours: the regression suite drives real pages against a local
+  // static server and beacons to production, so a 38-test run landed hundreds of pageviews
+  // and dozens of harvests in the live funnel — 917 "real" pageviews in a week of which the
+  // overwhelming majority were the test runner. A browser cannot opt a test runner in with
+  // ?dev=1, so the origin has to decide. (I79)
+  var LOCAL = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname) ||
+              location.protocol === "file:";
+  var DEV = LOCAL;
   try {
     var q = new URLSearchParams(location.search).get("dev");
     if (q === "1") localStorage.setItem("mycro_dev", "1");
     else if (q === "0") localStorage.removeItem("mycro_dev");
-    DEV = localStorage.getItem("mycro_dev") === "1";
+    DEV = LOCAL || localStorage.getItem("mycro_dev") === "1";
   } catch (e) {}
   function send(name, props) {
     try {

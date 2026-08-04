@@ -112,14 +112,18 @@
           '</span>' +
           '<span class="acctActions">' +
             '<button type="button" class="mini" id="acctPull">Load from my account</button> ' +
+            '<button type="button" class="mini" id="acctHist">Earlier versions</button> ' +
             '<button type="button" class="mini ghosty" id="acctOut">Sign out</button>' +
           '</span>' +
         '</div>' +
         '<p class="acctHint">Every change on this device saves to your account automatically. ' +
-        'Sign in on your phone and the same log is there.</p>' +
+        'Sign in on your phone and the same log is there. Every version is kept, so a bad ' +
+        'day is a step back and not an ending.</p>' +
+        '<div id="acctHistBox" class="acctHist" style="display:none"></div>' +
         '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
       el('acctOut').addEventListener('click', signOut);
       el('acctPull').addEventListener('click', function () { pull(true); });
+      el('acctHist').addEventListener('click', showHistory);
     } else {
       box.innerHTML =
         '<div class="acctRow">' +
@@ -175,6 +179,78 @@
     setStatus('Signed out. Your log is still saved on this device.');
     if (t) post('/api/auth/logout', { token: t }).catch(function () {});
     if (w.track) try { w.track('account_signout', {}); } catch (e) {}
+  }
+
+  /* ---- version history (I79) ----
+     The account keeps every distinct version that was pushed. This lists them with what was
+     actually in each one — "3 batches · 13 cultures" is the number a grower recognises as
+     theirs or not — and puts any of them back. Restoring pushes, and a push snapshots, so
+     the state you restored over is itself still there afterwards. */
+  function whenWords(iso) {
+    var t = Date.parse(iso); if (isNaN(t)) return iso;
+    var mins = Math.round((Date.now() - t) / 60000), d = new Date(t);
+    var clock = d.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric',
+                                       hour: '2-digit', minute: '2-digit' });
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago · ' + clock;
+    if (mins < 60 * 24) return Math.round(mins / 60) + 'h ago · ' + clock;
+    return Math.round(mins / 1440) + ' days ago · ' + clock;
+  }
+  function countWords(c) {
+    if (!c) return 'saved log';
+    var p = [];
+    if (c.batches) p.push(c.batches + ' batch' + (c.batches === 1 ? '' : 'es'));
+    if (c.cultures) p.push(c.cultures + ' culture' + (c.cultures === 1 ? '' : 's'));
+    if (c.sources) p.push(c.sources + ' source' + (c.sources === 1 ? '' : 's'));
+    return p.length ? p.join(' · ') : 'empty';
+  }
+  function showHistory() {
+    var box = el('acctHistBox'); if (!box) return;
+    if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    box.innerHTML = '<p class="acctHint">Loading your earlier versions…</p>';
+    post('/api/account/revisions', { token: token() }).then(function (j) {
+      var rv = (j && j.revisions) || [];
+      if (!rv.length) {
+        box.innerHTML = '<p class="acctHint">No earlier versions yet — the next change you make ' +
+          'starts the history.</p>';
+        return;
+      }
+      box.innerHTML = '<p class="acctHint"><b>Earlier versions of your log.</b> Restoring replaces ' +
+        'what is on this device — and keeps what you replaced, so you can come back.</p>' +
+        '<ul class="acctRevs">' + rv.map(function (r) {
+          return '<li><span class="revWhen">' + esc(whenWords(r.savedAt)) + '</span>' +
+            '<span class="revWhat">' + esc(countWords(r.counts)) + '</span>' +
+            '<button type="button" class="mini" data-rev="' + esc(r.id) + '">Restore this</button></li>';
+        }).join('') + '</ul>';
+      box.addEventListener('click', function (e) {
+        var id = e.target && e.target.getAttribute && e.target.getAttribute('data-rev');
+        if (id) restore(id, e.target);
+      });
+    }).catch(function () {
+      box.innerHTML = '<p class="acctHint">Could not load your history just now.</p>';
+    });
+  }
+  function restore(id, btn) {
+    if (!hooks.setState) return;
+    if (!w.confirm('Put this version back on this device? What is here now is kept in your ' +
+                   'history, so this can be undone.')) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Restoring…'; }
+    post('/api/account/revision', { token: token(), id: id }).then(function (j) {
+      if (!j || !j.data) throw new Error('empty');
+      var ok = hooks.setState(j.data);
+      if (ok === false) throw new Error('rejected');
+      el('acctHistBox').style.display = 'none';
+      // Say it AFTER the push settles: pushNow() writes its own "Saved" line, and the
+      // message that matters to someone who just got their work back is the restore.
+      pushNow().then(function () {
+        setStatus('Restored the version from ' + whenWords(j.savedAt) + ' ✓');
+      });
+      if (w.track) try { w.track('account_restore', {}); } catch (e) {}
+    }).catch(function () {
+      setStatus('Could not restore that version — nothing on this device was changed.', true);
+      if (btn) { btn.disabled = false; btn.textContent = 'Restore this'; }
+    });
   }
 
   /* Pull the account's copy onto this device. Always asks before replacing real work. */

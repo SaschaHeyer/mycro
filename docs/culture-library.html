@@ -310,7 +310,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
-<script src="/account.js?v=7"></script>
+<script src="/account.js?v=8"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -357,6 +357,7 @@ var BATCH_STAGE = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fru
 
 var addingUnder = null;   // {parentId, type} while an inline "add culture" form is open
 var recordingOn = null;   // culture id while its colonisation-performance form is open
+var attachingId = null;   // culture id while its "attach to a source" picker is open (I79)
 
 /* ---- date helpers ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -541,6 +542,17 @@ function holdsOwnWork(id){
   return d.cultures.some(function(x){ return !isSample(x.id); }) ||
          d.batches.some(function(b){ return !isSample(b.id); });
 }
+/* ---- unattached cultures (I79) ----
+   The tree is drawn from state.sources downwards, so a culture whose parent no longer
+   exists used to render nowhere at all — still in the data, invisible on the page. Deleting
+   a source (which the confirm cheerfully offered to do, "leave them orphaned") therefore
+   made an entire real chain disappear. Nothing is hidden now: anything whose parent is
+   missing is rendered as its own root under "Unattached", and can be attached to a source.
+   The code is never rewritten on attach — it is what the grower wrote on the jar. */
+function parentMissing(c){
+  return c.parentKind==='source' ? !findSource(c.parentId) : !findCulture(c.parentId);
+}
+function orphanRoots(){ return state.cultures.filter(parentMissing); }
 function jarsOf(c){ return (c.type==='grain' && typeof c.jars==='number' && c.jars>0) ? Math.round(c.jars) : 0; }
 function countJars(list){ return list.reduce(function(a,c){ return a+jarsOf(c); },0); }
 function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
@@ -882,8 +894,48 @@ function sourceCardHtml(s){
   return h;
 }
 function render(){
-  $('tree').innerHTML = state.sources.map(sourceCardHtml).join('');
-  $('empty').style.display = state.sources.length ? 'none' : 'block';
+  var h = state.sources.map(sourceCardHtml).join('');
+  var orph = orphanRoots();
+  if(orph.length) h += orphanCardHtml(orph);
+  $('tree').innerHTML = h;
+  // Only truly empty when there is nothing at all — never hide cultures behind "no sources yet".
+  $('empty').style.display = (state.sources.length || state.cultures.length) ? 'none' : 'block';
+}
+function orphanCardHtml(roots){
+  var n = 0;
+  roots.forEach(function(c){ n += 1 + descendants(c.id).cultures.length; });
+  var h = '<div class="srccard orphcard">';
+  h += '<div class="shead"><span class="chip chip-bad">⚠ Unattached</span>'+
+       '<span class="sname">'+n+' culture'+(n===1?'':'s')+' with no source</span></div>';
+  h += '<div class="smeta">The source '+(roots.length===1?'this chain came':'these chains came')+
+       ' from was deleted. Nothing has been lost — attach '+(roots.length===1?'it':'them')+
+       ' to a source to put '+(roots.length===1?'it':'them')+' back in the tree, and back into the '+
+       'strain-strength table.</div>';
+  roots.forEach(function(c){
+    h += '<div class="orphrow">';
+    if(state.sources.length){
+      h += '<button class="mini" data-act="attach" data-id="'+esc(c.id)+'">📎 Attach '+esc(c.code)+' to a source</button>';
+    } else {
+      h += '<span class="sub">Log a source above, then attach <b>'+esc(c.code)+'</b> to it.</span>';
+    }
+    h += '</div>';
+    if(attachingId===c.id) h += attachFormHtml(c);
+    h += cultureNodeHtml(c, 0);
+  });
+  h += '</div>';
+  return h;
+}
+function attachFormHtml(c){
+  return '<form class="addform" data-act="noop">'+
+    '<label>Attach <code>'+esc(c.code)+'</code> to'+
+    '<select id="at-src">'+state.sources.map(function(s){
+      return '<option value="'+esc(s.id)+'">'+esc(s.code)+' · '+esc(SPECIES[s.species].label)+'</option>';
+    }).join('')+'</select></label>'+
+    '<div class="sub">Its tracking code stays exactly as it is — that code is what is written on the jar.</div>'+
+    '<div class="nactions">'+
+      '<button class="mini" data-act="saveAttach" data-id="'+esc(c.id)+'">Attach</button>'+
+      '<button class="mini ghosty" data-act="cancelAttach">Cancel</button>'+
+    '</div></form>';
 }
 /* ---- the shared address book (I74) ----
    Contacts are created and edited in the Grow Log's Deliveries panel; this page only reads
@@ -1006,6 +1058,18 @@ $('tree').addEventListener('click', function(e){
     return;
   }
   if(act==='cancel'){ e.preventDefault(); addingUnder=null; paint(); return; }
+  if(act==='attach'){ e.preventDefault(); attachingId=el.getAttribute('data-id'); addingUnder=null; recordingOn=null; paint(); return; }
+  if(act==='cancelAttach'){ e.preventDefault(); attachingId=null; paint(); return; }
+  if(act==='saveAttach'){
+    e.preventDefault();
+    var ac = findCulture(el.getAttribute('data-id')), sel = $('at-src');
+    if(ac && sel && findSource(sel.value)){
+      ac.parentKind='source'; ac.parentId=sel.value;   // code untouched: it is on the jar
+      attachingId=null; save(); paint();
+      if(window.track) try{ track('culture_attach',{}); }catch(_){}
+    }
+    return;
+  }
   if(act==='perf'){ e.preventDefault(); recordingOn=el.getAttribute('data-id'); addingUnder=null; paint();
     var pf=$('p-date'); if(pf) pf.focus(); return; }
   if(act==='cancelPerf'){ e.preventDefault(); recordingOn=null; paint(); return; }
@@ -1046,7 +1110,9 @@ $('tree').addEventListener('click', function(e){
   }
   if(act==='delsrc'){
     var ds=descendants(id);
-    if(ds.cultures.length && !confirm('This source has '+ds.cultures.length+' culture(s) descended from it. Delete the source and leave them orphaned?')) return;
+    if(ds.cultures.length && !confirm('This source has '+ds.cultures.length+' culture(s) descended from it.\n\n'+
+      'They are NOT deleted — they move to "Unattached" at the bottom of the tree, and you can '+
+      'attach them to another source at any time.\n\nDelete the source?')) return;
     if(!ds.cultures.length && !confirm('Delete this source?')) return;
     state.sources = state.sources.filter(function(x){ return x.id!==id; });
     save(); paint(); return;
@@ -1178,12 +1244,13 @@ function isSampleOnly(){
     countLocal: function(){ return isSampleOnly() ? 0 : (state.cultures||[]).length; },
     countOf:    function(doc){ return (doc && Array.isArray(doc.cultures)) ? doc.cultures.length : 0; },
     setState:   function(doc){
-      if(!doc || !Array.isArray(doc.batches)) return;
-      if(!Array.isArray(doc.sources) || !doc.sources.every(validSource)) return;
-      if(!Array.isArray(doc.cultures) || !doc.cultures.every(validCulture)) return;
-      state = doc; recordingOn=null;
+      if(!doc || !Array.isArray(doc.batches)) return false;
+      if(!Array.isArray(doc.sources) || !doc.sources.every(validSource)) return false;
+      if(!Array.isArray(doc.cultures) || !doc.cultures.every(validCulture)) return false;
+      state = doc; recordingOn=null; attachingId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       paint();
+      return true;
     }
   });
 })();
@@ -1193,6 +1260,10 @@ function isSampleOnly(){
 /* culture-library specific */
 .srccard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
+/* Cultures whose source was deleted (I79) — visibly set apart, never hidden. */
+.orphcard{border-color:#e0b48a;background:#fffaf3}
+.orphcard .sname{font-style:normal}
+.orphrow{margin:10px 0 2px}
 .shead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .scode{font-size:1rem;font-weight:800;letter-spacing:.01em;background:var(--brand-soft);color:var(--brand-ink);
   padding:3px 9px;border-radius:8px}
@@ -1267,6 +1338,14 @@ table.strain .crown{font-size:.85rem}
   font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
 .acctHint{margin:7px 0 0;font-size:.82rem;color:var(--muted)}
 .acctStatus{margin-top:7px;font-size:.84rem;color:var(--muted)}
+/* version history (I79) */
+.acctHist{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.acctRevs{list-style:none;margin:6px 0 0;padding:0;max-height:260px;overflow-y:auto}
+.acctRevs li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:7px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+.acctRevs li:last-child{border-bottom:0}
+.revWhen{min-width:190px;color:var(--ink)}
+.revWhat{flex:1;color:var(--muted)}
 .acctActions .gbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;
   border:1px solid var(--line);font-weight:700}
 .acctActions .gbtn svg{width:16px;height:16px;flex:0 0 auto}
