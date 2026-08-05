@@ -1,7 +1,10 @@
 /* Mycro — first-party, privacy-light analytics.
-   No cookies, no localStorage, no PII, no third party, no consent banner needed.
+   No cookies, no PII, no third party, no cross-site identifier, no consent banner needed.
    Beacons {name, path, ref-host, props} to our own Cloud Run endpoint; stored in
-   Firestore. Read the funnel headless with tools/funnel.sh. Must NEVER break a page. */
+   Firestore. Read the funnel headless with tools/funnel.sh. Must NEVER break a page.
+   localStorage holds exactly two non-identifying things: the ?dev=1 flag that keeps our own
+   testing out of the numbers, and the first-touch CHANNEL LABEL (referrer host + utm tags),
+   both of which stay on the visitor's device unless they choose to give us their email. */
 (function () {
   "use strict";
   var ENDPOINT = "https://mycro-806349486128.us-central1.run.app/api/event";
@@ -29,6 +32,44 @@
     else if (q === "0") localStorage.removeItem("mycro_dev");
     DEV = LOCAL || localStorage.getItem("mycro_dev") === "1";
   } catch (e) {}
+  /* ---- first-touch attribution (I81) ----
+     Every lead record used to carry the referrer at the moment of SUBMIT, which for anyone
+     who browsed at all is usemycro.com — so 4 of 8 real leads had no recoverable channel and
+     the honest answer to "where did they come from" was "I don't know". The arrival is the
+     only moment the channel exists, and it is usually a different page and often a different
+     day from the signup.
+
+     Stored once on the FIRST page of the FIRST visit and never overwritten, so a grower who
+     arrives from ChatGPT, reads three guides and signs up a week later is still attributed to
+     ChatGPT. Channel labels only: referrer HOSTNAME, utm tags, landing path, date. No PII, no
+     full URL, no cross-site identifier — the same bar as the rest of this file. */
+  var FT_KEY = "mycro_first_touch";
+  function firstTouch() {
+    try {
+      var saved = localStorage.getItem(FT_KEY);
+      if (saved) return JSON.parse(saved);
+      var q = new URLSearchParams(location.search);
+      var ft = {
+        ref: document.referrer ? new URL(document.referrer).hostname.slice(0, 80) : "",
+        utm: (q.get("utm_source") || "").slice(0, 80),
+        med: (q.get("utm_medium") || "").slice(0, 40),
+        cmp: (q.get("utm_campaign") || "").slice(0, 60),
+        page: location.pathname.slice(0, 120),
+        day: new Date().toISOString().slice(0, 10)
+      };
+      // Our own domain is not a source. If the first thing we ever see is an internal
+      // referrer the visit began somewhere we did not observe, and "" says that honestly
+      // rather than crediting ourselves for it.
+      if (ft.ref && /(^|\.)usemycro\.com$/i.test(ft.ref)) ft.ref = "";
+      if (DEV) ft.dev = 1;
+      localStorage.setItem(FT_KEY, JSON.stringify(ft));
+      return ft;
+    } catch (e) { return null; }
+  }
+  // Read (and on a first visit, write) immediately: a bounce still records where it came from.
+  var FT = firstTouch();
+  window.mycroFirstTouch = function () { return FT || firstTouch(); };
+
   function send(name, props) {
     try {
       var body = JSON.stringify({

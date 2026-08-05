@@ -36,10 +36,22 @@
       "email": "hello@usemycro.com",
       "logo": "https://usemycro.com/og.png",
       "description": "Grow-operations software for small gourmet and functional mushroom farms.",
+      "founder": { "@id": "https://usemycro.com/#founder" },
       "sameAs": [
         "https://www.pinterest.com/usemycro",
-        "https://github.com/SaschaHeyer/mycro-grow"
+        "https://github.com/SaschaHeyer/mycro-grow",
+        "https://github.com/SaschaHeyer/mycro",
+        "https://www.reddit.com/user/usemycrocom"
       ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://usemycro.com/#founder",
+      "name": "Sascha Heyer",
+      "url": "https://usemycro.com/#about",
+      "jobTitle": "Founder",
+      "worksFor": { "@id": "https://usemycro.com/#organization" },
+      "sameAs": [ "https://github.com/SaschaHeyer" ]
     },
     {
       "@type": "WebSite",
@@ -126,6 +138,18 @@
 
 <section style="padding-top:8px">
   <div class="wrap">
+  <!-- Answer capsule. A self-contained ~55-word statement of what this is, high on the page
+       and readable with nothing around it, because that is the unit an answer engine lifts
+       and attributes. Everything in it is literally true today; if a claim here ever stops
+       being true it is the first thing to fix, since this is the sentence that gets quoted. -->
+  <p id="whatis" class="note" style="font-size:1.02rem;line-height:1.65">
+    <b style="color:var(--ink)">Mycro is free grow-operations software for small gourmet and
+    functional mushroom farms.</b> It tracks every batch from spawn to final flush, working out
+    biological efficiency, contamination rate and cost per pound automatically, and traces any
+    block back through grain spawn, liquid culture and petri dish to the source it came from.
+    It runs in a browser with no account.
+  </p>
+
   <div class="note" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
     <div style="flex:1;min-width:260px">
       <b style="color:var(--ink)">Right now you're probably running on a spreadsheet.</b>
@@ -358,6 +382,22 @@
     <p id="wl-msg" class="muted" style="margin-top:12px;display:none"></p>
     <p class="muted" style="font-size:.85rem;margin-top:10px">No spam. Just launch news. Unsubscribe anytime.</p>
   </div>
+</div></section>
+
+<!-- A named person behind the software. This is the visible half of the Person entity in the
+     page's JSON-LD, and the two must keep saying the same thing. -->
+<section id="about"><div class="wrap">
+  <h2>Who builds Mycro</h2>
+  <p class="muted" style="max-width:720px">Mycro is built by <b>Sascha Heyer</b>, working directly
+    with the growers who use it. Every feature on this page came from a specific request by a
+    working farm, not from a roadmap: the culture library and its contamination traceback, cost
+    per pound by method and strain, the delivery labels, and the grain-spawn shake milestone were
+    all asked for by name. The grow maths is open source and
+    <a href="https://github.com/SaschaHeyer/mycro-grow">published on GitHub</a> so the numbers can
+    be checked rather than taken on trust.</p>
+  <p class="muted" style="max-width:720px">If something here is wrong, or your farm needs something
+    it does not do, write to <a href="mailto:hello@usemycro.com">hello@usemycro.com</a>. A person
+    reads it.</p>
 </div></section>
 
 <footer><div class="wrap foot-row">

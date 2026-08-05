@@ -1612,7 +1612,7 @@ $('backupEmailBtn').addEventListener('click',function(){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ note.textContent='Please enter a valid email.'; note.style.color='#b23b3b'; return; }
   if(!id){ note.textContent='Back up first, then we can email the link.'; note.style.color='#b23b3b'; return; }
   var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Sending…';
-  fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:id})})
+  fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:id,first:mycroFirstTouch&&mycroFirstTouch()})})
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(){
       $('backupEmailWrap').innerHTML='<p style="margin:0;font-size:.9rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private restore link.</p>';
@@ -1722,7 +1722,7 @@ function showNudge(src){
         setCloudId(j.id);
         try{ $('backupMsg').textContent='Backed up to the cloud ✓'; $('backupUrl').value=restoreUrl(j.id); $('backupBox').style.display='block'; }catch(_){}
         if(window.track) try{ track('growlog_cloud_backup',{src:'nudge'}); }catch(_){}
-        return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id})});
+        return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,first:mycroFirstTouch&&mycroFirstTouch()})});
       })
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(){

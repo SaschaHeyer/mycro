@@ -14,6 +14,13 @@ function mycroCleanEmail(v){
   return s.replace(/^mailto:\s*/i,'').replace(/^["'<]+|["'>]+$/g,'').trim().toLowerCase();
 }
 
+/* The channel a lead ACTUALLY arrived from, captured by track.js on their first ever page
+   view and carried here unchanged. Sending document.referrer at submit time credited
+   usemycro.com for anyone who browsed before signing up, which was most of them. */
+function mycroFirst(){
+  try{ return (window.mycroFirstTouch && window.mycroFirstTouch()) || null; }catch(_){ return null; }
+}
+
 function mycroWaitlist(e){
   e.preventDefault();
   var f=e.target, msg=document.getElementById('wl-msg');
@@ -28,7 +35,7 @@ function mycroWaitlist(e){
   try{ localStorage.setItem('mycro_waitlist_email', email); }catch(_){}
   fetch(window.MYCRO_API+"/api/waitlist",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"" })
+    body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"", first: mycroFirst() })
   }).then(function(r){ return r.ok ? r.json().catch(function(){return {ok:true};}) : {ok:false}; })
     .then(function(d){
       if(d && d.ok){
@@ -68,7 +75,7 @@ function mycroFounding(e){
   try{
     fetch(window.MYCRO_API+"/api/waitlist",{
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"", note:"founding-intent" })
+      body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"", note:"founding-intent", first: mycroFirst() })
     }).then(redirect, redirect);
   }catch(_){ redirect(); }
   setTimeout(redirect, 1200);

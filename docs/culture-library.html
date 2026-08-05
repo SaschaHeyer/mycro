@@ -1472,7 +1472,7 @@ $('nudgeEmailBtn').addEventListener('click', function(){
       try{ localStorage.setItem(CLOUD_KEY, j.id); }catch(e){}
       setSync('All changes synced to your private link ✓');
       if(window.track) try{ track('growlog_cloud_backup',{src:'culture-nudge'}); }catch(_){}
-      return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id})});
+      return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,first:mycroFirstTouch&&mycroFirstTouch()})});
     })
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(){
