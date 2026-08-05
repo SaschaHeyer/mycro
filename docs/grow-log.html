@@ -580,6 +580,13 @@ function newId(){ return 'b'+Date.now().toString(36)+Math.floor(Math.random()*1e
    optional and read-only from this page's point of view: a log with no cultures behaves
    exactly as before, and an unlinked batch renders unchanged. */
 function cultures(){ return Array.isArray(state.cultures) ? state.cultures : []; }
+/* Archived cultures (I80) are finished work the grower filed away in the library, so they are
+   not offered when linking a NEW batch. The one exception is the culture a batch is ALREADY
+   linked to: it stays in its own picker, selected, because a picker that quietly drops the
+   current value unlinks the batch the moment the form is saved. */
+function pickableCultures(keepId){
+  return cultures().filter(function(c){ return c.archived!==true || c.id===keepId; });
+}
 // Mirrors CTYPE in culture-library.html — only the labels, so a picker here reads the same
 // as the chain over there ("SHI-02-P1-L2 · Liquid culture").
 var CULTURE_LABEL = {petri:'Petri dish', lc:'Liquid culture', grain:'Grain spawn'};
@@ -597,7 +604,7 @@ function flaggedAncestor(id){
   return null;
 }
 function renderCultureSelect(){
-  var cs=cultures(), wrap=$('f-culture-wrap'), sel=$('f-culture');
+  var cs=pickableCultures(), wrap=$('f-culture-wrap'), sel=$('f-culture');
   if(!wrap||!sel) return;
   if(!cs.length){ wrap.style.display='none'; sel.innerHTML=''; return; }
   wrap.style.display='flex';
@@ -857,7 +864,7 @@ function costFormHtml(b){
    Culture Library was built for: flag a contaminated jar and the traceback can only find
    blocks that carry the link, so it reports "0 blocks affected" and looks fine. */
 function linkFormHtml(b){
-  var cs=cultures();
+  var cs=pickableCultures(b.parentId);
   return '<form class="yieldForm" onsubmit="return saveLink(event,\''+b.id+'\')">'+
     '<label class="yl" style="min-width:200px">Spawned from'+
       '<select id="linkSel">'+
@@ -895,7 +902,7 @@ function actionsHtml(b){
   }
   var costBtn = '<button class="mini" data-act="cost" data-id="'+b.id+'">💵 Costs</button>';
   // Only offered once there is something to link to — an empty picker is worse than no button.
-  var linkBtn = cultures().length
+  var linkBtn = pickableCultures(b.parentId).length
     ? '<button class="mini" data-act="link" data-id="'+b.id+'">🧬 '+(b.parentId?'Change lineage':'Link lineage')+'</button>'
     : '';
   costBtn += linkBtn;
@@ -1079,7 +1086,13 @@ document.addEventListener('click',function(e){
   else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; render(); }
   else if(act==='cancelLink'){ editingLinkId=null; render(); }
   else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
-  else if(act==='delete' && b){ state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render(); }
+  else if(act==='delete' && b){
+    /* Counts only, never content. I79 could not answer "what happened to his batches" from
+       data because a deletion left no trace whatsoever; the next time it is one query away. */
+    var wasStage=b.stage, hadYield=(typeof b.yieldG==='number' && b.yieldG>0)?1:0;
+    state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render();
+    if(window.track) try{ track('growlog_batch_delete',{stage:wasStage, harvested:hadYield, left:state.batches.length}); }catch(_){}
+  }
   /* deliveries & contacts (I74) */
   else if(act==='deliver' && b){
     var p=$('deliveryPanel'); p.style.display='block';
@@ -1132,7 +1145,9 @@ document.querySelectorAll('#unitToggle button').forEach(function(bt){
 /* ---- reset + seed ---- */
 $('resetSample').addEventListener('click',function(){
   if(!confirm('Replace your log with the sample batches? This clears what is saved on this device.')) return;
+  var had=state.batches.length;
   state=sampleState(); editingYieldId=null; save(); render();
+  if(window.track) try{ track('growlog_reset',{had:had}); }catch(_){}
 });
 $('seedLink').addEventListener('click',function(e){ e.preventDefault(); state=sampleState(); save(); render(); });
 

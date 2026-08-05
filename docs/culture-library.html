@@ -27,6 +27,8 @@
 {"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}},
 {"@type":"Question","name":"How do you measure the strength of a mushroom strain?","acceptedAnswer":{"@type":"Answer","text":"The two practical measures growers use on a petri dish are how many days it takes to fully colonise the plate and how thick the growth is — fast, thick, rhizomorphic growth indicates a vigorous strain, while slow or wispy growth suggests a weak or ageing culture. Those signals are only meaningful within a species, because shiitake naturally colonises far slower than oyster. The strongest confirmation comes later: the biological efficiency of the blocks grown from that culture. The free Mycro culture library records days to colonisation and growth thickness on any culture and shows them per source alongside the loss rate and the biological efficiency of the blocks descended from it."}},
 {"@type":"Question","name":"Why track the number of grain spawn jars?","acceptedAnswer":{"@type":"Answer","text":"One grain spawn jar usually inoculates several grow bags, so the jar count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six jars came off it — and how many blocks those jars went into — tells you the size of the problem and how much to quarantine. The free Mycro culture library stores an optional jar count on grain spawn and totals the affected jars and blocks in its traceback."}},
+{"@type":"Question","name":"When should you shake a jar of grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Shake a grain spawn jar once the mycelium has colonised roughly 20 to 30 percent of the grain — enough growth that it can recover quickly, but early enough that redistributing it still saves you weeks. Shaking breaks the colonised grain apart and spreads those pieces through the rest of the jar, giving the mycelium many new starting points instead of one advancing front. Shake too early and a thin culture may not recover; shake too late and you gain little, because the jar is nearly run anyway. The right day depends on your grain, jar size and room temperature, so the useful number is your own: the free Mycro culture library records the shake as a dated milestone on every grain jar, alongside the day it was made and the day it finished, and once you have shaken two jars of a species it shows the day you usually shake rather than a figure from a book."}},
+{"@type":"Question","name":"How do I clear finished cultures without losing the traceback?","acceptedAnswer":{"@type":"Answer","text":"Archive them rather than delete them. A used-up grain spawn jar is still the parent of every block that came off it, so deleting it silently breaks the contamination traceback — flag a plate later and it will report that nothing downstream was affected, which reads as good news rather than a missing link. In the free Mycro culture library, archiving a finished culture or a whole source takes it out of the tree, the counts, the working clock and the strain table while keeping every code, date and link intact, and one click brings it back. Archiving a finished culture that live work still hangs off is refused for the same reason."}},
 {"@type":"Question","name":"How long should a petri dish, liquid culture or grain spawn jar take to colonise?","acceptedAnswer":{"@type":"Answer","text":"As a rough orientation, a petri dish or a liquid culture is usually fully colonised in about 7 to 14 days and a grain spawn jar in about 14 to 21 days, but the real answer depends heavily on species, temperature and how well the culture was agitated — shiitake runs far slower than oyster. That is why the free Mycro culture library treats those windows as orientation only and never calls a culture late against them: it lists every live culture with a day count running from the date you made it, and once you have recorded the finish date of two cultures of the same species and type it starts flagging a slow one against your own average instead of a published figure."}}]}
 </script>
 </head>
@@ -63,6 +65,7 @@
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 16px;flex-wrap:wrap">
     <a class="btn secondary" style="padding:8px 14px;font-size:.9rem" href="grow-log.html">← Grow Log</a>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem;display:none" id="archiveDone">🗄 Archive finished</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Reset to sample</button>
     </div>
@@ -177,6 +180,12 @@
   <div id="tree"></div>
   <p id="empty" class="note" style="display:none">No sources yet. Log your first one above — or
     <a href="#" id="seedLink">load a sample library</a> to see how lineage and traceback work.</p>
+  <p id="emptyArchived" class="note" style="display:none">Your finished work is <b>archived, not
+    deleted</b> — open “Archived” below to read it or bring any of it back.</p>
+
+  <!-- The archive (I80): finished work, out of the way but never gone. -->
+  <div id="archiveBar" class="samplebar" style="display:none"></div>
+  <div id="archiveList" style="display:none"></div>
 
   <!-- Aha-moment bridge: same honest capture as the grow log. -->
   <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
@@ -266,6 +275,29 @@
       number</b>: once you have recorded two cultures of the same species and type, the list starts
       flagging <b>against your own pace</b> instead, because how fast a culture runs is a property of
       your conditions, not of a textbook.</p>
+
+    <h3 style="margin-top:16px">The grain-spawn shake</h3>
+    <p class="muted">A grain jar is not one event with a start and a finish. You inoculate it, let it
+      run to roughly <b>20–30%</b>, <b>shake it</b> so the colonised grain is redistributed through the
+      rest of the jar, and then wait for it to hit 100% and go into grow media. The shake is the part
+      you actually <i>do</i>, and the part it is possible to get wrong: too early and a thin culture may
+      not recover, too late and you have gained little because the jar was nearly run anyway. So grain
+      spawn carries the shake as its own dated milestone — a jar reads <i>made</i>, <i>shaken on day 4</i>,
+      <i>fully colonised in 12 days, 8 days after the shake</i>. As everywhere else here, the day you
+      <i>should</i> shake is never quoted from a book: shake two jars of a species and the working list
+      starts telling you the day <b>you</b> usually shake, because that depends on your grain, your jar
+      size and your room.</p>
+
+    <h3 style="margin-top:16px">Finished work: archived, never deleted</h3>
+    <p class="muted">When a run is done you want it out of the way, not gone. <b>🗄 Archive finished</b>
+      files away every used-up, discarded or contaminated culture in one go — out of the tree, the
+      counts, the working clock and the strain table — while keeping every code, date and link exactly
+      as it was, so a single click brings any of it back. You can archive one culture, or a whole source
+      with its chain. <b>Deleting</b> a finished culture is the one thing that genuinely loses something:
+      a used-up grain jar is still the parent of every block that came off it, so removing it breaks the
+      traceback — flag a plate afterwards and it reports that nothing downstream was affected, which
+      reads as good news rather than a missing link. For the same reason a sweep refuses to archive a
+      finished culture that live work still hangs off, and says how many it kept and why.</p>
 
     <h3 style="margin-top:16px">Strain strength: what a plate tells you before the block does</h3>
     <p class="muted">Two things a grower already judges a culture on are <b>how long it takes to fully
@@ -390,7 +422,7 @@ function sampleCultures(){
       {id:'c2', code:'SHI-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c1',
        createdAt:daysAgoIso(120), status:'healthy', notes:'Light malt broth'},
       {id:'c3', code:'SHI-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c2',
-       createdAt:daysAgoIso(95), jars:5, status:'used', notes:'Rye'},
+       createdAt:daysAgoIso(95), shakenAt:daysAgoIso(89), jars:5, status:'used', notes:'Rye'},
       {id:'c7', code:'SHI-01-P2', type:'petri', parentKind:'source', parentId:'src1',
        createdAt:daysAgoIso(84), colonisedAt:daysAgoIso(71), vigor:'thick',
        status:'healthy', notes:'Second plate off the same source'},
@@ -408,7 +440,8 @@ function sampleCultures(){
 /* ---- state (resilient; shared with the grow log) ---- */
 function validSource(s){
   return s && typeof s.id==='string' && typeof s.code==='string' && SPECIES[s.species] &&
-    (s.kind==='purchased'||s.kind==='wild') && typeof s.acquiredAt==='string';
+    (s.kind==='purchased'||s.kind==='wild') && typeof s.acquiredAt==='string' &&
+    (s.archived==null || typeof s.archived==='boolean');     // filed away (I80)
 }
 function validCulture(c){
   return c && typeof c.id==='string' && typeof c.code==='string' && CTYPE[c.type] &&
@@ -416,6 +449,8 @@ function validCulture(c){
     CSTATUS[c.status] && typeof c.createdAt==='string' &&
     (c.jars==null || typeof c.jars==='number') &&            // jar count on grain spawn (I73)
     (c.colonisedAt==null || typeof c.colonisedAt==='string') && // fully-colonised date (I73)
+    (c.shakenAt==null || typeof c.shakenAt==='string') &&    // grain shake milestone (I80)
+    (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
     (c.vigor==null || !!VIGOR[c.vigor]);                     // growth thickness (I73)
 }
 function load(){
@@ -444,6 +479,57 @@ function findSource(id){ for(var i=0;i<state.sources.length;i++) if(state.source
 function findCulture(id){ for(var i=0;i<state.cultures.length;i++) if(state.cultures[i].id===id) return state.cultures[i]; return null; }
 function childrenOf(id){ return state.cultures.filter(function(c){ return c.parentId===id; }); }
 function batchesOf(id){ return state.batches.filter(function(b){ return b.parentId===id; }); }
+
+/* ---- the archive (I80) ----
+   Founding Grower #1, restarting after we shipped his roadmap: "is there a way to clear the
+   culture library history on the ones completed, so I can start to use this with a clean
+   slate". Filed away, NOT deleted — a used-up grain jar is still the parent of the blocks it
+   made, so deleting it would quietly break the traceback that is the reason this page exists.
+   Archived items leave every panel and the tree; the data, the codes and the chain are intact
+   and one click puts them back. Archiving cascades DOWN so no live culture is ever left
+   hanging off an archived parent — the I79 rule: nothing that exists may become unreachable. */
+function isArchived(x){ return !!(x && x.archived===true); }
+function liveCultures(){ return state.cultures.filter(function(c){ return !isArchived(c); }); }
+function liveSources(){ return state.sources.filter(function(s){ return !isArchived(s); }); }
+function liveChildrenOf(id){ return childrenOf(id).filter(function(c){ return !isArchived(c); }); }
+function liveDescendants(id){
+  var d = descendants(id);
+  return {cultures:d.cultures.filter(function(c){ return !isArchived(c); }), batches:d.batches};
+}
+/* Finished = the grower is done with it. Anything still live below it is not finished, so a
+   sweep leaves it alone rather than hiding the parent of work in progress. */
+function isFinished(c){ return c.status==='used'||c.status==='contaminated'||c.status==='discarded'; }
+function holdsLiveWork(id){
+  var d = liveDescendants(id);
+  return d.cultures.some(function(c){ return !isFinished(c); }) ||
+         d.batches.some(function(b){ return b.stage!=='harvested' && b.stage!=='contaminated'; });
+}
+function archivableCultures(){
+  return liveCultures().filter(function(c){ return isFinished(c) && !holdsLiveWork(c.id); });
+}
+function setArchived(id, on){
+  var c = findCulture(id), s = c ? null : findSource(id);
+  (c||s).archived = on ? true : null;
+  descendants(id).cultures.forEach(function(x){ x.archived = on ? true : null; });
+  if(!on){                                    // restoring: put its ancestors back too, or it
+    var chain = c ? ancestry(c) : [];          // would come back into a tree it cannot hang off
+    chain.forEach(function(a){ a.item.archived = null; });
+  }
+}
+/* The archived list shows chains by their top: an archived culture whose own parent is also
+   archived is already covered by the row above it. */
+function archivedRoots(){
+  var srcs = state.sources.filter(isArchived);
+  var cults = state.cultures.filter(function(c){
+    if(!isArchived(c)) return false;
+    var p = c.parentKind==='source' ? findSource(c.parentId) : findCulture(c.parentId);
+    return !p || !isArchived(p);
+  });
+  return {sources:srcs, cultures:cults};
+}
+function archivedCount(){
+  return state.sources.filter(isArchived).length + state.cultures.filter(isArchived).length;
+}
 
 /* Auto tracking codes. A child's code extends its parent's, so the code IS the lineage:
    SHI-01 -> SHI-01-P1 -> SHI-01-P1-L1 -> SHI-01-P1-L1-G2 */
@@ -487,6 +573,26 @@ function daysBetween(a,b){
 }
 function colonisedDays(c){ return c.colonisedAt ? daysBetween(c.createdAt, c.colonisedAt) : null; }
 
+/* ---- the grain-spawn shake (I80) ----
+   Founding Grower #1 described the stage this page was missing, in his own words: a grain jar
+   goes "inoculate → populate to 20-30% → SHAKE to redistribute → 100% colonised → into grow
+   media". Until now a culture had two dates, made and finished, so the shake — the one thing a
+   grower actually does to a jar in between, and the decision they get wrong — was nowhere.
+   It is a grain-only milestone: nothing is shaken on a plate. */
+function shakenDays(c){ return c.shakenAt ? daysBetween(c.createdAt, c.shakenAt) : null; }
+function isGrain(c){ return c.type==='grain'; }
+/* Your own days-to-shake for a species. Same rule as everywhere else on this page: two
+   measured jars minimum, and never a published window — when to shake depends on your grain,
+   your jar size and your room, so the only honest baseline is what you have done before. */
+function ownShakePace(species){
+  if(!species) return null;
+  var d = liveCultures().filter(function(c){
+    return isGrain(c) && shakenDays(c)!=null && speciesOf(c)===species;
+  }).map(shakenDays);
+  if(d.length < 2) return null;
+  return d.reduce(function(a,b){ return a+b; },0)/d.length;
+}
+
 /* ---- the working clock (I78) ----
    The Grow Log counts the days a batch has been running and flags one that has gone long.
    This page did not, so Founding Grower #1 logged his liquid-culture jars as grow-log
@@ -510,18 +616,20 @@ function speciesOf(c){ var s = sourceOf(c); return s ? s.species : null; }
    trivially its own average and would end up flagging itself. */
 function ownPace(species, type){
   if(!species) return null;
-  var d = state.cultures.filter(function(c){
+  var d = liveCultures().filter(function(c){
     return c.type===type && colonisedDays(c)!=null && speciesOf(c)===species;
   }).map(colonisedDays);
   if(d.length < 2) return null;
   return d.reduce(function(a,b){ return a+b; },0)/d.length;
 }
 function workingCultures(){
-  return state.cultures.filter(function(c){
+  return liveCultures().filter(function(c){
     return c.status==='healthy' && !c.colonisedAt;
   }).map(function(c){
     var sp = speciesOf(c), pace = ownPace(sp, c.type), days = daysSince(c.createdAt);
-    return {c:c, sp:sp, days:days, pace:pace, long: pace!=null && days > Math.round(pace*1.5)};
+    return {c:c, sp:sp, days:days, pace:pace, long: pace!=null && days > Math.round(pace*1.5),
+            shook: shakenDays(c), needsShake: isGrain(c) && !c.shakenAt,
+            shakePace: isGrain(c) ? ownShakePace(sp) : null};
   }).sort(function(a,b){ return b.days - a.days; });
 }
 
@@ -550,9 +658,13 @@ function holdsOwnWork(id){
    missing is rendered as its own root under "Unattached", and can be attached to a source.
    The code is never rewritten on attach — it is what the grower wrote on the jar. */
 function parentMissing(c){
-  return c.parentKind==='source' ? !findSource(c.parentId) : !findCulture(c.parentId);
+  var p = c.parentKind==='source' ? findSource(c.parentId) : findCulture(c.parentId);
+  // An archived parent counts as missing for a LIVE child: archiving cascades down so this
+  // should never happen, but if a synced document ever arrives in that shape the child still
+  // renders here rather than vanishing. Nothing that exists may become unreachable (I79).
+  return !p || (isArchived(p) && !isArchived(c));
 }
-function orphanRoots(){ return state.cultures.filter(parentMissing); }
+function orphanRoots(){ return liveCultures().filter(parentMissing); }
 function jarsOf(c){ return (c.type==='grain' && typeof c.jars==='number' && c.jars>0) ? Math.round(c.jars) : 0; }
 function countJars(list){ return list.reduce(function(a,c){ return a+jarsOf(c); },0); }
 function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
@@ -563,10 +675,10 @@ function beOf(b){
 }
 function atRisk(){
   // Live (not yet written off) items descended from anything marked contaminated.
-  var bad = state.cultures.filter(function(c){ return c.status==='contaminated'; });
+  var bad = liveCultures().filter(function(c){ return c.status==='contaminated'; });
   var seen={}, risky={cultures:[], batches:[], roots:bad};
   bad.forEach(function(c){
-    var d = descendants(c.id);
+    var d = liveDescendants(c.id);
     d.cultures.forEach(function(x){ if(x.status!=='contaminated' && x.status!=='discarded' && !seen['c'+x.id]){ seen['c'+x.id]=1; risky.cultures.push(x); } });
     d.batches.forEach(function(b){ if(b.stage!=='contaminated' && !seen['b'+b.id]){ seen['b'+b.id]=1; risky.batches.push(b); } });
   });
@@ -575,12 +687,13 @@ function atRisk(){
 
 /* ---- render ---- */
 function renderSummary(){
-  var live = state.cultures.filter(function(c){ return c.status==='healthy'; }).length;
-  var finished = state.cultures.filter(function(c){ return c.status==='contaminated'||c.status==='used'||c.status==='discarded'; }).length;
-  var lost = state.cultures.filter(function(c){ return c.status==='contaminated'; }).length;
-  var traced = state.batches.filter(function(b){ return b.parentId && findCulture(b.parentId); })
+  var pool = liveCultures();
+  var live = pool.filter(function(c){ return c.status==='healthy'; }).length;
+  var finished = pool.filter(isFinished).length;
+  var lost = pool.filter(function(c){ return c.status==='contaminated'; }).length;
+  var traced = state.batches.filter(function(b){ var p=findCulture(b.parentId); return p && !isArchived(p); })
     .reduce(function(a,b){ return a + (typeof b.blocks==='number'?b.blocks:0); },0);
-  $('k-sources').textContent = state.sources.length || '–';
+  $('k-sources').textContent = liveSources().length || '–';
   $('k-live').textContent = live;
   var rate = finished ? Math.round(lost/finished*100) : null;
   $('k-contam').textContent = rate==null ? '–' : rate+'%';
@@ -595,23 +708,69 @@ function renderWork(){
     var against = r.pace!=null
       ? 'your average <b>'+Math.round(r.pace)+'d</b>'
       : (t ? '<span class="sub">typical '+t[0]+'–'+t[1]+'d</span>' : '<span class="sub">—</span>');
+    // Grain: the shake sits between made and finished, so the clock reads both.
+    if(r.shook!=null) against += '<div class="sub">shaken day '+r.shook+'</div>';
+    else if(r.needsShake) against += '<div class="sub">'+(r.shakePace!=null
+      ? 'you usually shake around day '+Math.round(r.shakePace)
+      : 'not shaken yet')+'</div>';
     return '<tr>'+
       '<td class="sname">'+esc(r.c.code)+
         '<div class="sub">'+esc(r.sp ? SPECIES[r.sp].label : 'unknown species')+
         (r.c.notes ? ' · '+esc(r.c.notes) : '')+'</div></td>'+
       '<td><span class="sub">'+CTYPE[r.c.type].icon+' '+esc(CTYPE[r.c.type].label)+'</span></td>'+
-      '<td'+(r.long?' class="wklong"':'')+'>day '+r.days+(r.long?' · running long':'')+'</td>'+
+      '<td'+(r.long?' class="wklong"':'')+'>day '+r.days+
+        (r.shook!=null?' · shaken day '+r.shook:'')+(r.long?' · running long':'')+'</td>'+
       '<td>'+against+'</td>'+
-      '<td><button class="mini" data-act="goperf" data-id="'+esc(r.c.id)+'">✓ Record colonisation</button></td>'+
+      '<td><button class="mini" data-act="goperf" data-id="'+esc(r.c.id)+'">'+
+        (r.needsShake ? '🥄 Record shake' : '✓ Record colonisation')+'</button></td>'+
     '</tr>';
   }).join('');
   $('workNote').innerHTML = 'Counted from the day you made it. Recording the day one finished takes it off '+
     'this list and feeds the strain-strength table below. ' +
+    (rows.some(function(r){ return r.needsShake || r.shook!=null; })
+      ? 'Grain spawn also carries the <b>shake</b> — inoculate, let it run to a fifth or a third, shake to '+
+        'redistribute, then the day it is fully colonised. '
+      : '') +
     (rows.some(function(r){ return r.pace!=null; })
       ? '<b>“Running long”</b> is measured against <b>your own</b> average for that species and culture type — never a published number.'
       : 'The typical windows are orientation only and nothing is called late against them: record <b>two</b> '+
         'cultures of the same species and type and this list starts flagging against <b>your own</b> pace instead.');
   panel.style.display='block';
+}
+/* The archive bar: always says how much is filed away, and opens it in place. */
+var archiveOpen = false;
+function renderArchive(){
+  var bar = $('archiveBar'), list = $('archiveList'), n = archivedCount();
+  var sweepable = archivableCultures().length, btn = $('archiveDone');
+  // NOT the `hidden` attribute: .btn sets display, which wins over [hidden]'s display:none.
+  if(btn) btn.style.display = sweepable ? '' : 'none';
+  if(!n){ bar.style.display='none'; list.style.display='none'; return; }
+  var roots = archivedRoots();
+  bar.innerHTML = '<span>🗄 <b>Archived</b> — '+n+' item'+(n===1?'':'s')+' filed away. '+
+    'Nothing is deleted: the codes, the dates and the chain are all still here.</span>'+
+    '<button class="mini" id="toggleArchive">'+(archiveOpen?'Hide':'Show')+'</button>';
+  bar.style.display='flex';
+  if(!archiveOpen){ list.style.display='none'; return; }
+  var h = '<div class="srccard archcard">';
+  roots.sources.forEach(function(s){
+    var d = descendants(s.id);
+    h += '<div class="archrow"><code class="ncode">'+esc(s.code)+'</code> '+
+      '<span class="sub">'+esc(SPECIES[s.species].label)+' · source · '+d.cultures.length+
+      ' culture'+(d.cultures.length===1?'':'s')+' with it</span>'+
+      '<button class="mini" data-act="unarchive" data-id="'+esc(s.id)+'">↩ Restore</button></div>';
+  });
+  roots.cultures.forEach(function(c){
+    var d = descendants(c.id);
+    h += '<div class="archrow"><code class="ncode">'+esc(c.code)+'</code> '+
+      '<span class="sub">'+esc(CTYPE[c.type].label)+' · '+esc(CSTATUS[c.status].label.toLowerCase())+
+      ' · made '+esc(c.createdAt)+(d.cultures.length?' · '+d.cultures.length+' below it':'')+'</span>'+
+      '<button class="mini" data-act="unarchive" data-id="'+esc(c.id)+'">↩ Restore</button></div>';
+  });
+  h += '<p class="muted" style="font-size:.84rem;margin:10px 2px 0">Restoring brings back everything '+
+    'under that line, and its source with it, so it lands back in the tree where it belongs. '+
+    'Archived work stays out of the counts, the working clock and the strain table until you do.</p></div>';
+  list.innerHTML = h;
+  list.style.display='block';
 }
 function renderSampleNote(){
   var box = $('sampleNote'), smp = sampleSources();
@@ -688,12 +847,12 @@ function renderRisk(){
    part no spreadsheet does. Days are only comparable WITHIN a species, so the trophy is only
    ever awarded between two measured sources of the same species. */
 function strainRows(){
-  return state.sources.map(function(s){
-    var d = descendants(s.id);
+  return liveSources().map(function(s){
+    var d = liveDescendants(s.id);
     var measured = d.cultures.filter(function(c){ return colonisedDays(c)!=null; });
     var days = measured.map(colonisedDays);
     var vig = measured.filter(function(c){ return c.vigor; }).map(function(c){ return VIGOR[c.vigor].score; });
-    var finished = d.cultures.filter(function(c){ return c.status==='contaminated'||c.status==='used'||c.status==='discarded'; });
+    var finished = d.cultures.filter(isFinished);
     var lost = d.cultures.filter(function(c){ return c.status==='contaminated'; });
     var bes = d.batches.map(beOf).filter(function(v){ return v!=null; });
     return {
@@ -788,22 +947,28 @@ function renderStrains(){
 function statusChip(st){ var s=CSTATUS[st]||CSTATUS.healthy; return '<span class="chip '+s.cls+'">'+s.label+'</span>'; }
 
 function cultureNodeHtml(c, depth){
-  var kids = childrenOf(c.id), bts = batchesOf(c.id);
+  var kids = liveChildrenOf(c.id), bts = batchesOf(c.id);
   var jars = jarsOf(c);
   var h = '<div class="node" id="node-'+esc(c.id)+'" style="margin-left:'+(depth*18)+'px">';
   h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
        '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
        (jars ? '<span class="chip chip-jars">'+jars+' jar'+(jars>1?'s':'')+'</span>' : '')+
        '<span class="nmeta">'+CTYPE[c.type].label+' · made '+esc(c.createdAt)+' ('+daysSince(c.createdAt)+'d ago)</span></div>';
-  var cd = colonisedDays(c);
+  var cd = colonisedDays(c), sd = shakenDays(c);
+  if(sd!=null){
+    h += '<div class="perfline">🥄 Shaken on <b>day '+sd+'</b> <span class="muted">('+esc(c.shakenAt)+')</span></div>';
+  }
   if(cd!=null){
     h += '<div class="perfline">✓ Fully colonised in <b>'+cd+' day'+(cd===1?'':'s')+'</b>'+
+      (sd!=null ? ' <span class="muted">· '+(cd-sd)+' day'+((cd-sd)===1?'':'s')+' after the shake</span>' : '')+
       (c.vigor ? ' · <b>'+esc(VIGOR[c.vigor].short)+'</b> growth' : '')+'</div>';
   }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   h += '<div class="nactions">';
   if(c.status!=='contaminated')
-    h += '<button class="mini" data-act="perf" data-id="'+c.id+'">'+(cd!=null?'✎ Edit colonisation':'✓ Record colonisation')+'</button>';
+    h += '<button class="mini" data-act="perf" data-id="'+c.id+'">'+
+      (cd!=null ? '✎ Edit colonisation'
+                : (isGrain(c) && sd==null ? '🥄 Record shake' : '✓ Record colonisation'))+'</button>';
   CTYPE[c.type].next.forEach(function(t){
     h += '<button class="mini" data-act="new" data-parent="'+c.id+'" data-type="'+t+'">+ '+CTYPE[t].label+'</button>';
   });
@@ -811,6 +976,9 @@ function cultureNodeHtml(c, depth){
   if(c.status!=='contaminated') h += '<button class="mini warn" data-act="contam" data-id="'+c.id+'">⚑ Mark contaminated</button>';
   else h += '<button class="mini" data-act="ok" data-id="'+c.id+'">↺ Not contaminated</button>';
   if(c.status==='healthy') h += '<button class="mini" data-act="used" data-id="'+c.id+'">Mark used up</button>';
+  // Finished work can be filed away instead of deleted — the chain below a used-up jar is
+  // what makes a traceback work, so deleting it is the one thing that must not be the easy path.
+  if(isFinished(c)) h += '<button class="mini" data-act="arch" data-id="'+c.id+'">🗄 Archive</button>';
   h += '<button class="mini ghosty" data-act="del" data-id="'+c.id+'">Delete</button>';
   h += '</div>';
   if(recordingOn===c.id) h += perfFormHtml(c);
@@ -846,8 +1014,13 @@ function addFormHtml(parentCode, type){
 /* Colonisation performance: the two things a grower already judges a plate on — how long it
    took to run the dish, and how thick the growth was. Both are optional. */
 function perfFormHtml(c){
-  var h = '<div class="addbox">'+
-    '<div class="abrow"><label>Fully colonised on</label>'+
+  var h = '<div class="addbox">';
+  /* Grain only: the shake belongs between made and finished, and it is the milestone a grower
+     acts on — one form, so there is still exactly one place each date is written. */
+  if(isGrain(c))
+    h += '<div class="abrow"><label>Shaken on <span class="opt">optional</span></label>'+
+      '<input id="p-shake" type="date" value="'+esc(c.shakenAt||'')+'" min="'+esc(c.createdAt)+'"></div>';
+  h += '<div class="abrow"><label>Fully colonised on</label>'+
       '<input id="p-date" type="date" value="'+esc(c.colonisedAt||today())+'" min="'+esc(c.createdAt)+'"></div>'+
     '<div class="abrow"><label>Growth thickness</label><select id="p-vigor">'+
       '<option value="">— not judged —</option>';
@@ -856,15 +1029,17 @@ function perfFormHtml(c){
   });
   h += '</select></div>'+
     '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Made '+esc(c.createdAt)+
-      '. Days to full colonisation and thickness are your strain-strength signals — they show up per source below.</p></div>'+
+      '. Days to full colonisation and thickness are your strain-strength signals — they show up per source below.'+
+      (isGrain(c) ? ' Leave the shake blank until you do it — you can come back and fill it in.' : '')+
+      '</p></div>'+
     '<div class="abrow wide"><button class="mini solid" data-act="savePerf" data-id="'+c.id+'">Save</button>'+
-      (c.colonisedAt ? '<button class="mini ghosty" data-act="clearPerf" data-id="'+c.id+'">Clear</button>' : '')+
+      ((c.colonisedAt||c.shakenAt) ? '<button class="mini ghosty" data-act="clearPerf" data-id="'+c.id+'">Clear</button>' : '')+
       '<button class="mini ghosty" data-act="cancelPerf">Cancel</button></div></div>';
   return h;
 }
 function sourceCardHtml(s){
-  var kids = state.cultures.filter(function(c){ return c.parentKind==='source' && c.parentId===s.id; });
-  var d = descendants(s.id);
+  var kids = liveCultures().filter(function(c){ return c.parentKind==='source' && c.parentId===s.id; });
+  var d = liveDescendants(s.id);
   var h = '<div class="srccard">';
   h += '<div class="shead"><code class="scode">'+esc(s.code)+'</code>'+
     '<span class="sname">'+esc(s.sci || (SPECIES[s.species]||SPECIES.other).sci || SPECIES[s.species].label)+'</span>'+
@@ -887,6 +1062,7 @@ function sourceCardHtml(s){
   ['petri','lc','grain'].forEach(function(t){
     h += '<button class="mini" data-act="new" data-parent="'+s.id+'" data-type="'+t+'" data-src="1">+ '+CTYPE[t].label+'</button>';
   });
+  h += '<button class="mini" data-act="archsrc" data-id="'+s.id+'">🗄 Archive this source</button>';
   h += '<button class="mini ghosty" data-act="delsrc" data-id="'+s.id+'">Delete source</button></div>';
   if(addingUnder && addingUnder.parentId===s.id) h += addFormHtml(s.code, addingUnder.type);
   kids.forEach(function(k){ h += cultureNodeHtml(k, 0); });
@@ -894,12 +1070,16 @@ function sourceCardHtml(s){
   return h;
 }
 function render(){
-  var h = state.sources.map(sourceCardHtml).join('');
+  var h = liveSources().map(sourceCardHtml).join('');
   var orph = orphanRoots();
   if(orph.length) h += orphanCardHtml(orph);
   $('tree').innerHTML = h;
   // Only truly empty when there is nothing at all — never hide cultures behind "no sources yet".
-  $('empty').style.display = (state.sources.length || state.cultures.length) ? 'none' : 'block';
+  // Archived work is not nothing, so an empty tree with an archive says which it is. (The
+  // note's own markup is left alone: it carries the wired "load a sample library" link.)
+  var nLive = liveSources().length + liveCultures().length;
+  $('empty').style.display = nLive ? 'none' : 'block';
+  $('emptyArchived').style.display = (!nLive && archivedCount()) ? 'block' : 'none';
 }
 function orphanCardHtml(roots){
   var n = 0;
@@ -965,7 +1145,7 @@ function renderBook(){
     $('f-contact').value=[c.phone,c.email].filter(Boolean).join(' · ');
   });
 })();
-function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderStrains(); renderBook(); }
+function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderStrains(); renderArchive(); renderBook(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -1078,19 +1258,54 @@ $('tree').addEventListener('click', function(e){
     var pc = findCulture(el.getAttribute('data-id'));
     if(pc){
       var d = $('p-date').value, v = $('p-vigor').value;
+      var sh = $('p-shake') ? $('p-shake').value : '';
       // A plate can't finish before it was started — ignore an impossible date rather than store it.
       if(d && daysBetween(pc.createdAt, d)!=null) pc.colonisedAt = d;
+      // Nor can a jar be shaken before it was made, or after it finished. Same rule: an
+      // impossible date is dropped, never stored — a wrong date is worse than no date.
+      var shOk = sh && daysBetween(pc.createdAt, sh)!=null &&
+                 (!pc.colonisedAt || daysBetween(sh, pc.colonisedAt)!=null);
+      if($('p-shake')) pc.shakenAt = shOk ? sh : null;
       pc.vigor = VIGOR[v] ? v : null;
       recordingOn=null; save(); paint();
-      if(window.track) try{ track('culture_colonised',{type:pc.type, vigor:pc.vigor||''}); }catch(_){}
-      showNudge('perf');
+      if(window.track) try{ track('culture_colonised',{type:pc.type, vigor:pc.vigor||'', shaken:pc.shakenAt?1:0}); }catch(_){}
+      showNudge(pc.colonisedAt ? 'perf' : 'shake');
     }
     return;
   }
   if(act==='clearPerf'){
     e.preventDefault();
     var qc = findCulture(el.getAttribute('data-id'));
-    if(qc){ qc.colonisedAt=null; qc.vigor=null; recordingOn=null; save(); paint(); }
+    if(qc){ qc.colonisedAt=null; qc.vigor=null; qc.shakenAt=null; recordingOn=null; save(); paint(); }
+    return;
+  }
+  if(act==='arch'){
+    e.preventDefault();
+    var ac2 = findCulture(el.getAttribute('data-id'));
+    if(!ac2) return;
+    var dd = liveDescendants(ac2.id), below = dd.cultures.length;
+    // A block in the grow log is not archived with the culture — it stays exactly where it is,
+    // and its contamination flag keeps working. Say so, rather than let it be a surprise.
+    var live = dd.batches.filter(function(b){ return b.stage!=='harvested' && b.stage!=='contaminated'; }).length;
+    if((below||live) && !confirm('Archive '+ac2.code+
+      (below ? ' and the '+below+' culture'+(below===1?'':'s')+' below it' : '')+
+      '?\n\nNothing is deleted — they move to Archived and can be brought back any time.'+
+      (live ? '\n\nNote: '+live+' batch'+(live===1?'':'es')+' still running came off this, and '+
+              (live===1?'it stays':'they stay')+' in your grow log either way.' : ''))) return;
+    setArchived(ac2.id, true); save(); paint();
+    if(window.track) try{ track('culture_archive',{kind:'culture', n:below+1}); }catch(_){}
+    return;
+  }
+  if(act==='archsrc'){
+    e.preventDefault();
+    var as = findSource(el.getAttribute('data-id'));
+    if(!as) return;
+    var n2 = liveDescendants(as.id).cultures.length;
+    if(!confirm('Archive '+as.code+(n2 ? ' and the '+n2+' culture'+(n2===1?'':'s')+' descended from it' : '')+
+      '?\n\nNothing is deleted — the codes, dates and the whole chain stay, out of your way, and one '+
+      'click brings them back.')) return;
+    setArchived(as.id, true); save(); paint();
+    if(window.track) try{ track('culture_archive',{kind:'source', n:n2+1}); }catch(_){}
     return;
   }
   if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
@@ -1106,7 +1321,11 @@ $('tree').addEventListener('click', function(e){
       : 'Delete this culture?';
     if(!confirm(warn)) return;
     state.cultures = state.cultures.filter(function(x){ return x.id!==id; });
-    save(); paint(); return;
+    save(); paint();
+    // Counts only, never content: I79 could not answer "what happened to his batches" because
+    // deletion left no trace at all. The next time, the question is one query away.
+    if(window.track) try{ track('culture_delete',{below:d.cultures.length, batches:d.batches.length}); }catch(_){}
+    return;
   }
   if(act==='delsrc'){
     var ds=descendants(id);
@@ -1115,8 +1334,40 @@ $('tree').addEventListener('click', function(e){
       'attach them to another source at any time.\n\nDelete the source?')) return;
     if(!ds.cultures.length && !confirm('Delete this source?')) return;
     state.sources = state.sources.filter(function(x){ return x.id!==id; });
-    save(); paint(); return;
+    save(); paint();
+    if(window.track) try{ track('culture_delete',{kind:'source', below:ds.cultures.length}); }catch(_){}
+    return;
   }
+});
+
+/* Archive: the bar, the sweep, and putting anything back. */
+$('archiveBar').addEventListener('click', function(e){
+  if(!e.target || e.target.id!=='toggleArchive') return;
+  e.preventDefault(); archiveOpen = !archiveOpen; renderArchive();
+});
+$('archiveList').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-act="unarchive"]') : null;
+  if(!el) return;
+  e.preventDefault();
+  setArchived(el.getAttribute('data-id'), false); save(); paint();
+  if(window.track) try{ track('culture_unarchive',{}); }catch(_){}
+});
+$('archiveDone').addEventListener('click', function(){
+  var list = archivableCultures();
+  if(!list.length) return;
+  // Anything still feeding live work is left where it is: hiding the parent of a jar you are
+  // still using would take the traceback with it.
+  var held = liveCultures().filter(function(c){ return isFinished(c) && holdsLiveWork(c.id); }).length;
+  if(!confirm('Archive '+list.length+' finished culture'+(list.length===1?'':'s')+
+    ' (used up, discarded or contaminated)?\n\nNothing is deleted — they move to Archived, out of '+
+    'the counts and the tree, and one click brings any of them back.'+
+    (held ? '\n\n'+held+' finished one'+(held===1?' is':'s are')+' kept, because live work still '+
+            'hangs off '+(held===1?'it':'them')+'.' : ''))) return;
+  list.forEach(function(c){ setArchived(c.id, true); });
+  save(); paint();
+  if(window.track) try{ track('culture_archive',{kind:'sweep', n:list.length}); }catch(_){}
+  if(held) alert('Archived '+list.length+'. Kept '+held+' that live work still hangs off — archiving '+
+    (held===1?'it':'them')+' would have taken your traceback with '+(held===1?'it':'them')+'.');
 });
 
 [].forEach.call(document.querySelectorAll('#kindToggle button'), function(b){
@@ -1127,7 +1378,9 @@ $('f-code').addEventListener('input', function(){ this.dataset.auto=''; });
 
 $('resetSample').addEventListener('click', function(){
   if(!confirm('Replace your culture library with the sample one? Your grow log batches are not touched.')) return;
+  var had=state.cultures.length;
   var sm=sampleCultures(); state.sources=sm.sources; state.cultures=sm.cultures; save(); paint();
+  if(window.track) try{ track('culture_reset',{had:had}); }catch(_){}
 });
 $('seedLink').addEventListener('click', function(e){
   e.preventDefault(); var sm=sampleCultures(); state.sources=sm.sources; state.cultures=sm.cultures; save(); paint();
@@ -1138,15 +1391,20 @@ function chainOf(c){
   return ancestry(c).map(function(a){ return a.item.code; }).reverse().concat([c.code]).join(' > ');
 }
 $('exportCsv').addEventListener('click', function(){
-  var rows = [['code','type','status','made_on','jars','colonised_on','days_to_colonise','growth',
+  // Archived rows are exported too, flagged — a CSV is the copy a grower keeps, so it holds
+  // everything they have, not just what is on screen today.
+  var rows = [['code','type','status','made_on','jars','shaken_on','days_to_shake',
+    'colonised_on','days_to_colonise','growth','archived',
     'chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
   state.cultures.forEach(function(c){
     var an = ancestry(c), src = null;
     for(var i=0;i<an.length;i++) if(an[i].kind==='source') src = an[i].item;
     var bts = batchesOf(c.id).map(function(b){ return b.name; }).join('; ');
-    var cd = colonisedDays(c);
+    var cd = colonisedDays(c), sd = shakenDays(c);
     rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt,
-      jarsOf(c)||'', c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
+      jarsOf(c)||'', c.shakenAt||'', sd==null?'':sd,
+      c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
+      isArchived(c)?'yes':'',
       chainOf(c),
       src?src.code:'', src?src.kind:'', src?SPECIES[src.species].label:'', src?src.supplier:'',
       src?src.vendorBatch:'', src?src.contact:'', src?src.location:'', c.notes||'', bts]);
@@ -1192,7 +1450,8 @@ function showNudge(src){
   var n=$('ahaNudge'); if(!n || n.style.display==='block') return;
   $('nudgeLead').textContent = src==='export' ? 'Exporting by hand?' :
     (src==='source' ? 'Source logged.' :
-    (src==='perf' ? "That's a performance record on the plate." : 'That culture is on the record.'));
+    (src==='perf' ? "That's a performance record on the plate." :
+    (src==='shake' ? 'Shake logged.' : 'That culture is on the record.')));
   n.style.display='block';
   if(window.track) try{ track('culture_nudge_show',{src:src}); }catch(_){}
 }
@@ -1263,6 +1522,10 @@ function isSampleOnly(){
 /* Cultures whose source was deleted (I79) — visibly set apart, never hidden. */
 .orphcard{border-color:#e0b48a;background:#fffaf3}
 .orphcard .sname{font-style:normal}
+.archcard{background:var(--surface-2);margin-top:10px}
+.archrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)}
+.archrow:last-of-type{border-bottom:0}
+.archrow .sub{flex:1;min-width:180px}
 .orphrow{margin:10px 0 2px}
 .shead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .scode{font-size:1rem;font-weight:800;letter-spacing:.01em;background:var(--brand-soft);color:var(--brand-ink);
