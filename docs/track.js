@@ -23,14 +23,23 @@
   // and dozens of harvests in the live funnel — 917 "real" pageviews in a week of which the
   // overwhelming majority were the test runner. A browser cannot opt a test runner in with
   // ?dev=1, so the origin has to decide. (I79)
+  // The origin rule only catches the LOCAL half of our own traffic. The other half is a
+  // headless browser pointed at the LIVE site — how every deploy gets verified — and that
+  // looks like a grower with no referrer. On 2026-08-01 that put 684 pageviews into a single
+  // day, 512 of them in one hour, against maybe a dozen real ones; every per-page and
+  // conversion-rate reading that week was drawn from a pool that was mostly us. Automation
+  // says so itself: navigator.webdriver is set by Chrome/Playwright/Puppeteer under control
+  // and is false in a real browser. A grower is never flagged by it. (I82)
   var LOCAL = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname) ||
               location.protocol === "file:";
-  var DEV = LOCAL;
+  var AUTOMATED = false;
+  try { AUTOMATED = navigator.webdriver === true; } catch (e) {}
+  var DEV = LOCAL || AUTOMATED;
   try {
     var q = new URLSearchParams(location.search).get("dev");
     if (q === "1") localStorage.setItem("mycro_dev", "1");
     else if (q === "0") localStorage.removeItem("mycro_dev");
-    DEV = LOCAL || localStorage.getItem("mycro_dev") === "1";
+    DEV = LOCAL || AUTOMATED || localStorage.getItem("mycro_dev") === "1";
   } catch (e) {}
   /* ---- first-touch attribution (I81) ----
      Every lead record used to carry the referrer at the moment of SUBMIT, which for anyone
