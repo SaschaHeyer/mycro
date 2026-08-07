@@ -26,7 +26,7 @@
 {"@type":"Question","name":"How do I trace a mushroom contamination back to its source?","acceptedAnswer":{"@type":"Answer","text":"Mark the contaminated culture in your records, then walk the chain in both directions. Downstream: every culture and every block made from that culture is suspect and should be checked or quarantined. Upstream: look at its parent and at the other cultures made from that same parent — if they are clean, the contamination entered at your step; if they are also failing, it came in earlier, possibly with the source itself. The Mycro culture library does both walks automatically and lists the at-risk items."}},
 {"@type":"Question","name":"Is there a free tool to track liquid culture and grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro culture library is free and needs no sign-up. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one gets a tracking code derived from its parent (for example SHI-01-P1-L1-G2) so the code itself shows the lineage. Grain spawn can be linked to a batch in the free Mycro grow log, which connects the culture chain to real yield and biological efficiency."}},
 {"@type":"Question","name":"How do you measure the strength of a mushroom strain?","acceptedAnswer":{"@type":"Answer","text":"The two practical measures growers use on a petri dish are how many days it takes to fully colonise the plate and how thick the growth is — fast, thick, rhizomorphic growth indicates a vigorous strain, while slow or wispy growth suggests a weak or ageing culture. Those signals are only meaningful within a species, because shiitake naturally colonises far slower than oyster. The strongest confirmation comes later: the biological efficiency of the blocks grown from that culture. The free Mycro culture library records days to colonisation and growth thickness on any culture and shows them per source alongside the loss rate and the biological efficiency of the blocks descended from it."}},
-{"@type":"Question","name":"Why track the number of grain spawn jars?","acceptedAnswer":{"@type":"Answer","text":"One grain spawn jar usually inoculates several grow bags, so the jar count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six jars came off it — and how many blocks those jars went into — tells you the size of the problem and how much to quarantine. The free Mycro culture library stores an optional jar count on grain spawn and totals the affected jars and blocks in its traceback."}},
+{"@type":"Question","name":"Why track the number of grain spawn jars or bags?","acceptedAnswer":{"@type":"Answer","text":"One container of grain spawn usually inoculates several grow bags, so the count is what turns a contamination traceback from 'which batch' into 'how much'. If a liquid culture turns out to be contaminated, knowing that six bags of grain came off it, and how many blocks those bags went into, tells you the size of the problem and how much to quarantine. Growers do this in jars or in small bags depending on how they work, and the two are the same unit: one container holding one lot of grain. The free Mycro culture library stores an optional count on grain spawn, records whether it was jars or bags so it uses your own word, and totals the affected containers and blocks in its traceback, listing jars and bags separately if you run both."}},
 {"@type":"Question","name":"When should you shake a jar of grain spawn?","acceptedAnswer":{"@type":"Answer","text":"Shake a grain spawn jar once the mycelium has colonised roughly 20 to 30 percent of the grain — enough growth that it can recover quickly, but early enough that redistributing it still saves you weeks. Shaking breaks the colonised grain apart and spreads those pieces through the rest of the jar, giving the mycelium many new starting points instead of one advancing front. Shake too early and a thin culture may not recover; shake too late and you gain little, because the jar is nearly run anyway. The right day depends on your grain, jar size and room temperature, so the useful number is your own: the free Mycro culture library records the shake as a dated milestone on every grain jar, alongside the day it was made and the day it finished, and once you have shaken two jars of a species it shows the day you usually shake rather than a figure from a book."}},
 {"@type":"Question","name":"How do I clear finished cultures without losing the traceback?","acceptedAnswer":{"@type":"Answer","text":"Archive them rather than delete them. A used-up grain spawn jar is still the parent of every block that came off it, so deleting it silently breaks the contamination traceback — flag a plate later and it will report that nothing downstream was affected, which reads as good news rather than a missing link. In the free Mycro culture library, archiving a finished culture or a whole source takes it out of the tree, the counts, the working clock and the strain table while keeping every code, date and link intact, and one click brings it back. Archiving a finished culture that live work still hangs off is refused for the same reason."}},
 {"@type":"Question","name":"How long should a petri dish, liquid culture or grain spawn jar take to colonise?","acceptedAnswer":{"@type":"Answer","text":"As a rough orientation, a petri dish or a liquid culture is usually fully colonised in about 7 to 14 days and a grain spawn jar in about 14 to 21 days, but the real answer depends heavily on species, temperature and how well the culture was agitated — shiitake runs far slower than oyster. That is why the free Mycro culture library treats those windows as orientation only and never calls a culture late against them: it lists every live culture with a day count running from the date you made it, and once you have recorded the finish date of two cultures of the same species and type it starts flagging a slow one against your own average instead of a published figure."}}]}
@@ -58,7 +58,7 @@
        placed high on the page because that is the unit an answer engine lifts and attributes.
        Every number in it matches the page below. If one changes, change it here first. -->
   <p id="answer" class="note" style="font-size:1.02rem;line-height:1.65">
-    <b style="color:var(--ink)">The Mycro Culture Library traces a mushroom culture from its source through petri dish, liquid culture and grain spawn to the block it fruits.</b> Every culture takes a tracking code derived from its parent, so flagging one contaminated plate lists every jar and every batch descended from it. Free, in a browser, with no account.
+    <b style="color:var(--ink)">The Mycro Culture Library traces a mushroom culture from its source through petri dish, liquid culture and grain spawn to the block it fruits.</b> Every culture takes a tracking code derived from its parent, so flagging one contaminated plate lists every grain jar or bag and every batch descended from it. Free, in a browser, with no account.
   </p>
 
   <p class="muted" style="font-size:.98rem;margin-top:-4px">It shares the same storage as the free
@@ -268,9 +268,13 @@
       it came in earlier, possibly with the source. That distinction is the difference between fixing
       your technique and returning a bad lot. New to diagnosing what you're looking at? Read the
       <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
-    <p class="muted">Because a grain jar can inoculate several bags, grain spawn carries an optional
-      <b>jar count</b> — so the traceback tells you <i>how much</i> is affected ("6 jars and 24 blocks"),
-      not just which batch to go and look at.</p>
+    <p class="muted">Because one container of grain spawn can inoculate several grow bags, grain spawn
+      carries an optional <b>count</b> — so the traceback tells you <i>how much</i> is affected
+      ("6 bags and 24 blocks"), not just which batch to go and look at. Grain goes into jars or into
+      bags depending on how you work, so you pick the word when you log it and the tool uses yours
+      everywhere after that. Run both and it counts them separately: "4 bags and 2 jars", never a
+      total that hides the difference, because the number on the screen has to be the number you
+      go and count on the shelf.</p>
 
     <h3 style="margin-top:16px">What is still running right now</h3>
     <p class="muted">A lineage tree tells you where things came from; it does not tell you what needs
@@ -284,7 +288,7 @@
       your conditions, not of a textbook.</p>
 
     <h3 style="margin-top:16px">The grain-spawn shake</h3>
-    <p class="muted">A grain jar is not one event with a start and a finish. You inoculate it, let it
+    <p class="muted">A jar or bag of grain spawn is not one event with a start and a finish. You inoculate it, let it
       run to roughly <b>20–30%</b>, <b>shake it</b> so the colonised grain is redistributed through the
       rest of the jar, and then wait for it to hit 100% and go into grow media. The shake is the part
       you actually <i>do</i>, and the part it is possible to get wrong: too early and a thin culture may
@@ -454,7 +458,9 @@ function validCulture(c){
   return c && typeof c.id==='string' && typeof c.code==='string' && CTYPE[c.type] &&
     (c.parentKind==='source'||c.parentKind==='culture') && typeof c.parentId==='string' &&
     CSTATUS[c.status] && typeof c.createdAt==='string' &&
-    (c.jars==null || typeof c.jars==='number') &&            // jar count on grain spawn (I73)
+    (c.jars==null || typeof c.jars==='number') &&            // container count on grain spawn (I73)
+    (c.container==null || c.container==='jar' || c.container==='bag') && // jar or bag (I83)
+    (c.species==null || !!SPECIES[c.species]) &&             // its own species, kept if the source goes (I83)
     (c.colonisedAt==null || typeof c.colonisedAt==='string') && // fully-colonised date (I73)
     (c.shakenAt==null || typeof c.shakenAt==='string') &&    // grain shake milestone (I80)
     (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
@@ -617,7 +623,27 @@ function sourceOf(c){
   var chain = ancestry(c), last = chain[chain.length-1];
   return (last && last.kind==='source') ? last.item : null;
 }
-function speciesOf(c){ var s = sourceOf(c); return s ? s.species : null; }
+/* ---- a culture's species (I83) ----
+   Species used to live ONLY on the source, and a culture read it back up the chain. So when
+   Founding Grower #1 deleted his backyard source, all 13 surviving cultures lost their species
+   with it — and every species-keyed reading (`ownPace`, `ownShakePace`, the whole strain
+   table) went quietly blind for his entire library. On screen that reads as "not enough data
+   yet" rather than "the species is unknowable", which is the worse of the two failures.
+   A record that can outlive its parent has to carry the field the parent held: a culture now
+   keeps its own species, stamped when it is made, when it is attached, and — the moment the
+   information would otherwise be lost — when its source is deleted. The source stays the
+   fallback, so nothing written before this changes meaning. */
+function speciesOf(c){
+  if(c && SPECIES[c.species]) return c.species;
+  var s = sourceOf(c); return s ? s.species : null;
+}
+/* What a culture made under this parent would be. Used at the moment of creation, so a
+   culture is never born without the one fact it cannot re-derive later. */
+function speciesUnder(isSource, parentId){
+  if(isSource){ var s=findSource(parentId); return s ? s.species : null; }
+  var p=findCulture(parentId); return p ? speciesOf(p) : null;
+}
+function stampSpecies(c, sp){ if(sp && SPECIES[sp] && !SPECIES[c.species]) c.species = sp; }
 
 /* Your own pace for this species + culture type. Two recorded ones minimum: one culture is
    trivially its own average and would end up flagging itself. */
@@ -673,7 +699,38 @@ function parentMissing(c){
 }
 function orphanRoots(){ return liveCultures().filter(parentMissing); }
 function jarsOf(c){ return (c.type==='grain' && typeof c.jars==='number' && c.jars>0) ? Math.round(c.jars) : 0; }
-function countJars(list){ return list.reduce(function(a,c){ return a+jarsOf(c); },0); }
+
+/* ---- jars or bags (I83) ----
+   Founding Grower #1, asked directly: "the old school way was to do it in jars, I personally
+   use grain spawn bags. So either the grower uses jars or they small bags." So a bag is the
+   SAME unit as a jar — one container holding one lot of grain — and the count never changes;
+   only the word does. It is recorded per culture rather than as one setting, because a grower
+   can switch, and because a traceback that reports "6 jars" to someone who filled bags is
+   describing someone else's shelf. Grain written before this carries no container and reads
+   as jars, which is exactly what it meant when it was written. */
+function containerOf(c){ return c.container==='bag' ? 'bag' : 'jar'; }
+function unitWord(n, kind){ return n + ' ' + kind + (n===1?'':'s'); }
+function countUnits(list){
+  var t={jar:0, bag:0};
+  list.forEach(function(c){ var j=jarsOf(c); if(j) t[containerOf(c)] += j; });
+  return t;
+}
+/* "6 bags", or "4 bags and 2 jars" when a grower runs both. Never a total that hides the
+   difference: the number you go and count on the shelf has to be the number on the screen. */
+function unitPhrase(list){
+  var t=countUnits(list), out=[];
+  if(t.bag) out.push(unitWord(t.bag,'bag'));
+  if(t.jar) out.push(unitWord(t.jar,'jar'));
+  return out.join(' and ');
+}
+/* Default the picker to whatever they filled last — a grower who uses bags uses bags. */
+function lastContainer(){
+  for(var i=state.cultures.length-1;i>=0;i--){
+    var c=state.cultures[i];
+    if(c.type==='grain' && (c.container==='bag'||c.container==='jar')) return c.container;
+  }
+  return 'jar';
+}
 function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
 function beOf(b){
   var totalDry = (typeof b.dryG==='number'?b.dryG:0) * (typeof b.blocks==='number'?b.blocks:0);
@@ -812,9 +869,9 @@ function renderRisk(){
   if(!r.roots.length){ box.style.display='none'; return; }
   var n = r.cultures.length + r.batches.length;
   var scale = [];
-  var rj = countJars(r.cultures), rb = countBlocks(r.batches);
-  if(rj) scale.push(rj + ' jar' + (rj>1?'s':''));
-  if(rb) scale.push(rb + ' block' + (rb>1?'s':''));
+  var rj = unitPhrase(r.cultures), rb = countBlocks(r.batches);
+  if(rj) scale.push(rj);
+  if(rb) scale.push(unitWord(rb,'block'));
   $('riskHead').textContent = '⚠ Contamination traceback — ' + r.roots.length + ' contaminated culture' +
     (r.roots.length>1?'s':'') + ', ' + (n ? n + ' item' + (n>1?'s':'') + ' downstream to check' +
     (scale.length ? ' (' + scale.join(' and ') + ')' : '') : 'nothing downstream');
@@ -826,11 +883,11 @@ function renderRisk(){
       (c.createdAt?', made '+daysSince(c.createdAt)+'d ago':'')+')</span>';
     var d = descendants(c.id);
     if(d.cultures.length || d.batches.length){
-      var dj = countJars(d.cultures), db = countBlocks(d.batches), tot = [];
-      if(dj) tot.push(dj + ' jar' + (dj>1?'s':''));
-      if(db) tot.push(db + ' block' + (db>1?'s':''));
+      var dj = unitPhrase(d.cultures), db = countBlocks(d.batches), tot = [];
+      if(dj) tot.push(dj);
+      if(db) tot.push(unitWord(db,'block'));
       h += '<div class="riskline"><span class="rl">Downstream — check or quarantine:</span> ' +
-        d.cultures.map(function(x){ var j=jarsOf(x); return '<code>'+esc(x.code)+'</code>'+(j?' ('+j+' jar'+(j>1?'s':'')+')':''); })
+        d.cultures.map(function(x){ var j=jarsOf(x); return '<code>'+esc(x.code)+'</code>'+(j?' ('+esc(unitWord(j,containerOf(x)))+')':''); })
           .concat(d.batches.map(function(b){ return '<code>'+esc(b.name)+'</code>'+(typeof b.blocks==='number'?' ('+b.blocks+' block'+(b.blocks===1?'':'s')+')':''); }))
           .join(', ') +
         (tot.length ? ' <b>— ' + tot.join(' and ') + ' affected.</b>' : '') + '</div>';
@@ -959,7 +1016,7 @@ function cultureNodeHtml(c, depth){
   var h = '<div class="node" id="node-'+esc(c.id)+'" style="margin-left:'+(depth*18)+'px">';
   h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
        '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
-       (jars ? '<span class="chip chip-jars">'+jars+' jar'+(jars>1?'s':'')+'</span>' : '')+
+       (jars ? '<span class="chip chip-jars">'+esc(unitWord(jars, containerOf(c)))+'</span>' : '')+
        '<span class="nmeta">'+CTYPE[c.type].label+' · made '+esc(c.createdAt)+' ('+daysSince(c.createdAt)+'d ago)</span></div>';
   var cd = colonisedDays(c), sd = shakenDays(c);
   if(sd!=null){
@@ -1007,11 +1064,16 @@ function addFormHtml(parentCode, type){
     '<div class="abrow"><label>New '+CTYPE[type].label.toLowerCase()+' — code</label>'+
       '<input id="a-code" type="text" maxlength="30" value="'+esc(nextCultureCode(parentCode,type))+'"></div>'+
     '<div class="abrow"><label>Date made</label><input id="a-date" type="date" value="'+today()+'"></div>';
-  /* Jar count, grain only: one jar can inoculate several bags, so the count is what makes a
-     traceback say how much is affected rather than just which batch. */
+  /* Container count, grain only: one jar or bag can inoculate several grow bags, so the count
+     is what makes a traceback say how much is affected rather than just which batch. Jar or
+     bag is the grower's own word for the same unit (I83) and defaults to their last one. */
   if(type==='grain')
-    h += '<div class="abrow"><label>Jars made <span class="opt">optional</span></label>'+
-      '<input id="a-jars" type="number" min="1" max="999" step="1" inputmode="numeric" placeholder="e.g. 6"></div>';
+    h += '<div class="abrow"><label>How many made <span class="opt">optional</span></label>'+
+      '<div class="unitrow"><input id="a-jars" type="number" min="1" max="999" step="1" inputmode="numeric" placeholder="e.g. 6">'+
+      '<select id="a-container" aria-label="Jars or bags">'+
+        '<option value="jar"'+(lastContainer()==='jar'?' selected':'')+'>jars</option>'+
+        '<option value="bag"'+(lastContainer()==='bag'?' selected':'')+'>bags</option>'+
+      '</select></div></div>';
   h += '<div class="abrow'+(type==='grain'?'':' wide')+'"><label>Notes</label>'+
       '<input id="a-notes" type="text" maxlength="120" placeholder="'+(type==='grain'?'grain type, method…':'media, method…')+'"></div>'+
     '<div class="abrow wide"><button class="mini solid" data-act="save">Add</button>'+
@@ -1094,10 +1156,17 @@ function orphanCardHtml(roots){
   var h = '<div class="srccard orphcard">';
   h += '<div class="shead"><span class="chip chip-bad">⚠ Unattached</span>'+
        '<span class="sname">'+n+' culture'+(n===1?'':'s')+' with no source</span></div>';
+  // Say what is actually missing. A culture with no source has no species either, and the
+  // day counts and the strain table are keyed on species — so they show nothing, which looks
+  // like "not enough data yet" instead of "I cannot tell what this is" (I83).
+  var noSp = roots.filter(function(c){ return !speciesOf(c); }).length;
   h += '<div class="smeta">The source '+(roots.length===1?'this chain came':'these chains came')+
        ' from was deleted. Nothing has been lost — attach '+(roots.length===1?'it':'them')+
        ' to a source to put '+(roots.length===1?'it':'them')+' back in the tree, and back into the '+
-       'strain-strength table.</div>';
+       'strain-strength table.'+
+       (noSp ? ' Until then '+(roots.length===1?'it has':'they have')+' <b>no species</b>, and the '+
+               'working clock and the strain table have nothing to measure '+
+               (roots.length===1?'it':'them')+' against.' : '')+'</div>';
   roots.forEach(function(c){
     h += '<div class="orphrow">';
     if(state.sources.length){
@@ -1205,12 +1274,16 @@ function addCulture(parentId, isSource, type){
     createdAt: $('a-date').value || today(), status:'healthy',
     notes:($('a-notes').value||'').trim()
   };
+  // Carry the species down from the parent now, while it is still knowable (I83).
+  stampSpecies(c, speciesUnder(isSource, parentId));
   if(type==='grain' && $('a-jars')){
     var j = Math.round(parseFloat($('a-jars').value));
     if(isFinite(j) && j>0) c.jars = Math.min(j, 999);
+    var ct = $('a-container') ? $('a-container').value : '';
+    c.container = (ct==='bag') ? 'bag' : 'jar';
   }
   state.cultures.push(c); addingUnder=null; recordingOn=null; save(); paint();
-  if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0}); }catch(_){}
+  if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0, container:c.container||''}); }catch(_){}
   showNudge('culture');
 }
 /* The work queue is a shortcut into the tree, not a second editor: it opens the same
@@ -1252,6 +1325,12 @@ $('tree').addEventListener('click', function(e){
     var ac = findCulture(el.getAttribute('data-id')), sel = $('at-src');
     if(ac && sel && findSource(sel.value)){
       ac.parentKind='source'; ac.parentId=sel.value;   // code untouched: it is on the jar
+      // Attaching is how an orphan gets its species back, so stamp it and everything below.
+      var asrc = findSource(sel.value);
+      if(asrc){
+        stampSpecies(ac, asrc.species);
+        descendants(ac.id).cultures.forEach(function(x){ stampSpecies(x, asrc.species); });
+      }
       attachingId=null; save(); paint();
       if(window.track) try{ track('culture_attach',{}); }catch(_){}
     }
@@ -1340,6 +1419,10 @@ $('tree').addEventListener('click', function(e){
       'They are NOT deleted — they move to "Unattached" at the bottom of the tree, and you can '+
       'attach them to another source at any time.\n\nDelete the source?')) return;
     if(!ds.cultures.length && !confirm('Delete this source?')) return;
+    // This is the exact moment the species would be lost: it lives on the source, and every
+    // culture below reads it from here. Write it onto them before the source goes (I83).
+    var dsrc = findSource(id);
+    if(dsrc) ds.cultures.forEach(function(x){ stampSpecies(x, dsrc.species); });
     state.sources = state.sources.filter(function(x){ return x.id!==id; });
     save(); paint();
     if(window.track) try{ track('culture_delete',{kind:'source', below:ds.cultures.length}); }catch(_){}
@@ -1400,7 +1483,7 @@ function chainOf(c){
 $('exportCsv').addEventListener('click', function(){
   // Archived rows are exported too, flagged — a CSV is the copy a grower keeps, so it holds
   // everything they have, not just what is on screen today.
-  var rows = [['code','type','status','made_on','jars','shaken_on','days_to_shake',
+  var rows = [['code','type','status','made_on','containers','container','shaken_on','days_to_shake',
     'colonised_on','days_to_colonise','growth','archived',
     'chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
   state.cultures.forEach(function(c){
@@ -1409,11 +1492,14 @@ $('exportCsv').addEventListener('click', function(){
     var bts = batchesOf(c.id).map(function(b){ return b.name; }).join('; ');
     var cd = colonisedDays(c), sd = shakenDays(c);
     rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt,
-      jarsOf(c)||'', c.shakenAt||'', sd==null?'':sd,
+      jarsOf(c)||'', jarsOf(c)?containerOf(c):'', c.shakenAt||'', sd==null?'':sd,
       c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
       isArchived(c)?'yes':'',
       chainOf(c),
-      src?src.code:'', src?src.kind:'', src?SPECIES[src.species].label:'', src?src.supplier:'',
+      // Species comes off the culture itself when the source is gone — an unattached row
+      // still says what it is, rather than exporting a blank (I83).
+      src?src.code:'', src?src.kind:'',
+      speciesOf(c)?SPECIES[speciesOf(c)].label:'', src?src.supplier:'',
       src?src.vendorBatch:'', src?src.contact:'', src?src.location:'', c.notes||'', bts]);
   });
   var csv = rows.map(function(r){ return r.map(function(v){
@@ -1585,6 +1671,9 @@ table.strain .crown{font-size:.85rem}
 .addbox{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;background:var(--surface-2);
   border-radius:12px;padding:13px 15px;margin:10px 0 4px}
 .addbox .abrow{display:flex;flex-direction:column;gap:4px}
+.addbox .unitrow{display:flex;gap:6px;align-items:center}
+.addbox .unitrow input{flex:1 1 auto;min-width:0}
+.addbox .unitrow select{flex:0 0 auto}
 .addbox .abrow.wide{grid-column:1/-1}
 .addbox label{font-size:.78rem;font-weight:700;color:var(--muted)}
 .addbox input{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
