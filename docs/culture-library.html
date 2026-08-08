@@ -401,6 +401,7 @@ var BATCH_STAGE = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fru
 var addingUnder = null;   // {parentId, type} while an inline "add culture" form is open
 var recordingOn = null;   // culture id while its colonisation-performance form is open
 var attachingId = null;   // culture id while its "attach to a source" picker is open (I79)
+var speciesOn  = null;    // orphan-root id while its "set species" picker is open (I84)
 
 /* ---- date helpers ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -674,6 +675,15 @@ var SAMPLE_IDS = {src1:1,src2:1,c1:1,c2:1,c3:1,c4:1,c5:1,c6:1,c7:1,
                   s1:1,s2:1,s3:1,s4:1,s5:1,s6:1,s7:1,s8:1};
 function isSample(id){ return SAMPLE_IDS[id]===1; }
 function sampleSources(){ return state.sources.filter(function(s){ return isSample(s.id); }); }
+/* The examples outlive their own sources (I84). Founding Grower #1 deleted both seeded
+   sources and kept every seeded culture under them, so his library counted 13 cultures for
+   7 real ones — including OUR fictional contaminated oyster LC, which is the whole of his
+   loss rate. The I78 note never appeared, because it asked whether a sample SOURCE was
+   left. The same mistake as the species bug: the check looked at the parent, and the parent
+   was the thing that had been deleted. Ask about every seeded record, not just the roots.
+   ⚠️ Named `leftoverSamples`, NOT `sampleCultures` — that name is already the seed FACTORY
+   above, and a second declaration of it silently replaced the seeder for the whole page. */
+function leftoverSamples(){ return state.cultures.filter(function(c){ return isSample(c.id); }); }
 function hasOwnData(){
   return state.sources.some(function(s){ return !isSample(s.id); }) ||
          state.cultures.some(function(c){ return !isSample(c.id); });
@@ -837,11 +847,14 @@ function renderArchive(){
   list.style.display='block';
 }
 function renderSampleNote(){
-  var box = $('sampleNote'), smp = sampleSources();
-  if(!smp.length || !hasOwnData()){ box.style.display='none'; return; }
-  box.innerHTML = '<span>This library still holds the <b>'+smp.length+' example source'+(smp.length>1?'s':'')+
-    '</b> we seeded on your first visit ('+smp.map(function(s){ return '<b>'+esc(s.code)+'</b>'; }).join(', ')+
-    ') — they are counted in the panels above alongside your own.</span>'+
+  var box = $('sampleNote'), smp = sampleSources(), smc = leftoverSamples();
+  if((!smp.length && !smc.length) || !hasOwnData()){ box.style.display='none'; return; }
+  var parts = [];
+  if(smp.length) parts.push('<b>'+smp.length+' example source'+(smp.length>1?'s':'')+'</b>'+
+    ' ('+smp.map(function(s){ return '<b>'+esc(s.code)+'</b>'; }).join(', ')+')');
+  if(smc.length) parts.push('<b>'+smc.length+' example culture'+(smc.length>1?'s':'')+'</b>');
+  box.innerHTML = '<span>This library still holds '+parts.join(' and ')+
+    ' we seeded on your first visit — they are counted in the panels above alongside your own.</span>'+
     '<button class="mini" id="clearSamples">Remove the examples</button>';
   box.style.display='flex';
 }
@@ -1166,20 +1179,46 @@ function orphanCardHtml(roots){
        'strain-strength table.'+
        (noSp ? ' Until then '+(roots.length===1?'it has':'they have')+' <b>no species</b>, and the '+
                'working clock and the strain table have nothing to measure '+
-               (roots.length===1?'it':'them')+' against.' : '')+'</div>';
+               (roots.length===1?'it':'them')+' against. You can say what '+
+               (roots.length===1?'it is':'they are')+' here without inventing a source: that alone '+
+               'brings back the working clock and your own colonisation pace. The strain table is '+
+               'kept per source, so that one still needs a source.' : '')+'</div>';
   roots.forEach(function(c){
     h += '<div class="orphrow">';
+    h += '<button class="mini" data-act="setsp" data-id="'+esc(c.id)+'">🧬 '+
+         (speciesOf(c) ? 'Change species of ' : 'Set species of ')+esc(c.code)+'</button>';
     if(state.sources.length){
       h += '<button class="mini" data-act="attach" data-id="'+esc(c.id)+'">📎 Attach '+esc(c.code)+' to a source</button>';
-    } else {
-      h += '<span class="sub">Log a source above, then attach <b>'+esc(c.code)+'</b> to it.</span>';
     }
     h += '</div>';
+    if(speciesOn===c.id)   h += speciesFormHtml(c);
     if(attachingId===c.id) h += attachFormHtml(c);
     h += cultureNodeHtml(c, 0);
   });
   h += '</div>';
   return h;
+}
+/* ---- telling an orphan what it is (I84) ----
+   Attaching to a source is how an orphan normally gets its species back — but a grower who
+   deleted their only source has nothing in the picker, and inventing a source just to recover
+   a species would put a record in the library that is not true. Species and parentage are two
+   different facts, and since I83 the culture carries its own species, so it can simply be told.
+   Applied straight down the chain because everything below a culture was made FROM it and is
+   necessarily the same species — which is also what makes re-picking a safe correction. */
+function speciesFormHtml(c){
+  var n = descendants(c.id).cultures.length, cur = speciesOf(c);
+  return '<form class="addform" data-act="noop">'+
+    '<label>Species of <code>'+esc(c.code)+'</code>'+
+    '<select id="sp-pick">'+Object.keys(SPECIES).map(function(k){
+      return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+esc(SPECIES[k].label)+'</option>';
+    }).join('')+'</select></label>'+
+    '<div class="sub">'+(n ? 'Applied to this culture and the '+n+' below it — everything made from it '+
+      'is the same species. ' : '')+'Nothing else changes: the tracking code and every date stay '+
+      'exactly as they are.</div>'+
+    '<div class="nactions">'+
+      '<button class="mini" data-act="saveSp" data-id="'+esc(c.id)+'">Save species</button>'+
+      '<button class="mini ghosty" data-act="cancelSp">Cancel</button>'+
+    '</div></form>';
 }
 function attachFormHtml(c){
   return '<form class="addform" data-act="noop">'+
@@ -1318,8 +1357,21 @@ $('tree').addEventListener('click', function(e){
     return;
   }
   if(act==='cancel'){ e.preventDefault(); addingUnder=null; paint(); return; }
-  if(act==='attach'){ e.preventDefault(); attachingId=el.getAttribute('data-id'); addingUnder=null; recordingOn=null; paint(); return; }
+  if(act==='attach'){ e.preventDefault(); attachingId=el.getAttribute('data-id'); addingUnder=null; recordingOn=null; speciesOn=null; paint(); return; }
   if(act==='cancelAttach'){ e.preventDefault(); attachingId=null; paint(); return; }
+  if(act==='setsp'){ e.preventDefault(); speciesOn=el.getAttribute('data-id'); addingUnder=null; recordingOn=null; attachingId=null; paint(); return; }
+  if(act==='cancelSp'){ e.preventDefault(); speciesOn=null; paint(); return; }
+  if(act==='saveSp'){
+    e.preventDefault();
+    var sc = findCulture(el.getAttribute('data-id')), pick = $('sp-pick');
+    if(sc && pick && SPECIES[pick.value]){
+      sc.species = pick.value;
+      descendants(sc.id).cultures.forEach(function(x){ x.species = pick.value; });
+      speciesOn=null; save(); paint();
+      if(window.track) try{ track('culture_set_species',{}); }catch(_){}
+    }
+    return;
+  }
   if(act==='saveAttach'){
     e.preventDefault();
     var ac = findCulture(el.getAttribute('data-id')), sel = $('at-src');
@@ -1599,7 +1651,7 @@ function isSampleOnly(){
       if(!doc || !Array.isArray(doc.batches)) return false;
       if(!Array.isArray(doc.sources) || !doc.sources.every(validSource)) return false;
       if(!Array.isArray(doc.cultures) || !doc.cultures.every(validCulture)) return false;
-      state = doc; recordingOn=null; attachingId=null;
+      state = doc; recordingOn=null; attachingId=null; speciesOn=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       paint();
       return true;
