@@ -156,6 +156,13 @@
     ls(EMAIL_HINT, em);        // so opening the link on this device needs no retyping
     post('/api/auth/request', { email: em })
       .then(function (j) {
+        // The server now says whether the mail actually left. Telling someone to check an
+        // inbox for an email that was never sent leaves them waiting on nothing, and on this
+        // screen that person may well have just paid us.
+        if (j && j.sent === false) {
+          setStatus('We could not send that email just now. Please tap send again in a moment.', true);
+          return;
+        }
         if (j && j.gated) {
           // Not a Founding Grower yet — say so here, not only in the email.
           setStatus('');
