@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Free Mushroom Culture Library — track lineage from source to block | Mycro</title>
-<meta name="description" content="A free mushroom culture library and lineage tracker. Log where a culture came from, follow it through petri dish → liquid culture → grain spawn → block, and trace a contamination back to every culture and batch it touched. No sign-up. Saves on your device.">
-<meta name="keywords" content="mushroom culture library, culture lineage tracking, mushroom strain tracking, liquid culture log, grain spawn tracking, contamination traceback, mushroom genealogy, agar plate records">
+<title>Free Mushroom Traceability Software — Culture Library | Mycro</title>
+<meta name="description" content="Free mushroom traceability software: log where every culture came from and follow it through petri dish → liquid culture → grain spawn → block. Flag one contamination and see every jar, bag and batch descended from it. No sign-up, runs in your browser.">
+<meta name="keywords" content="mushroom traceability software, mushroom traceability system, mushroom culture library, culture lineage tracking, mushroom strain tracking, liquid culture log, grain spawn tracking, contamination traceback, mushroom genealogy, agar plate records">
 <link rel="canonical" href="https://usemycro.com/culture-library.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Free Mushroom Culture Library — track lineage from source to block">
-<meta property="og:description" content="Log every source, petri dish, liquid culture and grain spawn — and trace a contamination back through the whole chain. Free, no sign-up.">
+<meta property="og:title" content="Free Mushroom Traceability Software — the Mycro Culture Library">
+<meta property="og:description" content="Log every source, petri dish, liquid culture and grain spawn — and trace a contamination back through the whole chain, in both directions. Free, no sign-up.">
 <meta property="og:url" content="https://usemycro.com/culture-library.html">
 <meta property="og:image" content="https://usemycro.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -17,10 +17,12 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom culture library that records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain.","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is mushroom traceability?","acceptedAnswer":{"@type":"Answer","text":"Traceability is the ability to answer two questions about anything on your shelf: where did this come from, and what else came from the same place. In large food operations that is a certified system with audits behind it. On a small mushroom farm it is a discipline — a code written on every jar and an honest record of what came off what — and it earns its keep the first time a plate goes green, because you can quarantine exactly what is affected instead of guessing or dumping the lot."}},
+{"@type":"Question","name":"Is there free mushroom traceability software?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro Culture Library is free, needs no account and runs in a browser. Log a source once, then add petri dishes, liquid cultures and grain spawn under it; each one takes a tracking code derived from its parent, so the code on the jar carries the lineage. Mark anything contaminated and it lists every culture, container and block descended from it, plus the parent and siblings it came from. It keeps your own records rather than acting as a certified food-safety or compliance system — there is no auditor and no third party verifying anything — and nothing leaves your device unless you choose to sync it."}},
 {"@type":"Question","name":"What is mushroom culture lineage tracking?","acceptedAnswer":{"@type":"Answer","text":"Culture lineage tracking records the parent of every culture you make, so each petri dish, liquid culture, grain spawn jar and finished block can be traced back to the original source — the grower or supplier you bought it from, or the wild collection you took it from. It answers two questions a grow log alone cannot: which source and strain actually produces your best blocks, and, when a contaminant appears, which other cultures came off the same parent and need checking."}},
 {"@type":"Question","name":"What should I record about a mushroom culture source?","acceptedAnswer":{"@type":"Answer","text":"For a purchased or gifted sample: species (scientific or common name), the supplier's batch number if they give one, the name and contact details of the company or individual, the date and time you received it, and your own assigned tracking ID. For a wild field sample: species, the location the sample was taken (GPS coordinates or address), date and time, and an assigned tracking ID. The supplier details matter for two reasons — you can go back for more of a strain that performs, and if there is ever a liability question you have a chain of responsibility."}},
 {"@type":"Question","name":"How do I trace a mushroom contamination back to its source?","acceptedAnswer":{"@type":"Answer","text":"Mark the contaminated culture in your records, then walk the chain in both directions. Downstream: every culture and every block made from that culture is suspect and should be checked or quarantined. Upstream: look at its parent and at the other cultures made from that same parent — if they are clean, the contamination entered at your step; if they are also failing, it came in earlier, possibly with the source itself. The Mycro culture library does both walks automatically and lists the at-risk items."}},
@@ -53,12 +55,13 @@
     earlier. Log where a culture <b>came from</b>, then follow it down the chain —
     <b>source → petri dish → liquid culture → grain spawn → block</b>. Every culture gets a tracking
     code derived from its parent, so when a contaminant turns up you can see, in one click,
-    <b>every culture and every batch that came off it</b>.</p>
+    <b>every culture and every batch that came off it</b>. That is traceability on a small farm,
+    without a spreadsheet and without a sign-up.</p>
   <!-- Answer capsule (AEO, I82). A self-contained ~50-word answer to this page's core question,
        placed high on the page because that is the unit an answer engine lifts and attributes.
        Every number in it matches the page below. If one changes, change it here first. -->
   <p id="answer" class="note" style="font-size:1.02rem;line-height:1.65">
-    <b style="color:var(--ink)">The Mycro Culture Library traces a mushroom culture from its source through petri dish, liquid culture and grain spawn to the block it fruits.</b> Every culture takes a tracking code derived from its parent, so flagging one contaminated plate lists every grain jar or bag and every batch descended from it. Free, in a browser, with no account.
+    <b style="color:var(--ink)">Mushroom traceability means being able to follow any block back to the culture and the source it came from.</b> The free Mycro Culture Library does that in a browser: every culture takes a tracking code derived from its parent, so flagging one contaminated plate lists every grain jar or bag and every batch descended from it. No account.
   </p>
 
   <p class="muted" style="font-size:.98rem;margin-top:-4px">It shares the same storage as the free
@@ -234,12 +237,25 @@
 
   <!-- Methodology / SEO depth -->
   <section style="padding:30px 0 0">
-    <h2>How culture lineage works</h2>
+    <h2>Mushroom traceability: how culture lineage works</h2>
     <p class="muted">A grow log tells you what a block did. A culture library tells you <i>why</i> —
       which genetics, from which source, handled by which method. Here is what this tool records and
       what it lets you answer.</p>
 
-    <h3 style="margin-top:18px">The chain</h3>
+    <h3 style="margin-top:18px">What traceability means on a small mushroom farm</h3>
+    <p class="muted">Traceability is the ability to answer two questions about anything on your shelf:
+      <b>where did this come from</b>, and <b>what else came from the same place</b>. In large food
+      operations that is a certified system with audits behind it. On a small farm it is a discipline —
+      a code written on every jar and an honest record of what came off what — and it earns its keep
+      the first time a plate goes green, because you can quarantine exactly what is affected instead of
+      guessing or dumping the lot.</p>
+    <p class="muted">Mycro is the small-farm kind. It keeps your own records, in your own browser, and
+      does the two lookups for you in both directions. <b>It is not a certified food-safety or
+      compliance system and does not claim to be one</b>: there is no auditor, no signature and no
+      third party verifying anything. What it gives you is the chain itself, complete enough to act on
+      and to show a buyer who asks where a batch came from.</p>
+
+    <h3 style="margin-top:16px">The chain</h3>
     <p class="muted">Genetics enter the farm once and then get copied, over and over. Each copy is a
       chance to gain performance data — and a chance to let something in.</p>
     <table class="spec">
