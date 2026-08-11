@@ -23,7 +23,8 @@
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"How much water to add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"To reach field capacity (about 60% moisture), add water equal to roughly 1.5x the dry substrate weight, so dry substrate plus water ends near 2.5x the dry weight. Water = M/(1-M) x dry weight, where M is the target moisture fraction."}},
 {"@type":"Question","name":"What is biological efficiency for mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is fresh mushroom yield divided by dry substrate weight, as a percentage. Oyster mushrooms commonly hit 75-100%+, while king oyster and lion's mane are often 50-75%."}},
-{"@type":"Question","name":"What spawn ratio should I use?","acceptedAnswer":{"@type":"Answer","text":"A common spawn rate is 10-30% of the hydrated substrate weight. 20% equals a 1:5 spawn-to-substrate ratio. Higher spawn rates colonize faster and resist contamination but cost more."}}]}
+{"@type":"Question","name":"What spawn ratio should I use?","acceptedAnswer":{"@type":"Answer","text":"A common spawn rate is 10-30% of the hydrated substrate weight. 20% equals a 1:5 spawn-to-substrate ratio. Higher spawn rates colonize faster and resist contamination but cost more."}},
+{"@type":"Question","name":"Can I save or print my mushroom batch plan?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Mycro Grow Calculator can email you the finished batch plan: water per block, total spawn needed, expected yield, cost per block and profit, together with a link that reopens the calculator with the same figures so you can change one number and see what it does. It is free and needs no account."}}]}
 </script>
 </head>
 <body>
@@ -176,6 +177,21 @@
       <div class="kpi" id="k-profit-card"><div class="v" id="k-profit">–</div><div class="l">Profit · <span id="k-margin">–</span> margin</div></div>
     </div>
     <p class="muted" id="r-note" style="margin:14px 0 0;font-size:.9rem"></p>
+
+    <!-- Email me this plan. The ask sits ON the result, not below it in a generic early-access
+         box: a grower who has just worked out water, spawn and cost for a real batch wants those
+         numbers at the bench tomorrow. The email carries the figures AND a link that reopens the
+         calculator with the same inputs. no-print so it never lands on a printed sheet. -->
+    <div class="no-print" id="planMail" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
+      <b style="color:var(--ink)">📧 Email me this batch plan</b>
+      <p class="muted" style="margin:6px 0 0;font-size:.92rem">Your numbers, in your inbox, with a link
+        that reopens this calculation. Handy when you are mixing substrate and the laptop is inside.</p>
+      <form class="waitlist" style="margin:12px 0 0;justify-content:flex-start" onsubmit="return mycroPlanEmail(event)">
+        <input type="email" id="planEmail" placeholder="you@yourfarm.com" required aria-label="Email">
+        <button class="btn" type="submit" id="planEmailBtn">Send me the plan →</button>
+      </form>
+      <p id="plan-msg" class="muted" style="margin-top:10px;display:none"></p>
+    </div>
   </div>
 
   <div class="note" id="waitlist" style="margin-top:18px">
@@ -349,10 +365,111 @@ document.querySelectorAll('#unitToggle button').forEach(function(b){
 });
 
 document.querySelectorAll('input,select').forEach(function(el){
-  if(el.id==='o-ratio') return;
+  if(el.id==='o-ratio'||el.id==='planEmail') return;   // the email field is not a calculator input
   el.addEventListener('input',calc);
 });
-setUnitLabels(); calc();
+
+/* ---- Email me this batch plan -------------------------------------------------
+   The calculator is the highest-traffic page on the site and the page the first paying
+   customer arrived through, but its only ask was a generic early-access box below the
+   results. This asks at the moment the numbers exist and are worth something, and pays
+   for the email with the numbers themselves. */
+var PLAN_INPUTS=['dryPerBag','moisture','bags','spawnRate','species','be','costSub','costSpawn','extraPerBag','salePrice'];
+
+/* The inputs as a query string, so the emailed link reopens THIS calculation. Values are
+   stored in whatever unit is on screen, and `u` carries that unit, so nothing is converted
+   twice on the way back in. */
+function planQuery(){
+  var p=['u='+unit];
+  PLAN_INPUTS.forEach(function(id){
+    var el=$(id); if(!el) return;
+    p.push(id+'='+encodeURIComponent(String(el.value).slice(0,12)));
+  });
+  return p.join('&');
+}
+
+/* Restore from ?u=..&dryPerBag=..
+   ORDER IS LOAD-BEARING: the unit is applied FIRST, and directly rather than through the
+   toggle. The toggle's job is to CONVERT whatever is on screen, and these values arrive
+   already expressed in the unit they were saved in. Setting the unit first means the values
+   written after it are taken at face value; applying it afterwards (or through the toggle)
+   converts a kg plan a second time and hands the grower nonsense. Pinned by
+   tests/calculator.spec.js — moving this block below the loop fails that test. */
+function restorePlan(){
+  var qs=new URLSearchParams(location.search);
+  if(!qs.has('u')&&!qs.has('bags')) return false;
+  var u=qs.get('u');
+  if(u==='kg'||u==='lb'){
+    unit=u;
+    document.querySelectorAll('#unitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+  }
+  PLAN_INPUTS.forEach(function(id){
+    if(!qs.has(id)) return;
+    var el=$(id), v=String(qs.get(id)).slice(0,12);
+    if(!el) return;
+    if(el.tagName==='SELECT'){ if([].some.call(el.options,function(o){return o.value===v;})) el.value=v; }
+    else if(/^-?\d*\.?\d*$/.test(v)&&v!=='') el.value=v;      // numeric inputs only, never free text
+  });
+  return true;
+}
+
+/* The rows are read back off the rendered page, so the email can never disagree with what
+   the grower just looked at. Unit and currency formatting stays in ONE place. */
+function planRows(){
+  var pairs=[
+    ['Water per block','o-waterPerBag'],['Hydrated weight per block','o-hydPerBag'],
+    ['Total dry substrate','o-totalDry'],['Total water','o-totalWater'],
+    ['Total hydrated substrate','o-totalHyd'],
+    ['Spawn ratio','o-ratio'],['Spawn per block','o-spawnPerBag'],['Total spawn needed','o-totalSpawn'],
+    ['Expected yield per block','o-yieldPerBag'],['Total fresh yield','k-yield'],
+    ['Cost per block','o-costPerBag'],['Total batch cost','o-totalCost'],
+    ['Cost per '+unit+' produced','o-costPerLb'],
+    ['Expected revenue','k-rev'],['Profit','k-profit'],['Margin','k-margin']
+  ];
+  var out=[];
+  pairs.forEach(function(p){
+    var el=$(p[1]); if(!el) return;
+    var v=(el.tagName==='INPUT'? el.value : el.textContent)||'';
+    // The page writes an en dash for "not filled in yet" and an em dash for "cannot be
+    // computed" (no yield, no spawn rate). Neither is a number, so neither belongs in a
+    // plan someone takes to the bench. Drop the row instead of mailing a dash.
+    v=v.trim(); if(!v||/^[–—-]$/.test(v)) return;
+    out.push([p[0],v]);
+  });
+  return out;
+}
+
+function mycroPlanEmail(e){
+  e.preventDefault();
+  var msg=$('plan-msg'), btn=$('planEmailBtn'), input=$('planEmail');
+  var email=(window.mycroCleanEmail? mycroCleanEmail(input.value) : String(input.value||'').trim().toLowerCase());
+  msg.style.display='block';
+  if(!/^[^@\s:,;<>\\]+@[^@\s:,;<>\\]+\.[^@\s:,;<>\\]+$/.test(email)){
+    msg.textContent='Please enter a valid email address.'; return false;
+  }
+  var rows=planRows();
+  if(!rows.length){ msg.textContent='Fill in the batch details first, then send yourself the plan.'; return false; }
+  btn.disabled=true; msg.textContent='Sending…';
+  var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
+  fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
+    method:'POST', headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({email:email,first:first,plan:{
+      sub:($('r-sub').textContent||'').trim(), q:planQuery(), rows:rows}})
+  }).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok){
+      msg.textContent='Sent ✓ Check your inbox for the plan and a link that reopens it.';
+      input.value='';
+      if(window.track) track('calc_plan_email',{});
+    } else {
+      msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
+    }
+  }).catch(function(){
+    msg.textContent='That did not send. Please check your connection and try again.'; btn.disabled=false;
+  });
+  return false;
+}
+
+restorePlan(); setUnitLabels(); calc();
 </script>
 <script src="waitlist.js"></script>
   <script src="/track.js" defer></script>
