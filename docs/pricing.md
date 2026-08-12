@@ -29,7 +29,7 @@ All prices in USD. Secure checkout by Stripe. Monthly-plan prices are targets an
 - Simple invoicing.
 
 ## Founding Grower — $99 one-time
-- Price: **$99 one-time**. Only 50 spots.
+- Price: **$99 one-time**. Only 10 spots.
 - **Opens a sign-in account immediately** — this is what the $99 buys today. Passwordless: you get an emailed sign-in link, and your grow log then follows your email onto any device instead of living in one browser.
 - Locks **lifetime founder pricing** — you never pay standard rates when the monthly plans open.
 - A direct line to the team: the last four features shipped were specified by Founding Grower #1.
