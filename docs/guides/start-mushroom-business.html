@@ -22,7 +22,7 @@
 "description":"A realistic, numbers-first guide to starting a small gourmet mushroom farming business: startup costs, the production cycle, profitability, pricing, finding buyers, and the mistakes that sink new farms.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-08-06",
+"datePublished":"2026-06-13","dateModified":"2026-08-15",
 "mainEntityOfPage":"https://usemycro.com/guides/start-mushroom-business.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -32,6 +32,8 @@
 {"@type":"Question","name":"How much does it cost to start a mushroom farm?","acceptedAnswer":{"@type":"Answer","text":"A serious home/garage-scale gourmet operation typically starts around $2,000–$8,000: a pressure sterilizer or steam setup, a still-air box or flow hood, shelving, a humidifier and fan for fruiting, bags and filter patches, spawn and substrate, and a small fridge for harvests. You can start lower with pasteurized straw and oyster mushrooms, or much higher if you buy a fruiting tent and lab gear up front. The biggest hidden cost is wasted substrate from contamination, not equipment."}},
 {"@type":"Question","name":"What is the easiest mushroom to grow commercially?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms (Pleurotus) are the standard starting crop: they are aggressive colonizers, tolerant of simple pasteurized substrates like straw or supplemented sawdust, fast to fruit, and forgiving of beginner mistakes. Lion's mane and shiitake are popular next steps with higher prices but slower, fussier cycles. Most farms start with oysters to learn the workflow, then add species their buyers ask for."}},
 {"@type":"Question","name":"How much money can a small mushroom farm make?","acceptedAnswer":{"@type":"Answer","text":"As a rough planning figure, a single 5 lb fruiting block of oysters at 60% biological efficiency yields about 3 lb of mushrooms; at $10/lb wholesale that is roughly $30 of revenue per block before costs. A small farm running a few hundred blocks per month can reach four figures of monthly revenue, but real net profit depends entirely on your yield per block, your contamination rate, and your labor — which is exactly why tracking each batch matters more than block count."}},
+{"@type":"Question","name":"How do I work out if my mushroom farm will be profitable?","acceptedAnswer":{"@type":"Answer","text":"Model a month, not a batch. Multiply blocks started per week by 4.33 to get blocks per month, remove your contamination rate to get blocks that reach harvest, multiply those by dry substrate weight times biological efficiency for fresh yield, then multiply by your price. Subtract every block you paid for including the ones that died, your fixed costs, and your own labour. The free planner on this page does exactly that and also reports your break-even block count and how long your startup spend takes to come back."}},
+{"@type":"Question","name":"What is a realistic profit margin for a small mushroom farm?","acceptedAnswer":{"@type":"Answer","text":"It depends almost entirely on whether you price your own time. A garage-scale farm running 50 blocks a week at 60% biological efficiency, 10% losses and $10/lb wholesale grosses roughly $5,850 a month against about $940 of blocks and fixed costs, which looks like an 84% margin. Pay yourself $20 an hour for 20 hours a week and the same farm nets around $3,175 a month, a margin closer to 54%. Any mushroom profit figure that does not name a labour cost is quoting the first number."}},
 {"@type":"Question","name":"Do I need a license to sell mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Rules vary by country, state, and county. Selling fresh cultivated gourmet mushrooms (oyster, lion's mane, shiitake, etc.) to restaurants and markets usually falls under local cottage-food or produce/food-handling rules and may require registration, a kitchen or processing standard, and liability insurance — check your local agriculture and health departments. Selling foraged wild mushrooms is regulated much more strictly. This guide covers cultivated culinary and medicinal species only."}}]}
 </script>
 </head>
@@ -66,7 +68,7 @@
     <b style="color:var(--ink)">A small gourmet mushroom farm typically starts for $2,000–$8,000 and sells fresh at $8–$16 a pound.</b> Whether it makes money turns on two numbers: biological efficiency, which sets the pounds a block returns, and contamination rate, which decides how many blocks reach harvest. A 10% loss rate quietly removes a tenth of the revenue while every cost stays.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 6 August 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 15 August 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -119,13 +121,133 @@
       <li>Now drop biological efficiency to 40% and lose 20% of blocks, and that same effort produces far
         less. Same farm, very different bank balance.</li>
     </ul>
-    <p>Before you spend a dollar on scaling, model your own numbers: estimate yield with the
-      <a href="../calculator.html">Grow Calculator</a> (substrate weight × biological efficiency → expected
-      fresh yield), size your substrate batches with the
+    <p>Before you spend a dollar on scaling, model your own numbers. The planner below does the farm-level
+      arithmetic that decides whether this is a business or an expensive hobby: what a month of production
+      is worth at your yield and your loss rate, what it costs you to get there, and how long the money you
+      spend up front takes to come back.</p>
+
+    <!-- Farm profit planner (I91). Section 3 told the reader to "model your own numbers" and then sent
+         them to a PER-BATCH yield calculator, which does not answer the question this page asks. The
+         defaults below are this page's own figures (5 lb block, 60% BE, 10% loss, $10/lb) — if a number
+         in the prose above changes, change it here and in the answer capsule too. -->
+    <section id="planner" style="margin:20px 0 6px">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="margin:0;font-size:1.15rem">Mushroom farm profit calculator</h3>
+        <div class="toggle" id="unitToggle" role="group" aria-label="Units">
+          <button type="button" data-unit="lb" class="active">lb</button>
+          <button type="button" data-unit="kg">kg</button>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+        <div class="field">
+          <label for="p-blocks">Blocks per week</label>
+          <input id="p-blocks" type="number" min="1" step="1" value="50" inputmode="decimal">
+          <span class="hint">How many you inoculate, not how many survive</span>
+        </div>
+        <div class="field">
+          <label for="p-dry">Dry substrate per block <span class="u-w">(lb)</span></label>
+          <input id="p-dry" type="number" min="0" step="0.1" value="5" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="p-be">Biological efficiency (%)</label>
+          <input id="p-be" type="number" min="0" max="300" step="1" value="60" inputmode="decimal">
+          <span class="hint">Fresh mushrooms as % of dry substrate weight</span>
+        </div>
+        <div class="field">
+          <label for="p-loss">Contamination loss (%)</label>
+          <input id="p-loss" type="number" min="0" max="100" step="1" value="10" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="p-price">Sale price <span class="u-p">($/lb)</span></label>
+          <input id="p-price" type="number" min="0" step="0.5" value="10" inputmode="decimal">
+          <span class="hint">Wholesale is typically $8–$16/lb</span>
+        </div>
+        <div class="field">
+          <label for="p-cost">Cost per block ($)</label>
+          <input id="p-cost" type="number" min="0" step="0.1" value="2.50" inputmode="decimal">
+          <span class="hint">Substrate + spawn + bag</span>
+        </div>
+        <div class="field">
+          <label for="p-fixed">Fixed costs per month ($)</label>
+          <input id="p-fixed" type="number" min="0" step="10" value="400" inputmode="decimal">
+          <span class="hint">Rent, power, water, insurance, packaging</span>
+        </div>
+        <div class="field">
+          <label for="p-hours">Hours you work per week</label>
+          <input id="p-hours" type="number" min="0" step="1" value="20" inputmode="decimal">
+          <span class="hint">Inoculating, harvesting, cleaning, delivering</span>
+        </div>
+        <div class="field">
+          <label for="p-wage">What your hour is worth ($)</label>
+          <input id="p-wage" type="number" min="0" step="1" value="20" inputmode="decimal">
+          <span class="hint">Set it to 0 to see profit before paying yourself</span>
+        </div>
+        <div class="field">
+          <label for="p-startup">One-off startup spend ($)</label>
+          <input id="p-startup" type="number" min="0" step="100" value="4000" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="results" style="margin-top:18px">
+        <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+          <div class="kpi"><div class="v" id="k-rev">—</div><div class="l">Revenue / month</div></div>
+          <div class="kpi"><div class="v" id="k-cost">—</div><div class="l">Costs / month</div></div>
+          <div class="kpi" id="kw-profit"><div class="v" id="k-profit">—</div><div class="l">Profit / month</div></div>
+          <div class="kpi"><div class="v" id="k-payback">—</div><div class="l">Startup paid back in</div></div>
+        </div>
+
+        <table class="spec" style="margin:18px 0 0">
+          <tbody>
+            <tr><td>Blocks started per month</td><td id="o-started" style="text-align:right">—</td></tr>
+            <tr><td>Blocks that reach harvest</td><td id="o-harv" style="text-align:right">—</td></tr>
+            <tr><td>Fresh yield per harvested block</td><td id="o-perblock" style="text-align:right">—</td></tr>
+            <tr><td>Fresh yield per month</td><td id="o-yield" style="text-align:right">—</td></tr>
+            <tr><td>Spent on blocks (all of them, harvested or not)</td><td id="o-blockspend" style="text-align:right">—</td></tr>
+            <tr><td>Of that, spent on blocks that never harvest</td><td id="o-lostspend" style="text-align:right">—</td></tr>
+            <tr><td>Mushrooms you never sold, at your price</td><td id="o-lostrev" style="text-align:right">—</td></tr>
+            <tr><td>Your own labour, priced</td><td id="o-labour" style="text-align:right">—</td></tr>
+            <tr><td>What an hour of your work actually earns</td><td id="o-perhour" style="text-align:right">—</td></tr>
+            <tr><td>Your real cost per <span class="u-wu">lb</span> produced</td><td id="o-cpu" style="text-align:right">—</td></tr>
+            <tr><td>Margin per <span class="u-wu">lb</span> at your price</td><td id="o-margin" style="text-align:right">—</td></tr>
+            <tr><td>Profit per year</td><td id="o-year" style="text-align:right">—</td></tr>
+            <tr><td>Blocks a week you need just to break even</td><td id="o-breakeven" style="text-align:right">—</td></tr>
+          </tbody>
+        </table>
+
+        <p class="note" id="p-note" style="margin-top:16px"></p>
+
+        <!-- The ask sits ON the result, not below it. Same shape as the batch-plan capture on
+             /calculator.html: the email is paid for with the reader's own numbers, and the link
+             in it reopens this planner with the same inputs. -->
+        <form id="planForm" style="margin:16px 0 0" onsubmit="return mycroFarmPlanEmail(event)">
+          <label for="planEmail" style="font-weight:650;font-size:.92rem;display:block;margin-bottom:6px">
+            📧 Email me this farm plan</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input id="planEmail" type="email" placeholder="you@farm.com" autocomplete="email"
+              style="flex:1;min-width:220px;font:inherit;padding:11px 13px;border-radius:10px;border:1px solid var(--line)">
+            <button class="btn" id="planEmailBtn" type="submit">Send it</button>
+          </div>
+          <p class="muted" style="font-size:.82rem;margin:8px 0 0">Your figures, plus a link that reopens
+            this planner with them. No spam, unsubscribe any time.</p>
+          <p id="plan-msg" style="display:none;font-size:.9rem;margin:8px 0 0"></p>
+        </form>
+      </div>
+
+      <p class="muted" style="font-size:.85rem;margin:12px 0 0">These are planning estimates, not a
+        forecast and not financial advice. Every figure depends on two numbers no calculator can know for
+        you: the biological efficiency you actually hit and the share of blocks you actually lose. What
+        the model does not include: tax, mushrooms you grow but fail to sell, and any cost that scales
+        with volume beyond the per-block figure. Labour is entered as a flat weekly figure, so if you
+        raise the block count you have to raise the hours with it.</p>
+    </section>
+
+    <p style="margin-top:18px">If the math only works at a yield you have never actually hit, fix the grow
+      room before you grow the farm. To go deeper on the inputs: size a single batch with the
+      <a href="../calculator.html">Grow Calculator</a>, cost your substrate mix with the
       <a href="../substrate-calculator.html">Substrate Recipe Calculator</a>, and read the
-      <a href="biological-efficiency.html">biological efficiency guide</a> to understand what a "good" BE
-      number actually is for your species. If the math only works at a yield you've never actually hit,
-      fix the grow room before you grow the farm.</p>
+      <a href="biological-efficiency.html">biological efficiency guide</a> to learn what a "good" BE number
+      actually is for your species.</p>
 
     <h2 style="margin-top:32px">4. The production cycle you're committing to</h2>
     <p>A mushroom farm is a pipeline, and every stage has to keep feeding the next or your shelves go
@@ -216,6 +338,10 @@
     <h3 style="margin-top:22px">How much money can a small mushroom farm make?</h3>
     <p>As a rough planning figure, a single 5 lb fruiting block of oysters at 60% biological efficiency yields about 3 lb of mushrooms; at $10/lb wholesale that is roughly $30 of revenue per block before costs. A small farm running a few hundred blocks per month can reach four figures of monthly revenue, but real net profit depends entirely on your yield per block, your contamination rate, and your labor — which is exactly why tracking each batch matters more than block count.</p>
 
+    <h3 style="margin-top:22px">How do I work out if my mushroom farm will be profitable?</h3>
+    <p>Model a month, not a batch. Multiply blocks started per week by 4.33 to get blocks per month, remove your contamination rate to get blocks that reach harvest, multiply those by dry substrate weight times biological efficiency for fresh yield, then multiply by your price. Subtract every block you paid for including the ones that died, your fixed costs, and your own labour. The free planner on this page does exactly that and also reports your break-even block count and how long your startup spend takes to come back.</p>
+    <h3 style="margin-top:22px">What is a realistic profit margin for a small mushroom farm?</h3>
+    <p>It depends almost entirely on whether you price your own time. A garage-scale farm running 50 blocks a week at 60% biological efficiency, 10% losses and $10/lb wholesale grosses roughly $5,850 a month against about $940 of blocks and fixed costs, which looks like an 84% margin. Pay yourself $20 an hour for 20 hours a week and the same farm nets around $3,175 a month, a margin closer to 54%. Any mushroom profit figure that does not name a labour cost is quoting the first number.</p>
     <h3 style="margin-top:22px">Do I need a license to sell mushrooms?</h3>
     <p>Rules vary by country, state, and county. Selling fresh cultivated gourmet mushrooms (oyster, lion's mane, shiitake, etc.) to restaurants and markets usually falls under local cottage-food or produce/food-handling rules and may require registration, a kitchen or processing standard, and liability insurance — check your local agriculture and health departments. Selling foraged wild mushrooms is regulated much more strictly. This guide covers cultivated culinary and medicinal species only.</p>
     <p class="disclaimer" style="margin-top:20px">General planning guidance from common cultivation and
@@ -243,5 +369,242 @@
 
   <script src="../waitlist.js"></script>
   <script src="/track.js" defer></script>
+
+<!-- Farm profit planner (I91) ---------------------------------------------------------
+     Client-side only. The arithmetic is deliberately farm-level rather than per-batch,
+     because the question this page's search traffic is asking ("mushroom farming cost",
+     "mushroom business plan", "is mushroom farming profitable") is answered in months and
+     payback, not in grams per bag.
+
+     Two accounting rules are load-bearing and mirror the Grow Log's cost panel (I72):
+       (a) EVERY block started is paid for, harvested or not. Charging only the survivors
+           understates cost per pound and flatters every number below it.
+       (b) Contaminated blocks yield nothing. The money lost is reported as two separate
+           quantities — cash spent on blocks that died, and mushrooms never sold — because
+           adding them together would double-count the same contamination.            -->
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  if(!$('p-blocks')) return;
+  var WK_PER_MONTH=52/12;                 // 4.333…, not 4 — twelve 4-week months is 48 weeks
+  var LB_PER_KG=2.2046226;
+  var unit='lb';
+
+  function val(id){var n=parseFloat($(id).value);return isFinite(n)&&n>=0?n:0;}
+  function money(x){
+    if(!isFinite(x)) return '—';
+    return (x<0?'-$':'$')+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  }
+  function money2(x){
+    if(!isFinite(x)) return '—';
+    return (x<0?'-$':'$')+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function wt(v){
+    if(!isFinite(v)) return '—';
+    var d=v<10?2:(v<1000?1:0);
+    return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+unit;
+  }
+  function num(v,d){
+    if(!isFinite(v)) return '—';
+    return v.toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+  }
+  function set(id,v){var el=$(id); if(el) el.textContent=v;}
+
+  function setUnitLabels(){
+    Array.prototype.forEach.call(document.querySelectorAll('.u-w'),function(e){e.textContent='('+unit+')';});
+    Array.prototype.forEach.call(document.querySelectorAll('.u-p'),function(e){e.textContent='($/'+unit+')';});
+    Array.prototype.forEach.call(document.querySelectorAll('.u-wu'),function(e){e.textContent=unit;});
+  }
+
+  function calc(){
+    var blocksWk=val('p-blocks'),
+        dry=val('p-dry'),
+        be=Math.max(0,val('p-be'))/100,
+        loss=Math.min(100,Math.max(0,val('p-loss')))/100,
+        price=val('p-price'),
+        costBlock=val('p-cost'),
+        fixed=val('p-fixed'),
+        hours=val('p-hours'),
+        wage=val('p-wage'),
+        startup=val('p-startup');
+
+    var started=blocksWk*WK_PER_MONTH,
+        harvested=started*(1-loss),
+        dead=started-harvested,
+        perBlock=dry*be,                       // BE is fresh weight as a share of DRY substrate
+        yieldMo=harvested*perBlock,
+        revenue=yieldMo*price,
+        blockSpend=started*costBlock,          // rule (a): all of them, not just the survivors
+        lostSpend=dead*costBlock,
+        lostRev=dead*perBlock*price,           // rule (b): reported apart from lostSpend, never summed
+        hoursMo=hours*WK_PER_MONTH,
+        labour=hoursMo*wage,                   // rule (c): your own time is a cost, not free
+        costs=blockSpend+fixed+labour,
+        profit=revenue-costs,
+        perHour=hoursMo>0? (revenue-blockSpend-fixed)/hoursMo : NaN,
+        cpu=yieldMo>0? costs/yieldMo : NaN,
+        margin=yieldMo>0? price-cpu : NaN,
+        payback=profit>0&&startup>0? startup/profit : NaN,
+        contrib=(1-loss)*perBlock*price-costBlock,   // what one started block adds after its own cost
+        beWk=contrib>0? (fixed+labour)/(WK_PER_MONTH*contrib) : NaN;
+
+    set('k-rev',money(revenue));
+    set('k-cost',money(costs));
+    set('k-profit',money(profit));
+    set('k-payback', startup<=0? 'nothing to pay back'
+        : (isFinite(payback)
+            ? (payback<1 ? 'under a month'
+               : num(payback,1)+(num(payback,1)==='1.0'?' month':' months'))
+            : 'not at these numbers'));
+    var kw=$('kw-profit');
+    if(kw){ kw.classList.toggle('good',profit>0); kw.classList.toggle('bad',profit<=0); }
+
+    set('o-started',num(started,0)+' blocks');
+    set('o-harv',num(harvested,0)+' blocks');
+    set('o-perblock',wt(perBlock));
+    set('o-yield',wt(yieldMo));
+    set('o-blockspend',money(blockSpend));
+    set('o-labour',money(labour));
+    set('o-perhour',isFinite(perHour)? money2(perHour)+' / hour' : '—');
+    set('o-lostspend',money(lostSpend));
+    set('o-lostrev',money(lostRev));
+    set('o-cpu',isFinite(cpu)? money2(cpu) : '—');
+    set('o-margin',isFinite(margin)? money2(margin) : '—');
+    set('o-year',money(profit*12));
+    set('o-breakeven',isFinite(beWk)? num(Math.ceil(beWk),0)+' blocks/week' : 'never at these numbers');
+
+    var note;
+    if(!(started>0)||!(perBlock>0)){
+      note='Fill in blocks per week, substrate weight and biological efficiency to see the numbers.';
+    } else if(contrib<=0){
+      note='At these numbers every block costs more to make than it sells for, so more blocks means more '+
+           'loss, not more profit. Fix the price, the cost per block, the yield or the loss rate first — '+
+           'scaling multiplies whichever of those is broken.';
+    } else if(profit<=0){
+      note='This does not break even yet. You would need about '+num(Math.ceil(beWk),0)+' blocks a week at '+
+           'these numbers just to cover '+money(fixed+labour)+' a month of fixed costs and your own labour, '+
+           'against the '+num(blocksWk,0)+' you planned. Contamination alone is costing you '+money(lostSpend)+
+           ' in wasted blocks and '+money(lostRev)+' in mushrooms you never sold, every month.';
+    } else {
+      note='Contamination at '+num(loss*100,0)+'% costs you '+money(lostSpend)+' a month in blocks you paid '+
+           'for and threw away, plus '+money(lostRev)+' of mushrooms you never sold. Halve the loss rate and '+
+           'most of that comes back without selling a single extra block.'+
+           (hoursMo>0? ' Before paying yourself, the farm returns '+money2(perHour)+' for each of the '+
+            num(hours,0)+' hours you put in a week.' : '');
+    }
+    set('p-note',note);
+  }
+
+  // The toggle converts what is on screen. Weights change one way, prices the other:
+  // a heavier unit means a bigger number of pounds but a smaller number per kilo.
+  document.querySelectorAll('#unitToggle button').forEach(function(b){
+    b.addEventListener('click',function(){
+      var nu=this.dataset.unit; if(nu===unit) return;
+      var wFactor = nu==='kg'? (1/LB_PER_KG) : LB_PER_KG;
+      var pFactor = nu==='kg'? LB_PER_KG : (1/LB_PER_KG);
+      $('p-dry').value=(val('p-dry')*wFactor).toFixed(2);
+      $('p-price').value=(val('p-price')*pFactor).toFixed(2);
+      unit=nu;
+      document.querySelectorAll('#unitToggle button').forEach(function(x){
+        x.classList.toggle('active',x.dataset.unit===unit);});
+      setUnitLabels(); calc();
+    });
+  });
+
+  var PLAN_INPUTS=['p-blocks','p-dry','p-be','p-loss','p-price','p-cost','p-fixed','p-hours','p-wage','p-startup'];
+  document.querySelectorAll('#planner input').forEach(function(el){
+    if(el.id==='planEmail') return;                 // the email field is not a planner input
+    el.addEventListener('input',calc);
+  });
+
+  function planQuery(){
+    var p=['u='+unit];
+    PLAN_INPUTS.forEach(function(id){
+      var el=$(id); if(!el) return;
+      p.push(id+'='+encodeURIComponent(String(el.value).slice(0,12)));
+    });
+    return p.join('&');
+  }
+
+  /* ORDER IS LOAD-BEARING, exactly as on /calculator.html: the unit is applied FIRST and
+     directly, never through the toggle. These values arrive already expressed in the unit
+     they were saved in, so the toggle — whose whole job is to convert what is on screen —
+     would convert a kg plan a second time. Pinned by tests/farm-planner.spec.js. */
+  function restorePlan(){
+    var qs=new URLSearchParams(location.search);
+    if(!qs.has('u')&&!qs.has('p-blocks')) return false;
+    var u=qs.get('u');
+    if(u==='kg'||u==='lb'){
+      unit=u;
+      document.querySelectorAll('#unitToggle button').forEach(function(x){
+        x.classList.toggle('active',x.dataset.unit===unit);});
+    }
+    PLAN_INPUTS.forEach(function(id){
+      if(!qs.has(id)) return;
+      var el=$(id), v=String(qs.get(id)).slice(0,12);
+      if(el&&/^-?\d*\.?\d*$/.test(v)&&v!=='') el.value=v;   // numeric only, never free text
+    });
+    return true;
+  }
+
+  /* Read back off the RENDERED page, so the inbox can never disagree with the screen and
+     the unit and currency formatting stays in one place. */
+  function planRows(){
+    var pairs=[
+      ['Blocks started per month','o-started'],['Blocks that reach harvest','o-harv'],
+      ['Fresh yield per harvested block','o-perblock'],['Fresh yield per month','o-yield'],
+      ['Revenue per month','k-rev'],
+      ['Spent on blocks (all of them)','o-blockspend'],
+      ['Spent on blocks that never harvest','o-lostspend'],
+      ['Mushrooms never sold, at your price','o-lostrev'],
+      ['Your own labour, priced','o-labour'],
+      ['What an hour of your work earns','o-perhour'],
+      ['Total costs per month','k-cost'],['Profit per month','k-profit'],['Profit per year','o-year'],
+      ['Real cost per '+unit+' produced','o-cpu'],['Margin per '+unit,'o-margin'],
+      ['Break-even volume','o-breakeven'],['Startup paid back in','k-payback']
+    ];
+    var out=[];
+    pairs.forEach(function(p){
+      var el=$(p[1]); if(!el) return;
+      var v=(el.textContent||'').trim();
+      if(!v||/^[–—-]$/.test(v)) return;    // a placeholder dash is dropped, never mailed
+      out.push([p[0],v]);
+    });
+    return out;
+  }
+
+  window.mycroFarmPlanEmail=function(e){
+    e.preventDefault();
+    var msg=$('plan-msg'), btn=$('planEmailBtn'), input=$('planEmail');
+    var email=(window.mycroCleanEmail? mycroCleanEmail(input.value) : String(input.value||'').trim().toLowerCase());
+    msg.style.display='block';
+    if(!/^[^@\s:,;<>\\]+@[^@\s:,;<>\\]+\.[^@\s:,;<>\\]+$/.test(email)){
+      msg.textContent='Please enter a valid email address.'; return false;
+    }
+    var rows=planRows();
+    if(!rows.length){ msg.textContent='Fill in your farm details first, then send yourself the plan.'; return false; }
+    btn.disabled=true; msg.textContent='Sending…';
+    var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
+    fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({email:email,first:first,kind:'farm',plan:{
+        sub:'A farm running '+($('p-blocks').value||'0')+' blocks a week.', q:planQuery(), rows:rows}})
+    }).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.ok){
+        msg.textContent='Sent ✓ Check your inbox for the plan and a link that reopens it.';
+        input.value='';
+        if(window.track) track('farm_plan_email',{});
+      } else {
+        msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
+      }
+    }).catch(function(){
+      msg.textContent='That did not send. Please check your connection and try again.'; btn.disabled=false;
+    });
+    return false;
+  };
+
+  restorePlan(); setUnitLabels(); calc();
+})();
+</script>
 </body>
 </html>
