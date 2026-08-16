@@ -101,6 +101,35 @@
     });
   }
 
+  /* ---- the gate, answered the same way at every door (I92) ----
+     There are three ways to ask for an account (the email link, Google, and redeeming a
+     link that was mailed), and until now only ONE of them explained itself. The other two
+     answered a bare red "not a Founding Grower yet" through setStatus, which writes
+     textContent and so cannot carry a link at all: no reason, no reassurance that the free
+     tools stay free, and no way to buy. A real grower hit that on 2026-08-15 — twice by
+     email, then twice with Google — and the last thing he saw was the emptiest version.
+     So the answer lives in one place and every door calls it.
+     It REPLACES rather than appends: he asked twice in twelve minutes, and the old
+     insertAdjacentHTML stacked a second identical paragraph, which reads as a broken page
+     and is the most likely reason he went looking for another way in.
+     It also fires the event from every door — we recorded 2 of his 4 attempts, so the one
+     number that measures demand for the paid thing was counting half. */
+  function gatedNotice(via, emailed) {
+    var box = el('acctBar'); if (!box) return;
+    var old = el('acctGated'); if (old && old.parentNode) old.parentNode.removeChild(old);
+    box.insertAdjacentHTML('beforeend',
+      '<p class="acctHint" id="acctGated" style="color:var(--ink)">' +
+      '<b>Accounts are Founding Grower early access.</b> ' +
+      (emailed ? 'We\'ve emailed you the details. ' : '') +
+      'Everything you\'re using stays free and uncapped either way: the grow log, the culture ' +
+      'library and the calculators, and you can still back this log up to a private link and ' +
+      'open it on your phone. ' +
+      '<a href="/#founding">Become a Founding Grower · $99</a> ' +
+      '<span style="color:var(--muted)">One payment, refundable any time, and it opens the ' +
+      'account straight away.</span></p>');
+    if (w.track) try { w.track('account_gated', { via: via }); } catch (e) {}
+  }
+
   function render() {
     var box = el('acctBar'); if (!box) return;
     if (signedIn()) {
@@ -166,11 +195,7 @@
         if (j && j.gated) {
           // Not a Founding Grower yet — say so here, not only in the email.
           setStatus('');
-          el('acctBar').insertAdjacentHTML('beforeend',
-            '<p class="acctHint" style="color:var(--ink)"><b>Accounts are Founding Grower early access.</b> ' +
-            'We\'ve emailed you the details — everything you\'re using stays free and uncapped either way. ' +
-            '<a href="/#founding">Become a Founding Grower · $99</a></p>');
-          if (w.track) try { w.track('account_gated', {}); } catch (e) {}
+          gatedNotice('email', true);
           return;
         }
         setStatus('Check ' + em + ' — the link works once and expires in 30 minutes.');
@@ -358,9 +383,13 @@
         });
     }).catch(function (e) {
       if (btn) btn.disabled = false;
-      setStatus(/not a founding grower|gated/i.test(e.message)
-        ? 'That Google account is not a Founding Grower yet.'
-        : 'Google sign-in did not complete. You can use the email link instead.', true);
+      if (/not a founding grower|gated/i.test(e.message)) {
+        // A refusal, not a failure. Say the same thing the email door says.
+        setStatus('That Google account is not a Founding Grower yet.', true);
+        gatedNotice('google', false);
+      } else {
+        setStatus('Google sign-in did not complete. You can use the email link instead.', true);
+      }
       return false;
     });
   }
@@ -444,11 +473,14 @@
       .catch(function (e) {
         // Re-render so the grower has the sign-in controls back and can ask for a fresh link.
         render();
-        setStatus(/not a founding grower|gated/i.test(e.message)
-            ? 'That account is not a Founding Grower yet.'
-          : /EXPIRED|INVALID/i.test(e.message)
+        if (/not a founding grower|gated/i.test(e.message)) {
+          setStatus('That account is not a Founding Grower yet.', true);
+          gatedNotice('link', false);
+        } else {
+          setStatus(/EXPIRED|INVALID/i.test(e.message)
             ? 'That sign-in link has expired or was already used — ask for a new one.'
             : 'Could not complete sign-in. Ask for a fresh link and try again.', true);
+        }
         return false;
       });
   }
