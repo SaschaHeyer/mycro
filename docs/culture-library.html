@@ -403,7 +403,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
-<script src="/account.js?v=10"></script>
+<script src="/account.js?v=11"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -1705,6 +1705,21 @@ function isSampleOnly(){
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       paint();
       return true;
+    },
+    /* Refused at the gate (I94) — see the note in grow-log.html. Same shared document, so
+       the link that comes back opens the library AND the grow log on any device. */
+    hasWork:  function(){ return ((state.sources||[]).length + (state.cultures||[]).length) > 0 && !isSampleOnly(); },
+    keepSafe: function(em){
+      return fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+        .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(j){
+          try{ localStorage.setItem(CLOUD_KEY, j.id); }catch(e){}
+          setSync('All changes synced to your private link ✓');
+          if(window.track) try{ track('growlog_cloud_backup',{src:'gate'}); }catch(_){}
+          return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,src:'gate',first:mycroFirstTouch&&mycroFirstTouch()})});
+        })
+        .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(){ if(window.track) try{ track('growlog_backup_email',{src:'gate'}); }catch(_){} });
     }
   });
 })();
@@ -1798,6 +1813,9 @@ table.strain .crown{font-size:.85rem}
 .acctBadge{display:inline-block;background:var(--brand-soft);color:var(--brand-ink);
   font-size:.72rem;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
 .acctHint{margin:7px 0 0;font-size:.82rem;color:var(--muted)}
+/* The gate's free offer (I94) — the one paragraph a refused grower actually reads. */
+#acctGated{font-size:.88rem}
+#acctKeepBox{border-top:1px solid var(--line);padding-top:9px}
 .acctStatus{margin-top:7px;font-size:.84rem;color:var(--muted)}
 /* version history (I79) */
 .acctHist{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
@@ -1816,7 +1834,7 @@ table.strain .crown{font-size:.85rem}
 @media (max-width:560px){
   .acctRow{align-items:flex-start}
   .acctActions{width:100%}
-  .acctActions .gbtn,.acctActions input,.acctActions #acctGo{width:100%;justify-content:center}
+  .acctActions .gbtn,.acctActions input,.acctActions #acctGo,.acctActions #acctKeepGo{width:100%;justify-content:center}
   .acctOr{width:100%;text-align:center}
 }
 

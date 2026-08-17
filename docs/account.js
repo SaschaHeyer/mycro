@@ -113,21 +113,88 @@
      insertAdjacentHTML stacked a second identical paragraph, which reads as a broken page
      and is the most likely reason he went looking for another way in.
      It also fires the event from every door — we recorded 2 of his 4 attempts, so the one
-     number that measures demand for the paid thing was counting half. */
-  function gatedNotice(via, emailed) {
+     number that measures demand for the paid thing was counting half.
+
+     I94 — and then the refusal DOES the thing they came for, instead of describing it.
+     Three growers hit this gate in three days (2026-08-15/16/17, nine refusals between
+     them) and produced zero founding clicks. One of them tried four times in six minutes,
+     sixty seconds after landing from Google — which is not someone evaluating a product
+     and deciding to pay, it is someone assuming a web tool needs an account before your
+     work is safe. What every one of them was reaching for is the same thing: don't lose
+     my log, let me open it on my phone. We give that away free and the notice merely
+     MENTIONED it in prose, at the exact moment they had already typed their address into
+     the box above. So the offer is now a button: one click backs the log up and emails
+     the private link. The $99 stays, below it, where it can be taken by anyone who wants
+     the account itself.
+     `hooks.keepSafe` is what does it, so the backup chain stays in the page that owns the
+     document; with no hook (or an empty log) the prose is unchanged and nothing is offered
+     that cannot be delivered. */
+  function gatedNotice(via, emailed, addr) {
     var box = el('acctBar'); if (!box) return;
     var old = el('acctGated'); if (old && old.parentNode) old.parentNode.removeChild(old);
+    var can = !!hooks.keepSafe && !(hooks.hasWork && !hooks.hasWork());
+    // They just typed it into the box above; asking for it a second line down is the kind
+    // of small insult that ends a session. Fall back through everywhere we already know it.
+    var em = cleanEmail(addr || (el('acctEmail') && el('acctEmail').value) ||
+                        ls(EMAIL_HINT) || ls(EMAIL_KEY));
     box.insertAdjacentHTML('beforeend',
-      '<p class="acctHint" id="acctGated" style="color:var(--ink)">' +
-      '<b>Accounts are Founding Grower early access.</b> ' +
+      '<div class="acctHint" id="acctGated" style="color:var(--ink)">' +
+      '<p style="margin:0"><b>Accounts are Founding Grower early access.</b> ' +
       (emailed ? 'We\'ve emailed you the details. ' : '') +
       'Everything you\'re using stays free and uncapped either way: the grow log, the culture ' +
-      'library and the calculators, and you can still back this log up to a private link and ' +
-      'open it on your phone. ' +
-      '<a href="/#founding">Become a Founding Grower · $99</a> ' +
+      'library and the calculators' +
+      (can ? '.' : ', and you can still back this log up to a private link and open it on ' +
+             'your phone.') +
+      '</p>' +
+      (can
+        ? '<div id="acctKeepBox" style="margin-top:10px">' +
+            '<p style="margin:0 0 7px"><b>Your work is safe without an account.</b> ' +
+            'We\'ll back this log up now and email you a private link that opens it on any ' +
+            'device, including your phone.</p>' +
+            '<span class="acctActions">' +
+              '<input id="acctKeepEmail" type="email" inputmode="email" autocomplete="email" ' +
+                'placeholder="you@farm.com" value="' + esc(EMAIL_RE.test(em) ? em : '') + '">' +
+              '<button type="button" class="mini solid" id="acctKeepGo">Email me my log link</button>' +
+            '</span>' +
+            '<p class="acctKeepNote" id="acctKeepNote" style="margin:7px 0 0;color:var(--muted)">' +
+            'Free, no account. We\'ll also send occasional Mycro grow tips; unsubscribe by ' +
+            'replying.</p>' +
+          '</div>'
+        : '') +
+      '<p style="margin:10px 0 0"><a href="/#founding">Become a Founding Grower · $99</a> ' +
       '<span style="color:var(--muted)">One payment, refundable any time, and it opens the ' +
-      'account straight away.</span></p>');
-    if (w.track) try { w.track('account_gated', { via: via }); } catch (e) {}
+      'account straight away.</span></p></div>');
+    if (can) el('acctKeepGo').addEventListener('click', keepSafe);
+    if (w.track) try { w.track('account_gated', { via: via, offer: can ? 1 : 0 }); } catch (e) {}
+  }
+
+  /* The free thing, delivered. Backing up and mailing the link is the page's job (it owns
+     the document and the cloud id), so this only validates, reports and counts. */
+  function keepSafe() {
+    var inp = el('acctKeepEmail'), note = el('acctKeepNote');
+    var em = cleanEmail(inp && inp.value);
+    if (!EMAIL_RE.test(em)) {
+      note.textContent = 'Please enter a valid email.'; note.style.color = '#b23b3b';
+      if (inp) inp.focus();
+      return;
+    }
+    var btn = el('acctKeepGo'), prev = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    note.style.color = ''; note.textContent = 'Backing up your log…';
+    if (w.track) try { w.track('account_gate_keep_click', {}); } catch (e) {}
+    Promise.resolve(hooks.keepSafe(em))
+      .then(function () {
+        var b = el('acctKeepBox');
+        if (b) b.innerHTML =
+          '<p style="margin:0"><b>Sent ✓</b> Your log is backed up and the private link is ' +
+          'in your inbox. Every change on this device syncs to it from now on.</p>';
+        if (w.track) try { w.track('account_gate_keep_sent', {}); } catch (e) {}
+      })
+      .catch(function () {
+        note.textContent = 'Could not send just now — please try again in a moment.';
+        note.style.color = '#b23b3b';
+        btn.disabled = false; btn.textContent = prev;
+      });
   }
 
   function render() {
@@ -195,7 +262,7 @@
         if (j && j.gated) {
           // Not a Founding Grower yet — say so here, not only in the email.
           setStatus('');
-          gatedNotice('email', true);
+          gatedNotice('email', true, em);
           return;
         }
         setStatus('Check ' + em + ' — the link works once and expires in 30 minutes.');
