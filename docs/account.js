@@ -18,6 +18,11 @@
   var API = 'https://mycro-806349486128.us-central1.run.app';
   var TOKEN_KEY = 'mycro_session';
   var EMAIL_KEY = 'mycro_email';
+  // "this device has a real account relationship" — set only when a sign-in actually
+  // succeeds or a link is issued to someone entitled to one. Deliberately NOT set by a
+  // refused ask: being told no is not a reason to greet you with the form again. Sign-out
+  // never clears it, because signing out means "not now", not "I have no account".
+  var SEEN_KEY = 'mycro_acct_seen';
   // Mirrors the server's rule. ":" is excluded on purpose — "mailto:you@farm.com" used to
   // pass as a valid address, and a paying grower was told he wasn't one because of it.
   // Apostrophes stay legal: o'brien@example.ie is a real address.
@@ -197,6 +202,34 @@
       });
   }
 
+  /* ---- the front door of a free tool (I97) ----
+     Nine strangers asked for an account in a week and not one of them added a batch, an
+     export, or anything else: every recorded ask fired 33 to 90 seconds after landing, with
+     nothing on the device. The reason was on the page. Under an eyebrow reading "Free tool ·
+     no sign-up", the first interactive control in <main> was a labelled "Sign in to your
+     Mycro account" form with a Google button, and the tool itself sat below the fold. A
+     visitor's whole first screen ended in a sign-in prompt, so they did the obvious thing,
+     were refused, and left without ever using what we came here to give away.
+     So the signed-out bar is now one quiet line until it is asked for. It still says the
+     words "Sign in", because success.html tells a buyer to look for exactly those. */
+  var expanded = false;
+  function wantsSignin() {
+    // EMAIL_HINT is deliberately absent: requestLink() writes it BEFORE the server answers,
+    // so a refused non-payer carries it too, and they are the one group this must not greet.
+    return expanded || !!ls(SEEN_KEY) || !!ls(EMAIL_KEY) ||
+           // Anyone arriving ON a sign-in link is signing in, whatever this device remembers.
+           // These paths write their own markup, but if one fails it must fail into the form
+           // and not into a collapsed line that hides the error it just wrote.
+           /[?&](signin=1|mode=signIn|oobCode=|login=)/.test(w.location.search) ||
+           /^#?signin$/i.test(w.location.hash || '');
+  }
+  function openSignin() {
+    expanded = true;
+    render();
+    var i = el('acctEmail'); if (i) { try { i.focus(); } catch (e) {} }
+    if (w.track) try { w.track('account_open_signin', {}); } catch (e) {}
+  }
+
   function render() {
     var box = el('acctBar'); if (!box) return;
     if (signedIn()) {
@@ -220,6 +253,16 @@
       el('acctOut').addEventListener('click', signOut);
       el('acctPull').addEventListener('click', function () { pull(true); });
       el('acctHist').addEventListener('click', showHistory);
+    } else if (!wantsSignin()) {
+      box.innerHTML =
+        '<div class="acctRow">' +
+          '<span class="acctLbl">Free to use. No account needed.</span>' +
+          '<span class="acctActions">' +
+            '<button type="button" class="mini" id="acctOpen">Founding Grower? Sign in</button>' +
+          '</span>' +
+        '</div>' +
+        '<div id="acctStatus" class="acctStatus" style="display:none"></div>';
+      el('acctOpen').addEventListener('click', openSignin);
     } else {
       box.innerHTML =
         '<div class="acctRow">' +
@@ -265,6 +308,9 @@
           gatedNotice('email', true, em);
           return;
         }
+        // Entitled to an account, so this device gets the full bar from now on. Set here
+        // and not above the gate check: a refused ask must not re-open the form next visit.
+        ls(SEEN_KEY, '1');
         setStatus('Check ' + em + ' — the link works once and expires in 30 minutes.');
         if (w.track) try { w.track('account_link_requested', {}); } catch (e) {}
       })
@@ -421,7 +467,7 @@
   function exchangeIdToken(idToken, via) {
     return post('/api/auth/firebase', { idToken: idToken }).then(function (j) {
       if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
-      ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null);
+      ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null); ls(SEEN_KEY, '1');
       state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
       render();
       setStatus('Signed in as ' + j.email + '.');
@@ -467,6 +513,10 @@
     try { pending = sessionStorage.getItem('mycro_google_redirect') === '1'; } catch (e) {}
     if (!pending) return Promise.resolve(false);
     try { sessionStorage.removeItem('mycro_google_redirect'); } catch (e) {}
+    // We sent this browser to Google, so whatever comes back, this person is signing in.
+    // The controls have to be on screen for the result — success or "try again" — to mean
+    // anything. A blocked popup falling back to redirect is routine on phones.
+    expanded = true; render();
     return loadFirebase()
       .then(function (fb) { return fb.auth.getRedirectResult(fb.instance); })
       .then(function (cred) {
@@ -539,6 +589,9 @@
       })
       .catch(function (e) {
         // Re-render so the grower has the sign-in controls back and can ask for a fresh link.
+        // The oobCode was stripped from the URL on arrival (line above), so say so explicitly
+        // rather than relying on wantsSignin() still being able to see it.
+        expanded = true;
         render();
         if (/not a founding grower|gated/i.test(e.message)) {
           setStatus('That account is not a Founding Grower yet.', true);
@@ -561,13 +614,14 @@
     try { history.replaceState({}, '', w.location.pathname + w.location.hash); } catch (e) {}
     return post('/api/auth/verify', { token: t }).then(function (j) {
       if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
-      ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email);
+      ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(SEEN_KEY, '1');
       state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
       render();
       setStatus('Signed in as ' + j.email + '.');
       if (w.track) try { w.track('account_signin', { founder: j.founder ? 1 : 0 }); } catch (e) {}
       return pull(false).then(function () { return true; });
     }).catch(function () {
+      expanded = true;                 // the token is already stripped from the URL by here
       render();
       setStatus('That sign-in link has expired or was already used — ask for a new one.', true);
       return false;
