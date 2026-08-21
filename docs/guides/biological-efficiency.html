@@ -22,7 +22,7 @@
 "description":"A practical guide to biological efficiency (BE) for mushroom growers: the formula, a worked example, target BE by species, and ways to improve it.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-08-06",
+"datePublished":"2026-06-13","dateModified":"2026-08-21",
 "mainEntityOfPage":"https://usemycro.com/guides/biological-efficiency.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -30,7 +30,9 @@
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"What is biological efficiency in mushroom growing?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is the fresh weight of mushrooms harvested divided by the dry weight of the substrate, expressed as a percentage. A BE of 100% means you harvested one pound of fresh mushrooms for every pound of dry substrate."}},
 {"@type":"Question","name":"What is a good biological efficiency for oyster mushrooms?","acceptedAnswer":{"@type":"Answer","text":"For oyster mushrooms, a BE of 75 to 100% or more across all flushes is considered good on a well-supplemented substrate. King oyster and lion's mane are typically lower, around 50 to 75%, while shiitake can range from 75 to 125% over a longer cycle."}},
-{"@type":"Question","name":"How do you calculate biological efficiency?","acceptedAnswer":{"@type":"Answer","text":"Divide the total fresh mushroom weight harvested across all flushes by the dry weight of the substrate, then multiply by 100. For example, 4 pounds of fresh mushrooms from 5 pounds of dry substrate is a BE of 80%."}}]}
+{"@type":"Question","name":"How do you calculate biological efficiency?","acceptedAnswer":{"@type":"Answer","text":"Divide the total fresh mushroom weight harvested across all flushes by the dry weight of the substrate, then multiply by 100. For example, 4 pounds of fresh mushrooms from 5 pounds of dry substrate is a BE of 80%."}},
+{"@type":"Question","name":"Do I count every flush when calculating biological efficiency?","acceptedAnswer":{"@type":"Answer","text":"Yes. Biological efficiency counts the fresh weight of every flush a block produces, divided by the same dry substrate weight. Stopping at the first flush is the most common way growers undercount their own BE: a 5 lb block that gives 2.6 lb on flush one reads as 52%, but adding the 1.1 lb and 0.5 lb that follow takes it to 84%."}},
+{"@type":"Question","name":"How do I calculate BE if I only know the wet weight of my block?","acceptedAnswer":{"@type":"Answer","text":"Multiply the wet weight by one minus the moisture fraction to get the dry weight, then divide your fresh harvest by that. A 12.5 lb block mixed to 60% moisture holds 5 lb of dry substrate, so 4.2 lb of fresh mushrooms off it is 84% BE. Entering the wet weight where the dry weight belongs understates BE by roughly the moisture content, which makes a healthy strain look like a failing one."}}]}
 </script>
 </head>
 <body>
@@ -62,7 +64,7 @@
     <b style="color:var(--ink)">Biological efficiency (BE) is fresh mushroom weight divided by the dry weight of the substrate it grew on, expressed as a percentage.</b> A 5 lb dry block yielding 4 lb of fresh mushrooms is 80% BE. Counting every flush, a good commercial figure is 75–100%+ for oyster, 50–75% for lion's mane and 75–125% for shiitake.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 6 August 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 21 August 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -97,10 +99,127 @@
     <p>BE = 4.2 ÷ 5 × 100% = <b>84%</b>. Note that you count <b>every flush</b>, not just the first.
       Stopping the math at flush one is the most common way growers undercount their true BE — and
       then wrongly conclude a strain is underperforming.</p>
+    <!-- The tool goes on the page that already draws the traffic and already promises it (I91's
+         rule). This page's own meta description has promised "a free calculator that does the
+         math" since it was written; the only calculator it linked takes BE as an INPUT and
+         predicts a harvest, which is the opposite direction from what a reader here has.
+         Defaults are the worked example immediately above, so the two can never disagree. -->
+    <section id="be-calc" style="margin:22px 0 6px">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="margin:0;font-size:1.15rem">Biological efficiency calculator</h3>
+        <div class="toggle" id="beUnitToggle" role="group" aria-label="Units">
+          <button type="button" data-unit="lb" class="active">lb</button>
+          <button type="button" data-unit="kg">kg</button>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <div class="field">
+          <label for="b-species">Species</label>
+          <select id="b-species">
+            <option value="0" selected>Blue / Pearl Oyster</option>
+            <option value="1">Pink / Yellow Oyster</option>
+            <option value="2">King Oyster</option>
+            <option value="3">Lion's Mane</option>
+            <option value="4">Shiitake</option>
+            <option value="5">Chestnut / Pioppino / Nameko</option>
+            <option value="6">Reishi</option>
+          </select>
+          <span class="hint">Sets the typical range to compare against</span>
+        </div>
+        <div class="field" id="b-dry-wrap">
+          <label for="b-dry">Dry substrate weight <span class="b-u">(lb)</span></label>
+          <input id="b-dry" type="number" min="0" step="0.1" value="5" inputmode="decimal">
+          <span class="hint">Before you added any water</span>
+        </div>
+        <div class="field" id="b-wet-wrap" style="display:none">
+          <label for="b-wet">Wet block weight <span class="b-u">(lb)</span></label>
+          <input id="b-wet" type="number" min="0" step="0.1" value="12.5" inputmode="decimal">
+          <span class="hint">What the finished block weighed</span>
+        </div>
+        <div class="field" id="b-moist-wrap" style="display:none">
+          <label for="b-moist">Moisture at mixing (%)</label>
+          <input id="b-moist" type="number" min="0" max="90" step="1" value="60" inputmode="decimal">
+          <span class="hint">Field capacity is around 60%</span>
+        </div>
+        <div class="field">
+          <label for="b-f1">Flush 1 fresh <span class="b-u">(lb)</span></label>
+          <input id="b-f1" type="number" min="0" step="0.1" value="2.6" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="b-f2">Flush 2 fresh <span class="b-u">(lb)</span></label>
+          <input id="b-f2" type="number" min="0" step="0.1" value="1.1" inputmode="decimal">
+          <span class="hint">Leave blank if there wasn't one</span>
+        </div>
+        <div class="field">
+          <label for="b-f3">Flush 3 fresh <span class="b-u">(lb)</span></label>
+          <input id="b-f3" type="number" min="0" step="0.1" value="0.5" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="b-price">Sale price <span class="b-p">($/lb)</span> <span class="hint" style="font-weight:400">optional</span></label>
+          <input id="b-price" type="number" min="0" step="0.5" value="" placeholder="leave blank" inputmode="decimal">
+          <span class="hint">Only used to price the gap. Blank shows no money figure.</span>
+        </div>
+      </div>
+
+      <label style="display:inline-flex;align-items:center;gap:9px;margin:12px 0 0;font-size:.92rem;cursor:pointer">
+        <input type="checkbox" id="b-wetmode" style="width:17px;height:17px">
+        <span>I only know the <b>wet</b> weight of the block</span>
+      </label>
+
+      <div class="results" style="margin-top:18px">
+        <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+          <div class="kpi" id="kw-be"><div class="v" id="k-be">&mdash;</div><div class="l">Biological efficiency</div></div>
+          <div class="kpi"><div class="v" id="k-total">&mdash;</div><div class="l">Total fresh harvest</div></div>
+          <div class="kpi"><div class="v" id="k-dry">&mdash;</div><div class="l">Dry substrate</div></div>
+          <div class="kpi" id="kw-verdict"><div class="v" id="k-verdict" style="font-size:1.05rem">&mdash;</div><div class="l">Against the typical range</div></div>
+        </div>
+
+        <table class="spec" style="margin:18px 0 0">
+          <tbody>
+            <tr><td>Flush 1</td><td id="o-f1" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Flush 2</td><td id="o-f2" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Flush 3</td><td id="o-f3" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Total fresh harvest, every flush</td><td id="o-total" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Dry substrate weight</td><td id="o-dry" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Biological efficiency</td><td id="o-be" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Typical range for this species</td><td id="o-range" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Flush 1 as a share of your total</td><td id="o-f1share" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Fresh yield at the top of that range</td><td id="o-attop" style="text-align:right">&mdash;</td></tr>
+            <tr><td>Extra fresh weight that would be</td><td id="o-gap" style="text-align:right">&mdash;</td></tr>
+            <tr><td>What that extra is worth at your price</td><td id="o-gapval" style="text-align:right">&mdash;</td></tr>
+          </tbody>
+        </table>
+
+        <p class="note" id="b-note" style="margin-top:16px"></p>
+
+        <!-- The ask sits ON the result, same shape as the batch plan on /calculator.html and
+             the farm plan on the business guide. Before today this page's only capture was a
+             generic waitlist box at 90% of the page, and no guide has ever produced a lead. -->
+        <form id="beForm" style="margin:16px 0 0" onsubmit="return mycroBeReportEmail(event)">
+          <label for="beEmail" style="font-weight:650;font-size:.92rem;display:block;margin-bottom:6px">
+            &#128231; Email me this BE report</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input id="beEmail" type="email" placeholder="you@yourfarm.com" autocomplete="email"
+              style="flex:1;min-width:220px;font:inherit;padding:11px 13px;border-radius:10px;border:1px solid var(--line)">
+            <button class="btn" id="beEmailBtn" type="submit">Send it</button>
+          </div>
+          <p class="muted" style="font-size:.82rem;margin:8px 0 0">Your numbers, plus a link that reopens
+            this calculator with them. No spam, unsubscribe any time.</p>
+          <p id="be-msg" style="display:none;font-size:.9rem;margin:8px 0 0"></p>
+        </form>
+      </div>
+
+      <p class="muted" style="font-size:.85rem;margin:12px 0 0">The ranges are rough figures from common
+        practice, not targets you owe anyone. Both weights have to be in the same unit, the mushrooms
+        weighed <b>fresh</b> and the substrate weighed <b>dry</b>. Sitting inside the range on a batch
+        that took twice as long, or that you lost half of, is not the better outcome.</p>
+    </section>
+
     <div class="note" style="margin:18px 0">
-      <b style="color:var(--ink)">Try it with your own numbers.</b> The free
-      <a href="../calculator.html">Grow Calculator</a> turns a BE into an expected harvest (and the
-      cost and profit that follow) for any batch size — no sign-up.
+      <b style="color:var(--ink)">Planning a batch you haven't run yet?</b> The free
+      <a href="../calculator.html">Grow Calculator</a> works the other way round: give it a BE and
+      it tells you the harvest, cost and profit to expect for any batch size. No sign-up.
     </div>
 
     <h2 style="margin-top:32px">What's a "good" BE?</h2>
@@ -186,6 +305,12 @@
 
     <h3 style="margin-top:22px">How do you calculate biological efficiency?</h3>
     <p>Divide the total fresh mushroom weight harvested across all flushes by the dry weight of the substrate, then multiply by 100. For example, 4 pounds of fresh mushrooms from 5 pounds of dry substrate is a BE of 80%.</p>
+
+    <h3 style="margin-top:22px">Do I count every flush when calculating biological efficiency?</h3>
+    <p>Yes. Biological efficiency counts the fresh weight of every flush a block produces, divided by the same dry substrate weight. Stopping at the first flush is the most common way growers undercount their own BE: a 5 lb block that gives 2.6 lb on flush one reads as 52%, but adding the 1.1 lb and 0.5 lb that follow takes it to 84%.</p>
+
+    <h3 style="margin-top:22px">How do I calculate BE if I only know the wet weight of my block?</h3>
+    <p>Multiply the wet weight by one minus the moisture fraction to get the dry weight, then divide your fresh harvest by that. A 12.5 lb block mixed to 60% moisture holds 5 lb of dry substrate, so 4.2 lb of fresh mushrooms off it is 84% BE. Entering the wet weight where the dry weight belongs understates BE by roughly the moisture content, which makes a healthy strain look like a failing one.</p>
     <p class="disclaimer" style="margin-top:20px">General guidance from common cultivation practice,
       not guarantees — your results vary with strain, substrate, supplementation, and conditions.
       Mycro is for legal culinary &amp; medicinal mushrooms only.</p>
@@ -208,5 +333,255 @@
 
   <script src="../waitlist.js"></script>
   <script src="/track.js" defer></script>
+<script>
+/* Biological efficiency calculator (I98).
+   Defaults ARE the worked example above this section (5 lb dry, 2.6 + 1.1 + 0.5 fresh = 84%).
+   That is deliberate: the prose and the tool cannot drift apart, and the FAQ answers below
+   quote figures read off this calculator at those defaults. tests/be-calculator.spec.js
+   asserts them, so the day someone changes a default the test says so. */
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  if(!$('be-calc')) return;
+  var LB_PER_KG=2.20462, unit='lb';
+
+  /* One row per species in the table below, same order, same numbers. If that table changes,
+     change this with it. A range is a pair, never a single "target". */
+  var SPECIES=[
+    {n:"Blue / Pearl Oyster",lo:75,hi:100},
+    {n:"Pink / Yellow Oyster",lo:65,hi:90},
+    {n:"King Oyster",lo:50,hi:75},
+    {n:"Lion's Mane",lo:50,hi:75},
+    {n:"Shiitake",lo:75,hi:125},
+    {n:"Chestnut / Pioppino / Nameko",lo:50,hi:75},
+    {n:"Reishi",lo:30,hi:50}
+  ];
+
+  function val(id){var el=$(id); if(!el) return NaN; var v=parseFloat(el.value); return isFinite(v)?v:NaN;}
+  function pos(id){var v=val(id); return isFinite(v)&&v>0?v:0;}
+  function set(id,t){var el=$(id); if(el) el.textContent=t;}
+  function num(v,d){return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);}
+  function wt(v){return num(v,2)+' '+unit;}
+  function money(v){return '$'+num(v,2);}
+  function spec(){var i=parseInt($('b-species').value,10); return SPECIES[i]||SPECIES[0];}
+
+  function setUnitLabels(){
+    Array.prototype.forEach.call(document.querySelectorAll('#be-calc .b-u'),function(e){e.textContent='('+unit+')';});
+    Array.prototype.forEach.call(document.querySelectorAll('#be-calc .b-p'),function(e){e.textContent='($/'+unit+')';});
+  }
+
+  /* Wet vs dry is the mistake this page warns about in prose, so the tool absorbs it rather
+     than relying on the reader having read that paragraph. Entering a WET weight where a dry
+     one belongs understates BE by roughly the moisture content, which reads as a failing
+     strain rather than as a measurement error. */
+  function wetMode(){return !!($('b-wetmode')&&$('b-wetmode').checked);}
+  function dryWeight(){
+    if(!wetMode()) return pos('b-dry');
+    var wet=pos('b-wet'), m=val('b-moist');
+    if(!(wet>0)||!isFinite(m)||m<0||m>=100) return 0;
+    return wet*(1-m/100);
+  }
+  function syncMode(){
+    var w=wetMode();
+    $('b-dry-wrap').style.display = w?'none':'flex';
+    $('b-wet-wrap').style.display = w?'flex':'none';
+    $('b-moist-wrap').style.display = w?'flex':'none';
+  }
+
+  function calc(){
+    var s=spec(),
+        f1=pos('b-f1'), f2=pos('b-f2'), f3=pos('b-f3'),
+        fresh=f1+f2+f3,
+        dry=dryWeight(),
+        price=val('b-price'),
+        /* Both sides are required. With an empty harvest the ratio is arithmetically 0, and a
+           report reading "0.0% biological efficiency" for a form nobody has filled in is a
+           number the reader did not produce. The note already asks for the weights instead. */
+        be=(dry>0&&fresh>0)? fresh/dry*100 : NaN,
+        atTop=dry>0? dry*s.hi/100 : NaN,
+        gap=isFinite(atTop)? atTop-fresh : NaN;
+
+    set('o-f1', f1>0? wt(f1):'—');
+    set('o-f2', f2>0? wt(f2):'—');
+    set('o-f3', f3>0? wt(f3):'—');
+    set('o-total', fresh>0? wt(fresh):'—');
+    set('o-dry', dry>0? wt(dry)+(wetMode()? ' (from '+wt(pos('b-wet'))+' wet at '+num(val('b-moist'),0)+'% moisture)':''):'—');
+    set('o-be', isFinite(be)? num(be,1)+'%':'—');
+    set('o-range', s.lo+'–'+s.hi+'%');
+    set('o-f1share', fresh>0? num(f1/fresh*100,0)+'% of your total':'—');
+    set('k-be', isFinite(be)? num(be,1)+'%':'—');
+    set('k-total', fresh>0? wt(fresh):'—');
+    set('k-dry', dry>0? wt(dry):'—');
+
+    var verdict='—', good=false, bad=false;
+    if(isFinite(be)){
+      if(be<s.lo){ verdict='below '+s.lo+'%'; bad=true; }
+      else if(be>s.hi){ verdict='above '+s.hi+'%'; good=true; }
+      else { verdict='inside '+s.lo+'–'+s.hi+'%'; good=true; }
+    }
+    set('k-verdict',verdict);
+    var kb=$('kw-be'), kv=$('kw-verdict');
+    if(kb){ kb.classList.toggle('good',good); kb.classList.toggle('bad',bad); }
+    if(kv){ kv.classList.toggle('good',good); kv.classList.toggle('bad',bad); }
+
+    /* The gap is only shown when there IS one. A batch already above the top of the range
+       does not get a made-up shortfall to chase, and a blank price never becomes a dollar
+       figure the reader did not supply. */
+    var hasGap=isFinite(gap)&&gap>0.005;
+    set('o-attop', isFinite(atTop)? wt(atTop):'—');
+    set('o-gap', hasGap? wt(gap):'—');
+    set('o-gapval', hasGap&&isFinite(price)&&price>0? money(gap*price):'—');
+
+    var note;
+    if(!(fresh>0)||!(dry>0)){
+      note='Enter what you harvested and the dry weight of the substrate it grew on, and this works '+
+           'out your biological efficiency.';
+    } else if(be>200){
+      note='That comes out at '+num(be,0)+'%, which is high enough to be worth a second look at the '+
+           'inputs rather than a celebration. The usual causes are the two weights being in different '+
+           'units, or a substrate weight that is only part of what actually went into the block.';
+    } else if(f2===0&&f3===0){
+      note='This counts one flush. Biological efficiency counts every flush a block gives you, and '+
+           'stopping at the first is the most common way growers undercount their own BE and then '+
+           'write off a strain that was doing fine. If later flushes are still to come, this number '+
+           'will rise.';
+    } else if(be<s.lo){
+      note='At '+num(be,1)+'% this batch is under the '+s.lo+'–'+s.hi+'% that '+s.n.toLowerCase()+
+           ' usually gives. Before blaming the strain, check the two things that move BE most: how much '+
+           'nitrogen the substrate was supplemented with, and whether the block was at field capacity '+
+           'rather than dry or waterlogged.'+
+           (hasGap? ' The top of that range on this much substrate would have been '+wt(atTop)+
+            ', which is '+wt(gap)+' more than you picked.':'');
+    } else if(be>s.hi){
+      note='At '+num(be,1)+'% this batch is above the '+s.lo+'–'+s.hi+'% usually quoted for '+
+           s.n.toLowerCase()+'. Worth recording exactly what you did, because the useful benchmark is '+
+           'not a published range, it is your own best run repeated.';
+    } else {
+      note='At '+num(be,1)+'% this batch is inside the '+s.lo+'–'+s.hi+'% usually quoted for '+
+           s.n.toLowerCase()+'.'+
+           (hasGap? ' The top of that range on this much substrate would have been '+wt(atTop)+
+            ', so there is '+wt(gap)+' still on the table.':'');
+    }
+    set('b-note',note);
+  }
+
+  /* The toggle converts what is on screen: weights get bigger going to pounds, a price per
+     unit gets smaller. Same shape, and the same trap, as the farm planner. */
+  Array.prototype.forEach.call(document.querySelectorAll('#beUnitToggle button'),function(b){
+    b.addEventListener('click',function(){
+      var nu=this.dataset.unit; if(nu===unit) return;
+      var wF = nu==='kg'? (1/LB_PER_KG) : LB_PER_KG;
+      var pF = nu==='kg'? LB_PER_KG : (1/LB_PER_KG);
+      ['b-dry','b-wet','b-f1','b-f2','b-f3'].forEach(function(id){
+        var el=$(id); if(el&&el.value!=='') el.value=(parseFloat(el.value)*wF).toFixed(2);
+      });
+      var p=$('b-price'); if(p&&p.value!=='') p.value=(parseFloat(p.value)*pF).toFixed(2);
+      unit=nu;
+      Array.prototype.forEach.call(document.querySelectorAll('#beUnitToggle button'),function(x){
+        x.classList.toggle('active',x.dataset.unit===unit);});
+      setUnitLabels(); calc();
+    });
+  });
+
+  var BE_INPUTS=['b-species','b-dry','b-wet','b-moist','b-f1','b-f2','b-f3','b-price'];
+  Array.prototype.forEach.call(document.querySelectorAll('#be-calc input,#be-calc select'),function(el){
+    if(el.id==='beEmail') return;
+    el.addEventListener('input',function(){ if(el.id==='b-wetmode') syncMode(); calc(); });
+    el.addEventListener('change',function(){ if(el.id==='b-wetmode') syncMode(); calc(); });
+  });
+
+  function beQuery(){
+    var p=['u='+unit,'w='+(wetMode()?1:0)];
+    BE_INPUTS.forEach(function(id){
+      var el=$(id); if(!el) return;
+      p.push(id+'='+encodeURIComponent(String(el.value).slice(0,12)));
+    });
+    return p.join('&');
+  }
+
+  /* ORDER IS LOAD-BEARING, exactly as on /calculator.html and the farm planner: the unit is
+     applied FIRST and directly, never through the toggle. These values arrive already in the
+     unit they were saved in, so the toggle would convert a kg report a second time. */
+  function restore(){
+    var qs=new URLSearchParams(location.search);
+    if(!qs.has('u')&&!qs.has('b-dry')) return false;
+    var u=qs.get('u');
+    if(u==='kg'||u==='lb'){
+      unit=u;
+      Array.prototype.forEach.call(document.querySelectorAll('#beUnitToggle button'),function(x){
+        x.classList.toggle('active',x.dataset.unit===unit);});
+    }
+    if(qs.get('w')==='1'&&$('b-wetmode')) $('b-wetmode').checked=true;
+    BE_INPUTS.forEach(function(id){
+      if(!qs.has(id)) return;
+      var el=$(id), v=String(qs.get(id)).slice(0,12);
+      if(el&&/^-?\d*\.?\d*$/.test(v)) el.value=v;      // numeric only, never free text
+    });
+    return true;
+  }
+
+  /* Read back off the RENDERED page, so the inbox can never disagree with the screen and the
+     unit formatting lives in exactly one place (I87b). A placeholder dash is dropped. */
+  function beRows(){
+    var pairs=[
+      ['Species','k-species-name'],
+      ['Flush 1','o-f1'],['Flush 2','o-f2'],['Flush 3','o-f3'],
+      ['Total fresh harvest, every flush','o-total'],
+      ['Dry substrate weight','o-dry'],
+      ['Biological efficiency','o-be'],
+      ['Typical range for this species','o-range'],
+      ['Against that range','k-verdict'],
+      ['Flush 1 as a share of your total','o-f1share'],
+      ['Fresh yield at the top of that range','o-attop'],
+      ['Extra fresh weight that would be','o-gap'],
+      ['What that extra is worth at your price','o-gapval']
+    ];
+    var out=[];
+    pairs.forEach(function(p){
+      var v;
+      if(p[1]==='k-species-name'){ v=spec().n; }
+      else { var el=$(p[1]); if(!el) return; v=(el.textContent||'').trim(); }
+      if(!v||/^[–—-]$/.test(v)) return;
+      out.push([p[0],v]);
+    });
+    return out;
+  }
+
+  window.mycroBeReportEmail=function(e){
+    e.preventDefault();
+    var msg=$('be-msg'), btn=$('beEmailBtn'), input=$('beEmail');
+    var email=(window.mycroCleanEmail? mycroCleanEmail(input.value) : String(input.value||'').trim().toLowerCase());
+    msg.style.display='block';
+    if(!/^[^@\s:,;<>\\]+@[^@\s:,;<>\\]+\.[^@\s:,;<>\\]+$/.test(email)){
+      msg.textContent='Please enter a valid email address.'; return false;
+    }
+    /* The guard is the BE figure itself, not a row count: without a harvest the rows still
+       carry a species, a substrate weight and a published range, which is a leaflet, not a
+       report. Same rule the server applies to an empty plan. */
+    var rows=beRows(), hasBe=rows.some(function(r){return r[0]==='Biological efficiency';});
+    if(!hasBe){ msg.textContent='Fill in your harvest and substrate weights first, then send yourself the report.'; return false; }
+    btn.disabled=true; msg.textContent='Sending…';
+    var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
+    fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({email:email,first:first,kind:'be',plan:{
+        sub:'A '+spec().n+' batch on '+($('o-dry').textContent||'').trim().split(' (')[0]+' of dry substrate.',
+        q:beQuery(), rows:rows}})
+    }).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.ok){
+        msg.textContent='Sent ✓ Check your inbox for the report and a link that reopens it.';
+        input.value='';
+        if(window.track) track('be_report_email',{});
+      } else {
+        msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
+      }
+    }).catch(function(){
+      msg.textContent='That did not send. Please check your connection and try again.'; btn.disabled=false;
+    });
+    return false;
+  };
+
+  restore(); syncMode(); setUnitLabels(); calc();
+})();
+</script>
 </body>
 </html>
