@@ -22,7 +22,7 @@
 "description":"A practical guide to identifying and preventing the common contaminants on a mushroom farm: green mold (Trichoderma), cobweb mold, black/pin mold, and bacterial blotch / wet spot.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-08-06",
+"datePublished":"2026-06-13","dateModified":"2026-08-25",
 "mainEntityOfPage":"https://usemycro.com/guides/contamination.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -31,6 +31,8 @@
 {"@type":"Question","name":"What is the green mold on my mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"Bright forest-green powder on grain or substrate is almost always Trichoderma. It starts as a white fuzzy patch that is easy to mistake for mycelium, then turns green as it sporulates. By the time it is green it has already released spores, so bag and remove it immediately and do not open it near clean blocks."}},
 {"@type":"Question","name":"What does cobweb mold look like?","acceptedAnswer":{"@type":"Answer","text":"Cobweb mold (Dactylium / Hypomyces) is a fast, wispy, grey-to-translucent growth that looks like spider silk and spreads across the surface visibly faster than mushroom mycelium — often overnight. Unlike the dense, rooted look of healthy mycelium, it sits loosely on top. It usually signals stagnant, overly humid air with poor fresh-air exchange."}},
 {"@type":"Question","name":"What causes wet spot or bacterial blotch?","acceptedAnswer":{"@type":"Answer","text":"Wet spot (sour rot, usually Bacillus) shows as slimy, grey, foul-smelling patches in grain or substrate and comes from under-sterilization or substrate that is too wet. Bacterial blotch on caps is sticky brown lesions from water sitting on the mushrooms with poor air movement. Both are bacterial, not fungal, and the fix is cleaner process and less standing moisture."}},
+{"@type":"Question","name":"How do I tell Trichoderma from healthy mycelium?","acceptedAnswer":{"@type":"Answer","text":"Judge it on texture rather than colour, because Trichoderma starts out white and is very easy to mistake for vigorous mycelium before it turns green. Trichoderma is powdery and stands up off the surface; healthy mycelium is ropey and lies tight against the substrate. The confirming test is a dry cotton bud: green spore dust lifts off onto the bud, while blue-grey bruising does not rub off and is harmless. By the time it is clearly green it has already released spores."}},
+{"@type":"Question","name":"Can a block with cobweb mold be saved?","acceptedAnswer":{"@type":"Answer","text":"Sometimes, and it is the one common contaminant that is often recoverable. Caught early, while it is still grey and wispy and has not coloured up, cobweb can be halted by moving the block away from clean ones and sharply increasing fresh-air exchange. Once it has taken on colour it is sporulating and the block goes out with the rest. Cobweb is telling you about stagnant humid air rather than about your sterile technique."}},
 {"@type":"Question","name":"How do I prevent mushroom contamination?","acceptedAnswer":{"@type":"Answer","text":"Prevention beats treatment: sterilize or pasteurize properly for the substrate, work clean (still air, wiped surfaces, alcohol, minimal exposure time), use a healthy high spawn rate so your culture colonizes before contaminants establish, hit field capacity instead of waterlogged moisture, and give fruiting blocks fresh air. Inspect daily and remove any contaminated block early before it spreads spores."}}]}
 </script>
 </head>
@@ -64,7 +66,7 @@
     <b style="color:var(--ink)">Almost all mushroom contamination is one of five organisms:</b> green mould (Trichoderma), cobweb mould, black pin mould, bacterial blotch and wet spot. Green mould is the commonest and the most expensive. Each one points at a different cause — sterilisation, spawn rate, airflow or moisture — so identify it first and change that one habit, not everything.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 6 August 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 25 August 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -74,6 +76,104 @@
       ones — one green-mold bag can seed an entire room. <b>Inspect daily.</b> When in doubt, seal the
       suspect block in a bag <i>before</i> moving it, take it well away from your clean area, and only
       then open it (if at all). Speed of removal matters more than a perfect ID.</p>
+
+    <!-- ── The contaminant identifier (I101) ──────────────────────────────────────────────
+         Why this, on this page: GSC page+query shows /guides/contamination.html drawing 44
+         distinct queries in 28 days at a median position of 60 and ZERO clicks, and almost all
+         of them are triage questions asked in a panic — "trichoderma vs mycelium", "how to tell
+         if mycelium is contaminated", "is cobweb mold dangerous", "mold on substrate". A live
+         SERP check found eight competing articles and NOT ONE tool: every rival makes the reader
+         self-diagnose from 2,000 words of prose. So the tool goes on the page that already shows
+         for the whole cluster rather than on a new page, which would only split it (I91's rule).
+
+         Four rules are load-bearing here, and each one has a test:
+         (a) Not enough to go on means NO diagnosis. Two signals minimum, or it says so.
+         (b) A tie resolves to the WORSE consequence, never the more comfortable one. Telling a
+             grower to bin a savable block costs one block; telling them to keep a sporulating
+             one costs the room. "You can save it" is the flattering direction here, and a guess
+             must never lean that way.
+         (c) Every verdict carries the one confirming test, because colour and texture are an
+             appearance guess and not an identification.
+         (d) It must be able to answer "this is healthy". An identifier that can only ever find
+             contamination would have growers binning good blocks on our advice.
+         The culprits below are the same six rows as the table above; a test pins them together
+         so the tool and the prose cannot drift apart. -->
+    <section id="idtool" style="margin:26px 0 6px">
+      <h2 style="margin-top:0">What is growing on my block?</h2>
+      <p>Answer what you can see from where you are standing. You do not need all four, but the
+        more you give it the narrower the answer gets. <b>Do not open a suspect bag to look
+        closer</b> — bag it first, carry it away from your clean blocks, and inspect it there.</p>
+
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <div class="field">
+          <label for="c-colour">Colour</label>
+          <select id="c-colour">
+            <option value="" selected>&mdash; pick one &mdash;</option>
+            <option value="white">White or cream</option>
+            <option value="green">Green (forest, olive, emerald)</option>
+            <option value="grey">Grey or translucent</option>
+            <option value="black">Black</option>
+            <option value="bluegreen">Blue-green or dusty blue</option>
+            <option value="pink">Pink or orange</option>
+            <option value="brown">Brown</option>
+            <option value="yellow">Yellow</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-texture">How it grows</label>
+          <select id="c-texture">
+            <option value="" selected>&mdash; pick one &mdash;</option>
+            <option value="rooted">Dense and rooted, grips the substrate</option>
+            <option value="fluffy">Fluffy or powdery, sits up off the surface</option>
+            <option value="wispy">Wispy and web-like, spreading fast</option>
+            <option value="slimy">Slimy or wet patches</option>
+            <option value="lesions">Sticky lesions, on the mushrooms</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-where">Where it is</label>
+          <select id="c-where">
+            <option value="" selected>&mdash; pick one &mdash;</option>
+            <option value="grain">In the grain or spawn jar</option>
+            <option value="substrate">On the substrate or block</option>
+            <option value="casing">On the casing layer</option>
+            <option value="mushrooms">On the mushrooms themselves</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-smell">Smell</label>
+          <select id="c-smell">
+            <option value="" selected>&mdash; pick one &mdash;</option>
+            <option value="normal">Mushroomy, normal</option>
+            <option value="musty">Musty or earthy</option>
+            <option value="sour">Sour, rotten or sweetish</option>
+            <option value="none">Cannot tell / not safe to smell it</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="results" style="margin-top:16px">
+        <div id="c-verdict" style="font-size:1.15rem;font-weight:700">&mdash;</div>
+        <p id="c-call" style="margin:10px 0 0;font-weight:650"></p>
+        <p id="c-hazard" style="margin:10px 0 0;display:none;font-weight:650;color:#8a2f14"></p>
+        <p id="c-confirm" style="margin:10px 0 0"></p>
+        <p id="c-cause" style="margin:10px 0 0"></p>
+        <p id="c-change" style="margin:10px 0 0"></p>
+        <p id="c-also" style="margin:10px 0 0;display:none"></p>
+        <p class="muted" style="font-size:.85rem;margin:14px 0 0">This reads appearance, which is a
+          strong hint and never a certainty &mdash; two organisms can look alike on a bad day and
+          lighting lies. Where it is unsure it will say the more cautious of the two, because
+          binning a block you could have saved costs one block and keeping one that is sporulating
+          can cost the room.</p>
+      </div>
+
+      <p class="note" style="margin-top:14px">Once you know what it was, the number that matters is
+        how often it happens. Log the batch as contaminated in the free
+        <a href="../grow-log.html">Grow Log</a> and it becomes your real contamination rate by
+        substrate, strain and method &mdash; and if the culture it came from is in the free
+        <a href="../culture-library.html">Culture Library</a>, flagging it shows every other jar and
+        block that came off the same parent. Both are free, no account needed.</p>
+    </section>
 
     <h2 style="margin-top:32px">The usual suspects, at a glance</h2>
     <table class="spec" style="margin:14px 0">
@@ -162,6 +262,12 @@
     <h3 style="margin-top:22px">What causes wet spot or bacterial blotch?</h3>
     <p>Wet spot (sour rot, usually Bacillus) shows as slimy, grey, foul-smelling patches in grain or substrate and comes from under-sterilization or substrate that is too wet. Bacterial blotch on caps is sticky brown lesions from water sitting on the mushrooms with poor air movement. Both are bacterial, not fungal, and the fix is cleaner process and less standing moisture.</p>
 
+    <h3 style="margin-top:22px">How do I tell Trichoderma from healthy mycelium?</h3>
+    <p>Judge it on texture rather than colour, because Trichoderma starts out white and is very easy to mistake for vigorous mycelium before it turns green. Trichoderma is powdery and stands up off the surface; healthy mycelium is ropey and lies tight against the substrate. The confirming test is a dry cotton bud: green spore dust lifts off onto the bud, while blue-grey bruising does not rub off and is harmless. By the time it is clearly green it has already released spores.</p>
+
+    <h3 style="margin-top:22px">Can a block with cobweb mold be saved?</h3>
+    <p>Sometimes, and it is the one common contaminant that is often recoverable. Caught early, while it is still grey and wispy and has not coloured up, cobweb can be halted by moving the block away from clean ones and sharply increasing fresh-air exchange. Once it has taken on colour it is sporulating and the block goes out with the rest. Cobweb is telling you about stagnant humid air rather than about your sterile technique.</p>
+
     <h3 style="margin-top:22px">How do I prevent mushroom contamination?</h3>
     <p>Prevention beats treatment: sterilize or pasteurize properly for the substrate, work clean (still air, wiped surfaces, alcohol, minimal exposure time), use a healthy high spawn rate so your culture colonizes before contaminants establish, hit field capacity instead of waterlogged moisture, and give fruiting blocks fresh air. Inspect daily and remove any contaminated block early before it spreads spores.</p>
     <p class="disclaimer" style="margin-top:20px">General guidance from common cultivation practice,
@@ -184,6 +290,184 @@
   <div style="text-align:right"><a href="../grow-log.html">Grow Log</a> · <a href="../culture-library.html">Culture Library</a> · <a href="../calculator.html">Grow Calculator</a> · <a href="../substrate-calculator.html">Substrate Calculator</a> · <a href="../fruiting-conditions.html">Fruiting Conditions</a> · <a href="../guides/">Guides</a> · <a href="../alternatives/best-mushroom-grow-log-apps.html">Compare</a> · <a href="../index.html#pricing">Pricing</a><br>
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
+
+  <script>
+/* Contaminant identifier (I101). The six culprits are exactly the six rows of the
+   "usual suspects" table above — tests/contaminant-id.spec.js pins that, so prose and
+   tool cannot drift apart the way a page and its meta description did at I98.
+
+   Scoring is deliberately dumb and legible: one point per field that matches. What is
+   NOT dumb, and is the whole point, is how ties break. `severity` is the cost of being
+   WRONG about this one, and a tie always resolves to the higher number. A guess that
+   leans toward "you can keep it" is the mushroom-farming version of a profit model that
+   forgets to pay the operator (I91): it is the comfortable direction, and it is the one
+   that takes a room out. */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  if(!$('idtool')) return;
+
+  var CONTAM = [
+    { id:'healthy', name:'Your own mycelium, most likely', severity:0, call:'keep',
+      colour:['white'], texture:['rooted'], where:['grain','substrate','casing'], smell:['normal','none'],
+      verdict:'This looks like your own mycelium, not a contaminant.',
+      confirm:'Wipe it with a dry cotton bud. If nothing lifts off onto the bud and it smells faintly mushroomy, that is your own mycelium. Blue or grey patches that do not rub off are bruising, which is harmless.',
+      cause:'Dense, rooted, white growth that grips the substrate and advances evenly is what a healthy colony looks like. A small fuzzy white tuft with tiny clear droplets is normal aerial mycelium.',
+      change:'Carry on, and keep inspecting daily. A fuzzy white patch that later turns any colour at all is a different story.' },
+
+    { id:'trich', name:'Trichoderma, green mould', severity:3, call:'bin',
+      colour:['green','white','bluegreen'], texture:['fluffy'], where:['grain','substrate','casing'], smell:['musty','normal','none'],
+      verdict:'Trichoderma, green mould.',
+      confirm:'Wipe it with a dry cotton bud. Green that lifts off onto the bud is spore dust and confirms it. It begins white and fluffy and is very easy to mistake for vigorous mycelium at that stage, so judge it on texture: Trichoderma is powdery and stands up off the surface, mycelium is ropey and lies tight against it.',
+      cause:'Spores got in and found a foothold before your culture claimed the substrate. Usually a sterilisation that fell short, an open moment at inoculation, or colonisation running too slow.',
+      change:'Raise the spawn rate so the block colonises faster, and check the load size in your steriliser actually lets heat reach the centre.' },
+
+    { id:'cobweb', name:'Cobweb mould, Dactylium', severity:2, call:'isolate',
+      colour:['grey','white'], texture:['wispy'], where:['substrate','casing','mushrooms'], smell:['musty','normal','none'],
+      verdict:'Cobweb mould, Dactylium.',
+      confirm:'Look again in three hours. Cobweb visibly advances in that time and mushroom mycelium does not. It is grey and translucent, sits loosely on top rather than gripping, and looks like spider silk.',
+      cause:'Stagnant air that is too humid. Cobweb is the one that tells you about your fresh-air exchange rather than your sterile technique.',
+      change:'Increase fresh-air exchange and stop water pooling on surfaces. Caught early and while still grey, this is the one contaminant that is often recoverable; once it has coloured up it is sporulating and it goes out with the rest.' },
+
+    { id:'black', name:'Black or pin mould, Aspergillus or Rhizopus', severity:4, call:'bin', hazard:true,
+      colour:['black','bluegreen'], texture:['fluffy'], where:['grain','substrate','casing'], smell:['musty','none','normal'],
+      verdict:'Black or pin mould, Aspergillus or Rhizopus.',
+      confirm:'Do not put your face near it and do not sniff it to check. Black or blue-green powdery spots on grain or substrate are enough to act on without a closer look.',
+      cause:'Airborne spores meeting an under-sterilised or exposed substrate. Grain is especially vulnerable.',
+      change:'Tighten the sterilisation cycle and the still-air work at inoculation. This one is about what is in your air.' },
+
+    { id:'wetspot', name:'Wet spot or sour rot, Bacillus', severity:3, call:'bin',
+      colour:['grey','brown','yellow'], texture:['slimy'], where:['grain','substrate'], smell:['sour'],
+      verdict:'Wet spot or sour rot, a bacterium rather than a mould.',
+      confirm:'Smell it at arm’s length. Sour, rotten or oddly sweet rather than mushroomy is bacterial. It shows as slimy grey patches and often a wet, glassy look through the bag.',
+      cause:'Sterilisation that did not go far enough, or substrate carrying more water than it should.',
+      change:'Hit field capacity instead of soaking wet, and give the steriliser full temperature for the full time. Drying it out afterwards does not save it, because the organism is already through the grain.' },
+
+    { id:'bactyeast', name:'A bacterial or yeast contamination', severity:3, call:'bin',
+      colour:['pink','yellow'], texture:['slimy'], where:['grain','substrate'], smell:['sour','musty'],
+      verdict:'A bacterial or yeast contamination.',
+      confirm:'Pink, orange or yellow slime on grain, usually with a sour or fermented smell rather than a mushroomy one.',
+      cause:'A sterilisation failure, or a culture that was already carrying it before it went in.',
+      change:'Start from a clean plate or a fresh culture, and check the steriliser before blaming the grain.' },
+
+    { id:'blotch', name:'Bacterial blotch, Pseudomonas', severity:1, call:'harvest',
+      colour:['brown','yellow'], texture:['lesions'], where:['mushrooms'], smell:['normal','sour','none'],
+      verdict:'Bacterial blotch, Pseudomonas.',
+      confirm:'Blot one lesion with a dry cloth. Blotch is sticky and stays put; plain water damage wipes away and leaves clean tissue.',
+      cause:'Water sitting on the caps with not enough air movement to dry them between mistings.',
+      change:'Mist less directly and move more air across the caps. The block itself is not lost.' }
+  ];
+
+  var CALLS = {
+    keep:    'Keep going. This does not need action.',
+    harvest: 'The block is not lost. Harvest what is ready and fix the air.',
+    isolate: 'Move it away from your clean blocks now. It may still be savable.',
+    bin:     'Bag it where it stands, then take it out. Do not open it near clean blocks.'
+  };
+
+  function read(){
+    return { colour:$('c-colour').value, texture:$('c-texture').value,
+             where:$('c-where').value, smell:$('c-smell').value };
+  }
+
+  /* One point per field that matches. A field left blank scores nothing and rules nothing
+     out — an unanswered question is not evidence either way. */
+  function score(c, v){
+    var n = 0, FIELDS = ['colour','texture','where','smell'];
+    for(var i=0;i<FIELDS.length;i++){
+      var f = FIELDS[i];
+      if(v[f] && c[f].indexOf(v[f]) !== -1) n++;
+    }
+    return n;
+  }
+
+  function rank(v){
+    var out = CONTAM.map(function(c){ return { c:c, n:score(c,v) }; });
+    /* Rule (b): higher score first, and on a tie the WORSE consequence wins. Never the
+       other way round, and never alphabetical or source order, which would silently make
+       the answer depend on how this array happens to be typed. */
+    out.sort(function(a,b){ return (b.n - a.n) || (b.c.severity - a.c.severity); });
+    return out;
+  }
+
+  function paint(){
+    var v = read();
+    var answered = 0;
+    for(var k in v){ if(v[k]) answered++; }
+    var r = rank(v), top = r[0];
+
+    var hide = ['c-call','c-confirm','c-cause','c-change'];
+    /* Rule (a): two signals minimum, and the winner has to actually match two of them.
+       One field, or four fields that agree with nothing, is not a diagnosis and does not
+       get dressed up as one. */
+    if(answered < 2 || top.n < 2){
+      $('c-verdict').textContent = '—';
+      $('c-call').textContent = answered === 0
+        ? 'Tell it what you can see and it will narrow this down.'
+        : 'Not enough to name it yet. Add the colour and how it grows, and it will have something to go on.';
+      $('c-confirm').textContent = '';
+      $('c-cause').textContent = '';
+      $('c-change').textContent = '';
+      $('c-hazard').style.display = 'none';
+      $('c-also').style.display = 'none';
+      return;
+    }
+
+    /* "Most likely:" belongs in front of a named culprit. In front of the healthy answer it
+       reads as a hedge on good news, so the healthy verdict stands on its own sentence. */
+    $('c-verdict').textContent = (top.c.id === 'healthy' ? '' : 'Most likely: ') + top.c.verdict;
+    $('c-call').textContent = CALLS[top.c.call];
+    $('c-confirm').textContent = 'Confirm it: ' + top.c.confirm;
+    $('c-cause').textContent = 'What it is telling you: ' + top.c.cause;
+    $('c-change').textContent = 'The one change: ' + top.c.change;
+
+    /* Rule (d), and it is never softened by rank: if black mould is a live contender the
+       health line shows, even when something else is winning. Aspergillus is a genuine
+       respiratory hazard and not the kind of thing to mention only when it happens to top
+       a scoring contest.
+       "Contender" is the same one-point bar used for naming a close second, and it is a
+       deliberate limit rather than a looser "score >= 2". Black matching only on generic
+       fields like where-it-is and smell, while the real answer is four-for-four cobweb, is
+       not a warning: it is a warning that fires on almost everything, and an alarm that is
+       always on is one nobody reads (the I99 rule). */
+    var blackPlausible = false;
+    for(var i=0;i<r.length;i++){
+      if(r[i].c.id==='black' && r[i].n >= 2 && (r[0].n - r[i].n) <= 1) blackPlausible = true;
+    }
+    if(blackPlausible){
+      $('c-hazard').textContent = 'Health note: black mould can be Aspergillus, which is a real '
+        + 'respiratory hazard and not just a lost block. Bag it before you move it, do not shake '
+        + 'it out, and wear a mask if you have one.';
+      $('c-hazard').style.display = '';
+    } else {
+      $('c-hazard').style.display = 'none';
+    }
+
+    /* A close second is named rather than swallowed. If two things are one point apart the
+       reader deserves to know the tool nearly said something else.
+       The advice splits, and this is the half that is easy to get wrong. When a CONTAMINANT
+       is winning, "act on the more serious one" is right: the cost of being wrong is a room.
+       When the HEALTHY answer is winning it is exactly backwards, because acting on the
+       runner-up means binning a block that is fine. Leaning cautious has to mean check it
+       again, not destroy it — over-caution on our say-so is still our mistake. */
+    var second = r[1];
+    if(second && second.n >= 2 && (top.n - second.n) <= 1){
+      $('c-also').textContent = 'It could also be ' + second.c.name.toLowerCase()
+        + (top.c.id === 'healthy'
+            ? ', which looks like this early on. Do the test above and look again tomorrow before you trust it. Do not bin a block on a maybe.'
+            : '. Where the two disagree, act on the more serious one first.');
+      $('c-also').style.display = '';
+    } else {
+      $('c-also').style.display = 'none';
+    }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#idtool select'), function(el){
+    el.addEventListener('change', paint);
+  });
+  paint();
+  window.mycroContamRank = rank;   // used by the regression tests
+})();
+</script>
 
   <script src="../waitlist.js"></script>
   <script src="/track.js" defer></script>
