@@ -77,7 +77,9 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem;display:none" id="archiveDone">🗄 Archive finished</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
-      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Reset to sample</button>
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
+      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
+      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
   </div>
 
@@ -1576,6 +1578,72 @@ $('resetSample').addEventListener('click', function(){
 });
 $('seedLink').addEventListener('click', function(e){
   e.preventDefault(); var sm=sampleCultures(); state.sources=sm.sources; state.cultures=sm.cultures; save(); paint();
+});
+
+/* ---- start fresh (I100) --------------------------------------------------------------
+   The same control, on the same shared document, at both doors — an answer that exists at
+   one door only is the I92 bug in a smaller shape, and the customer who asked for this
+   twice had been living in THIS tool, not the Grow Log. See the long note in grow-log.html
+   for why the copy is taken first, why the empty document is written rather than the key
+   deleted, and why the address book survives. Batches go too: the batches and the culture
+   chain are one document, and a half-clear leaves `parentId`s pointing at cultures that no
+   longer exist (I78). */
+function fullExport(){
+  return { v:state.v||1, cur:state.cur, labelQr:state.labelQr, seller:state.seller,
+           contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
+           sources:state.sources, cultures:state.cultures };
+}
+function jsonDownload(name,obj){
+  var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a);
+  a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+function countWord(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
+function freshCounts(){
+  var n=function(a){ return Array.isArray(a)?a.length:0; };
+  return { batches:n(state.batches), deliveries:n(state.deliveries),
+           cultures:n(state.cultures), sources:n(state.sources) };
+}
+function freshTotal(c){ return c.batches+c.deliveries+c.cultures+c.sources; }
+function freshState(){
+  var s = { v:state.v||1, batches:[], sources:[], cultures:[] };
+  if(state.cur) s.cur = state.cur;
+  if(state.labelQr) s.labelQr = state.labelQr;
+  if(state.seller) s.seller = state.seller;
+  if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
+  return s;
+}
+function startFreshFlow(){
+  var c = freshCounts(), total = freshTotal(c);
+  if(!total){ alert('This library is already empty. Log your first source above whenever you are ready.'); return false; }
+  var had = c;
+  jsonDownload('mycro-log-backup.json', fullExport());
+  var parts=[];
+  if(c.sources)    parts.push(countWord(c.sources,'source'));
+  if(c.cultures)   parts.push(countWord(c.cultures,'culture'));
+  if(c.batches)    parts.push(countWord(c.batches,'batch','batches'));
+  if(c.deliveries) parts.push(countWord(c.deliveries,'delivery','deliveries'));
+  var list = parts.length>1 ? parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1] : parts[0];
+  var keeps=[];
+  if(Array.isArray(state.contacts) && state.contacts.length) keeps.push('your address book');
+  if(state.seller) keeps.push('your own seller details');
+  keeps.push('your currency and label settings');
+  var msg = 'Clear this library and start fresh?\n\n'
+    + 'Your library and your grow log are one record, so this removes ' + list + ' from this device'
+    + ((window.MycroAccount && MycroAccount.signedIn()) ? ' and from your account' : '')
+    + '.\n\nKept: ' + (keeps.length>1 ? keeps.slice(0,-1).join(', ')+' and '+keeps[keeps.length-1] : keeps[0]) + '.'
+    + '\n\nA full copy of everything has just been saved to your downloads.';
+  if(!confirm(msg)) return false;
+  state = freshState();
+  save(); paint();
+  if(window.track) try{ track('culture_start_fresh',{batches:had.batches,cultures:had.cultures,sources:had.sources,deliveries:had.deliveries}); }catch(_){}
+  return true;
+}
+$('startFresh').addEventListener('click', startFreshFlow);
+$('exportJson').addEventListener('click', function(){
+  jsonDownload('mycro-grow-log.json', fullExport());
+  if(window.track) try{ track('culture_export',{fmt:'json'}); }catch(_){}
 });
 
 /* ---- CSV export: one row per culture, with its full chain ---- */

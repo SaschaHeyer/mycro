@@ -103,7 +103,8 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
-      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Reset to sample</button>
+      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
+      <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
   </div>
 
@@ -1203,6 +1204,80 @@ $('resetSample').addEventListener('click',function(){
 });
 $('seedLink').addEventListener('click',function(e){ e.preventDefault(); state=sampleState(); save(); render(); });
 
+/* ---- start fresh (I100) --------------------------------------------------------------
+   Founding Grower #1 asked twice for a way to "clear the existing data so we have a fresh
+   view of RL production" — at I80, and again on 2026-08-24 — and both times the only control
+   on the page that looked like an answer was `↺ Reset to sample`, which clears nothing: it
+   REPLACES the grower's own records with our fictional demo farm. His library was 13 cultures
+   of which 6 were ours, so our seeded contamination was his entire loss rate. This product
+   could seed, and could replace-with-seed, and could not start empty.
+
+   Three rules here are load-bearing, and each one is the difference between a clean slate and
+   a fresh way to lose work:
+   (a) a full copy is downloaded BEFORE anything is removed, and it is the WHOLE document —
+       `⬇ JSON` used to write `state.batches` alone, so the customer whose data is 0 batches
+       and 13 cultures would have been handed `[]` and told it was his backup;
+   (b) the empty document is WRITTEN, never removeItem'd — `load()` seeds the sample farm when
+       the key is missing, so deleting the key hands back the very demo data the grower just
+       cleared, which is the one outcome worse than doing nothing;
+   (c) standing reference data is KEPT — the address book, your own seller details, currency
+       and label choice are not production records, and someone clearing last season should not
+       have to retype their own phone number. The confirm says so, so it is never a surprise.
+   The batches and the culture chain are one shared document, so both go: a half-clear leaves
+   `parentId`s pointing at cultures that no longer exist, which reads on the card as "not
+   linked" while still sitting in the data (I78). */
+function fullExport(){
+  return { v:state.v||1, cur:state.cur, labelQr:state.labelQr, seller:state.seller,
+           contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
+           sources:state.sources, cultures:state.cultures };
+}
+function countWord(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
+/* What a clear would remove, in the grower's own units. Anything not listed here is kept. */
+function freshCounts(){
+  var n=function(a){ return Array.isArray(a)?a.length:0; };
+  return { batches:n(state.batches), deliveries:n(state.deliveries),
+           cultures:n(state.cultures), sources:n(state.sources) };
+}
+function freshTotal(c){ return c.batches+c.deliveries+c.cultures+c.sources; }
+/* An empty production log that KEEPS the standing reference data. */
+function freshState(){
+  var s = { v:state.v||1, batches:[], sources:[], cultures:[] };
+  if(state.cur) s.cur = state.cur;
+  if(state.labelQr) s.labelQr = state.labelQr;
+  if(state.seller) s.seller = state.seller;
+  if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
+  return s;
+}
+function startFreshFlow(){
+  var c = freshCounts(), total = freshTotal(c);
+  if(!total){ alert('This log is already empty. Add your first batch above whenever you are ready.'); return false; }
+  var had = c;
+  // The copy is taken FIRST, so the confirm below states a fact rather than making a promise.
+  download('mycro-log-backup.json', JSON.stringify(fullExport(),null,2), 'application/json');
+  var parts=[];
+  if(c.batches)    parts.push(countWord(c.batches,'batch','batches'));
+  if(c.deliveries) parts.push(countWord(c.deliveries,'delivery','deliveries'));
+  if(c.cultures)   parts.push(countWord(c.cultures,'culture'));
+  if(c.sources)    parts.push(countWord(c.sources,'source'));
+  var list = parts.length>1 ? parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1] : parts[0];
+  var keeps=[];
+  if(Array.isArray(state.contacts) && state.contacts.length) keeps.push('your address book');
+  if(state.seller) keeps.push('your own seller details');
+  keeps.push('your currency and label settings');
+  var msg = 'Clear this log and start fresh?\n\n'
+    + 'This removes ' + list + ' from this device'
+    + ((window.MycroAccount && MycroAccount.signedIn()) ? ' and from your account' : '')
+    + '.\n\nKept: ' + (keeps.length>1 ? keeps.slice(0,-1).join(', ')+' and '+keeps[keeps.length-1] : keeps[0]) + '.'
+    + '\n\nA full copy of everything has just been saved to your downloads.';
+  if(!confirm(msg)) return false;
+  state = freshState();
+  editingYieldId=null; editingCostId=null; editingLinkId=null;
+  save(); render();
+  if(window.track) try{ track('growlog_start_fresh',{batches:had.batches,cultures:had.cultures,sources:had.sources,deliveries:had.deliveries}); }catch(_){}
+  return true;
+}
+$('startFresh').addEventListener('click', startFreshFlow);
+
 /* ---- export ---- */
 function download(name,text,type){
   var blob=new Blob([text],{type:type}); var url=URL.createObjectURL(blob);
@@ -1236,7 +1311,9 @@ $('exportCsv').addEventListener('click',function(){
   showNudge('export');
 });
 $('exportJson').addEventListener('click',function(){
-  download('mycro-grow-log.json',JSON.stringify(state.batches,null,2),'application/json');
+  // The WHOLE document, not state.batches alone (I100). A grower whose records are all in
+  // the Culture Library used to be handed `[]` and told it was their log.
+  download('mycro-grow-log.json',JSON.stringify(fullExport(),null,2),'application/json');
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
   showNudge('export');
 });
