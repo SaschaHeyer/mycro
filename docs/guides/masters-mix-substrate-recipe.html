@@ -130,11 +130,38 @@
         <tr><td><b>Hydrated total</b></td><td style="text-align:right"><b>~25 lb → ~5 blocks</b></td></tr>
       </tbody>
     </table>
-    <div class="note" style="margin:18px 0">
-      <b style="color:var(--ink)">Scale it to your batch.</b> The free
-      <a href="../substrate-calculator.html">Substrate Recipe Calculator</a> takes the number of blocks
-      you want and gives you the exact sawdust, soy hull, gypsum, and water — for Master's Mix or any other
-      recipe. No sign-up.
+    <div class="panel" id="mmCalc" style="margin:18px 0">
+      <h3><span class="step">↳</span> Scale this recipe to your batch</h3>
+      <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Locked to the 50/50 Master's Mix
+        ratio above (1% gypsum, 60% moisture) — enter your batch and get the exact weights.</p>
+      <div class="inline-grid">
+        <div class="field"><label for="mm-blocks">Number of blocks</label>
+          <input id="mm-blocks" type="number" step="1" min="1" value="5">
+          <span class="hint">Fruiting blocks in this batch.</span></div>
+        <div class="field"><label>Dry sawdust + soy hull per block <span id="mm-u1" class="hint"></span></label>
+          <input id="mm-dry" type="number" step="0.1" min="0" value="2">
+          <span class="hint">Before gypsum &amp; water. 2 lb/block matches the worked example above.</span></div>
+      </div>
+      <div class="toggle" id="mmUnitToggle" role="group" aria-label="Units" style="margin-top:10px">
+        <button data-unit="lb" class="active">lb</button>
+        <button data-unit="kg">kg</button>
+      </div>
+      <div class="kpis" style="margin-top:16px">
+        <div class="kpi"><div class="v" id="mm-k-dry">–</div><div class="l">Total dry (this batch)</div></div>
+        <div class="kpi"><div class="v" id="mm-k-water">–</div><div class="l">Water to add</div></div>
+        <div class="kpi"><div class="v" id="mm-k-hyd">–</div><div class="l">Hydrated total</div></div>
+        <div class="kpi"><div class="v" id="mm-k-perblock">–</div><div class="l">Hydrated / block</div></div>
+      </div>
+      <div style="margin-top:16px">
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;font-size:.78rem;
+          text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:0 2px 6px">
+          <span>Ingredient</span><span style="text-align:right">Per block</span><span style="text-align:right">Whole batch</span>
+        </div>
+        <div id="mm-ingredients"></div>
+      </div>
+      <p class="muted" style="margin:14px 0 0;font-size:.9rem">Need a different ratio, bran instead of soy
+        hull, or a custom moisture target? The full
+        <a href="../substrate-calculator.html">Substrate Recipe Calculator</a> covers any recipe.</p>
     </div>
 
     <h2 style="margin-top:32px">Step by step</h2>
@@ -238,6 +265,57 @@
 </div></footer>
 
   <script src="../waitlist.js"></script>
+  <script>
+  (function(){
+    var unit='lb';
+    var GYP=0.01, M=0.6;   // locked to this recipe: 1% gypsum on top of base, 60% moisture
+    var $=function(id){return document.getElementById(id);};
+    function val(id){var n=parseFloat($(id).value);return isFinite(n)?n:0;}
+    function wt(v){var d=v<10?2:(v<100?1:0);return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+unit;}
+    function row(name,perBlock,total){
+      return '<div class="rowline" style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px">'+
+        '<span>'+name+'</span><b style="text-align:right">'+wt(perBlock)+'</b>'+
+        '<b style="text-align:right">'+wt(total)+'</b></div>';
+    }
+    function calc(){
+      var blocks=Math.max(0,Math.round(val('mm-blocks')));
+      var basePB=Math.max(0,val('mm-dry'));          // dry sawdust+soyhull per block, before gypsum
+      var sawPB=basePB/2, soyPB=basePB/2;
+      var gypPB=basePB*GYP;
+      var dryPB=basePB+gypPB;
+      var waterPB=(1-M)>0 ? M*dryPB/(1-M) : 0;
+      var hydPB=dryPB+waterPB;
+
+      var html='';
+      html+=row('Hardwood sawdust',sawPB,sawPB*blocks);
+      html+=row('Soy hull pellets',soyPB,soyPB*blocks);
+      html+=row('Gypsum (~1%)',gypPB,gypPB*blocks);
+      html+=row('— Total dry',dryPB,dryPB*blocks);
+      html+=row('Water',waterPB,waterPB*blocks);
+      $('mm-ingredients').innerHTML=html;
+
+      $('mm-k-dry').textContent=wt(dryPB*blocks);
+      $('mm-k-water').textContent=wt(waterPB*blocks);
+      $('mm-k-hyd').textContent=wt(hydPB*blocks);
+      $('mm-k-perblock').textContent=wt(hydPB);
+    }
+    function setUnitLabel(){ $('mm-u1').textContent='('+unit+')'; }
+
+    $('mm-blocks').addEventListener('input',calc);
+    $('mm-dry').addEventListener('input',calc);
+    document.querySelectorAll('#mmUnitToggle button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var nu=this.dataset.unit; if(nu===unit) return;
+        var f = nu==='kg'? (1/2.2046226) : 2.2046226;
+        $('mm-dry').value=(val('mm-dry')*f).toFixed(2);
+        unit=nu;
+        document.querySelectorAll('#mmUnitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+        setUnitLabel(); calc();
+      });
+    });
+    setUnitLabel(); calc();
+  })();
+  </script>
   <script src="/track.js" defer></script>
 </body>
 </html>
