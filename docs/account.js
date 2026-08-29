@@ -634,6 +634,14 @@
        countLocal() / countOf(doc) -> batch counts, used only to warn before replacing. */
     init: function (opts) {
       hooks = Object.assign(hooks, opts || {});
+      /* A page that IS the sign-in page (docs/sign-in.html) opens with the form already
+         showing, rather than the quiet one-line prompt the tools use (I97). It sets this
+         instead of calling openSignin() so that account_open_signin does NOT fire: that
+         event measures in-product demand for an account, and someone who arrived by
+         searching "mycro login" is a different population. Merging the two would make
+         neither readable — the same rule that keeps account-gate-link and growlog-backup
+         apart. The tools never pass it, so their collapsed bar is untouched. */
+      if (opts && opts.expanded) expanded = true;
       var em = ls(EMAIL_KEY);
       if (token() && em) { state.email = em; }
       render();
