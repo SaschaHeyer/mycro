@@ -357,6 +357,7 @@ function calc(){
   $('r-note').textContent = 'At ~'+money(revPerBag)+' revenue and '+money(profitPerBag)+
     ' profit per block. '+(profit>=0? 'This batch pencils out — nice.' :
     'This batch loses money — raise price, cut cost, or improve BE.');
+  planPaintSend();
 }
 
 // species preset -> set BE
@@ -457,6 +458,42 @@ function planRows(){
   return out;
 }
 
+
+/* ---- The confirmation is DERIVED, never written once and left ------------------------
+   A calculator exists to be changed after you have looked at it, so "Sent ✓" written into a
+   node outlives the numbers it confirmed: change one input and the page still tells the
+   grower their inbox holds a report for figures that were never mailed, with the send
+   button permanently disabled so the corrected one can never follow. The block is
+   therefore a pure function of (what was sent, what is on screen) and calc() repaints it
+   like any other output. Three rules, each pinned by a test:
+     - only a SUCCESSFUL send records a signature (the I85/I93 rule), so a failed attempt
+       can never later claim an earlier version is sitting in an inbox;
+     - a stale state RE-ENABLES the button. Describing the problem and still refusing to
+       fix it is worse than saying nothing;
+     - editing back to exactly what was sent returns to "sent", never nags about a
+       difference that no longer exists, and never invites a duplicate of the same mail.
+   The address is deliberately not cleared: asking twice for it is the small insult that
+   ends a session (I94). */
+var planSentSig=null;
+function planSig(){ return JSON.stringify([planQuery(), planRows()]); }
+function planSendView(sig){
+  if(planSentSig==null) return {mode:'ask'};
+  return {mode: planSentSig===sig ? 'done' : 'stale'};
+}
+function planPaintSend(){
+  if(planSentSig==null) return;                 // nothing sent yet: leave the ask alone
+  var v=planSendView(planSig()), msg=$('plan-msg'), btn=$('planEmailBtn');
+  if(!msg||!btn) return;
+  msg.style.display='block';
+  if(v.mode==='done'){
+    msg.textContent='Sent ✓ Check your inbox for the plan and a link that reopens it.';
+    btn.disabled=true;
+  }else{
+    msg.textContent='These numbers changed after you sent. Your inbox has the earlier version. Send this one too?';
+    btn.disabled=false;
+  }
+}
+
 function mycroPlanEmail(e){
   e.preventDefault();
   var msg=$('plan-msg'), btn=$('planEmailBtn'), input=$('planEmail');
@@ -468,6 +505,11 @@ function mycroPlanEmail(e){
   var rows=planRows();
   if(!rows.length){ msg.textContent='Fill in the batch details first, then send yourself the plan.'; return false; }
   btn.disabled=true; msg.textContent='Sending…';
+  /* Taken BEFORE the request, from the same read that builds the payload. If the grower
+     edits an input while it is in flight, the signature that gets recorded is still the one
+     that was actually mailed, so the block correctly reads stale rather than confirming
+     numbers nobody sent. */
+  var sig=planSig();
   var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
   fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
     method:'POST', headers:{'Content-Type':'text/plain'},
@@ -475,8 +517,7 @@ function mycroPlanEmail(e){
       sub:($('r-sub').textContent||'').trim(), q:planQuery(), rows:rows}})
   }).then(function(r){return r.json();}).then(function(j){
     if(j&&j.ok){
-      msg.textContent='Sent ✓ Check your inbox for the plan and a link that reopens it.';
-      input.value='';
+      planSentSig=sig; planPaintSend();
       if(window.track) track('calc_plan_email',{});
     } else {
       msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
