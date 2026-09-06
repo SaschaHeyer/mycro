@@ -14,6 +14,66 @@ function mycroCleanEmail(v){
   return s.replace(/^mailto:\s*/i,'').replace(/^["'<]+|["'>]+$/g,'').trim().toLowerCase();
 }
 
+/* ---------------------------------------------------------------------------
+   ONE MEMORY PER BROWSER, NOT ONE PER PAGE.
+   26 email inputs live across 19 pages of this site and, until now, 25 of them
+   started blank on every visit. The only capture that ever remembered anything
+   wrote 'mycro_waitlist_email' and NOTHING read it back — a field stored and
+   never read is a rule somebody meant to enforce (I99).
+   Why this needs its OWN key rather than reusing one that already exists, which
+   is the obvious move and the wrong one:
+     - 'mycro_email' is account.js's identity slot. wantsSignin() treats it as
+       "this browser has an account", so writing a calculator address into it
+       re-opens the sign-in bar above the free tool — the exact I97 bug that
+       cost a whole loop to undo.
+     - 'mycro_signin_email' is a Firebase credential slot: completeFirebaseLink()
+       redeems a one-time code AGAINST it. A wrong value there locks a paying
+       customer out of the account they bought.
+   So both are READ (they are more authoritative than anything typed here) and
+   neither is ever written. Only an ACCEPTED capture is remembered (I85/I93/I109):
+   an address the server refused must not be spread to every other form.  */
+var MYCRO_LEAD_EMAIL_KEY = 'mycro_lead_email';
+/* Most authoritative first. The last entry is the retired key, read once so a
+   browser that signed up before today is not asked again. */
+var MYCRO_EMAIL_KEYS = ['mycro_email', MYCRO_LEAD_EMAIL_KEY, 'mycro_signin_email', 'mycro_waitlist_email'];
+
+function mycroKnownEmail(){
+  for(var i=0;i<MYCRO_EMAIL_KEYS.length;i++){
+    var v='';
+    try{ v=mycroCleanEmail(localStorage.getItem(MYCRO_EMAIL_KEYS[i])||''); }catch(_){ return ''; }
+    if(v && MYCRO_EMAIL_RE.test(v)) return v;
+  }
+  return '';
+}
+function mycroRememberEmail(email){
+  var e=mycroCleanEmail(email);
+  if(!MYCRO_EMAIL_RE.test(e)) return false;
+  try{ localStorage.setItem(MYCRO_LEAD_EMAIL_KEY, e); }catch(_){ return false; }
+  return true;
+}
+/* Fills every EMPTY email input in scope. Never overwrites what is already there
+   (a restored plan link or a half-typed address belongs to the visitor), and
+   never touches #acctBar: that bar's fields are sign-in credentials with their
+   own chain, and putting a lead address in them would say "you are signed in as"
+   to someone who is not. */
+function mycroFillKnownEmail(root){
+  var e=mycroKnownEmail(); if(!e) return 0;
+  var list=(root||document).querySelectorAll('input[type=email]'), n=0;
+  for(var i=0;i<list.length;i++){
+    var el=list[i];
+    if(el.value) continue;
+    if(el.closest && el.closest('#acctBar')) continue;
+    el.value=e; n++;
+  }
+  return n;
+}
+window.mycroKnownEmail=mycroKnownEmail;
+window.mycroRememberEmail=mycroRememberEmail;
+window.mycroFillKnownEmail=mycroFillKnownEmail;
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){ mycroFillKnownEmail(); });
+}else{ mycroFillKnownEmail(); }
+
 /* The channel a lead ACTUALLY arrived from, captured by track.js on their first ever page
    view and carried here unchanged. Sending document.referrer at submit time credited
    usemycro.com for anyone who browsed before signing up, which was most of them. */
@@ -32,13 +92,13 @@ function mycroWaitlist(e){
     msg.textContent="Please enter a valid email address."; return false;
   }
   var orig=btn.textContent; btn.disabled=true; btn.textContent="Joining…";
-  try{ localStorage.setItem('mycro_waitlist_email', email); }catch(_){}
   fetch(window.MYCRO_API+"/api/waitlist",{
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ email: email, source: location.pathname, ref: document.referrer||"", first: mycroFirst() })
   }).then(function(r){ return r.ok ? r.json().catch(function(){return {ok:true};}) : {ok:false}; })
     .then(function(d){
       if(d && d.ok){
+        mycroRememberEmail(email);
         if(window.track) try{ track('waitlist_signup', {src: location.pathname}); }catch(_){}
         f.style.display='none';
         msg.textContent="You're on the list 🍄 Check your inbox — we just sent you a quick welcome with all the free tools. (Peek in spam if it's not there in a minute.)";
@@ -68,7 +128,7 @@ function mycroFounding(e){
   }
   var orig=btn.textContent; btn.disabled=true; btn.textContent="Taking you to checkout…";
   if(window.track) try{ track('founding_click', {src: location.pathname}); }catch(_){}
-  try{ localStorage.setItem('mycro_waitlist_email', email); }catch(_){}
+  mycroRememberEmail(email);
   var go=function(){ location.href = window.MYCRO_FOUNDING_LINK + "?prefilled_email=" + encodeURIComponent(email); };
   // Fire-and-forget lead capture; redirect regardless after a short beat so we never block the sale.
   var redirected=false, redirect=function(){ if(!redirected){ redirected=true; go(); } };

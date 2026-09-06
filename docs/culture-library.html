@@ -1741,6 +1741,7 @@ $('nudgeEmailBtn').addEventListener('click', function(){
     .then(function(){
       $('nudgeEmailRow').innerHTML='<p style="margin:0;font-size:.92rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private link — it opens your library and grow log on any device.</p>';
       note.textContent='From now on every change on this device syncs to that link automatically.';
+      if(window.mycroRememberEmail) mycroRememberEmail(em);
       if(window.track) try{ track('growlog_backup_email',{src:'culture-nudge'}); }catch(_){}
     })
     .catch(function(){ note.textContent='Could not send just now — please try again in a moment.'; note.style.color='#b23b3b';
@@ -1907,7 +1908,7 @@ table.strain .crown{font-size:.85rem}
 }
 
 </style>
-<script src="waitlist.js"></script>
+<script src="waitlist.js?v=2"></script>
 <script src="/track.js" defer></script>
 </body>
 </html>

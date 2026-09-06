@@ -518,6 +518,7 @@ function mycroPlanEmail(e){
   }).then(function(r){return r.json();}).then(function(j){
     if(j&&j.ok){
       planSentSig=sig; planPaintSend();
+      if(window.mycroRememberEmail) mycroRememberEmail(email);
       if(window.track) track('calc_plan_email',{});
     } else {
       msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
@@ -530,7 +531,7 @@ function mycroPlanEmail(e){
 
 restorePlan(); setUnitLabels(); calc();
 </script>
-<script src="waitlist.js"></script>
+<script src="waitlist.js?v=2"></script>
   <script src="/track.js" defer></script>
 </body>
 </html>

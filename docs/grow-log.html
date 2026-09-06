@@ -1745,6 +1745,7 @@ $('backupEmailBtn').addEventListener('click',function(){
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(){
       $('backupEmailWrap').innerHTML='<p style="margin:0;font-size:.9rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private restore link.</p>';
+      if(window.mycroRememberEmail) mycroRememberEmail(em);
       if(window.track) try{ track('growlog_backup_email',{}); }catch(_){}
     })
     .catch(function(){ note.textContent='Could not send just now — copy the link above instead.'; note.style.color='#b23b3b'; btn.disabled=false; btn.textContent=prev; });
@@ -1875,6 +1876,7 @@ function showNudge(src){
       .then(function(){
         var row=$('nudgeEmailRow'); if(row) row.style.display='none';
         note.style.color=''; note.innerHTML='<b style="color:var(--ink)">Sent ✓</b> Your log is backed up and the private link is in your inbox.';
+        if(window.mycroRememberEmail) mycroRememberEmail(em);
         if(window.track) try{ track('growlog_backup_email',{src:'nudge'}); }catch(_){}
       })
       .catch(function(){ note.textContent='Could not save just now — try the ☁ Back up button above, or retry in a moment.'; note.style.color='#b23b3b'; btn.disabled=false; btn.textContent=prev; });
@@ -2010,7 +2012,7 @@ table.strain td.daddr{white-space:normal;min-width:170px;color:var(--muted)}
 }
 
 </style>
-<script src="waitlist.js"></script>
+<script src="waitlist.js?v=2"></script>
 <script src="/track.js" defer></script>
 </body>
 </html>

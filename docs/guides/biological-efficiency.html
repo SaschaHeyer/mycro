@@ -331,7 +331,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
-  <script src="../waitlist.js"></script>
+  <script src="../waitlist.js?v=2"></script>
   <script src="/track.js" defer></script>
 <script>
 /* Biological efficiency calculator (I98).
@@ -611,6 +611,7 @@
     }).then(function(r){return r.json();}).then(function(j){
       if(j&&j.ok){
         beSentSig=sig; bePaintSend();
+        if(window.mycroRememberEmail) mycroRememberEmail(email);
         if(window.track) track('be_report_email',{});
       } else {
         msg.textContent='That did not send. Please try again in a moment.'; btn.disabled=false;
