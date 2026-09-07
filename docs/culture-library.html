@@ -78,6 +78,8 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem;display:none" id="archiveDone">🗄 Archive finished</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson">⬆ Import backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
@@ -518,6 +520,34 @@ function validCulture(c){
     (c.shakenAt==null || typeof c.shakenAt==='string') &&    // grain shake milestone (I80)
     (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
     (c.vigor==null || !!VIGOR[c.vigor]);                     // growth thickness (I73)
+}
+/* The strict, all-or-nothing check for "is this a real Mycro backup file", used only by the
+   file import below. `load()` deliberately falls back per-field (a corrupt sources array
+   still lets a good cultures array through); an imported FILE gets no such leniency — refuse
+   the whole thing rather than silently drop half of what a grower thinks they just restored
+   (only-copy-is-the-browser). Batches are this page's blind spot the rest of the time, but an
+   IMPORT here can still overwrite the shared document — an unvalidated batches array that
+   passed here would then fail grow-log.html's own (stricter) load() on the next visit there
+   and silently discard the sources/cultures just restored along with it. So batches are
+   checked with the same rule grow-log.html uses, duplicated rather than shared (this file has
+   no STAGE_LABEL of its own — see IMPORT_STAGES). */
+var IMPORT_STAGES = {inoculated:1,colonizing:1,fruiting:1,harvested:1,contaminated:1};
+function validImportBatch(b){
+  return b && typeof b.id==='string' && typeof b.name==='string' &&
+    SPECIES[b.species] && typeof b.dryG==='number' && typeof b.blocks==='number' &&
+    typeof b.inoculatedOn==='string' && IMPORT_STAGES[b.stage] && typeof b.stageSince==='string' &&
+    (b.flushes==null || Array.isArray(b.flushes)) &&
+    (b.parentId==null || typeof b.parentId==='string') &&
+    (b.method==null || typeof b.method==='string') &&
+    (b.code==null || typeof b.code==='string') &&
+    (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
+    (b.priceG==null || typeof b.priceG==='number');
+}
+function validGrowDoc(s){
+  return !!(s && typeof s==='object' &&
+    Array.isArray(s.batches) && s.batches.every(validImportBatch) &&
+    Array.isArray(s.sources) && s.sources.every(validSource) &&
+    Array.isArray(s.cultures) && s.cultures.every(validCulture));
 }
 function load(){
   var s=null;
@@ -1644,6 +1674,41 @@ $('startFresh').addEventListener('click', startFreshFlow);
 $('exportJson').addEventListener('click', function(){
   jsonDownload('mycro-grow-log.json', fullExport());
   if(window.track) try{ track('culture_export',{fmt:'json'}); }catch(_){}
+});
+
+/* ---- import a downloaded backup (only-copy-is-the-browser) ---------------------------
+   Mirrors the same fix on grow-log.html — see the long note there. localStorage is not
+   storage the grower controls; a JSON download nothing can read back in is a museum piece.
+   Refuses rather than partly loading, and never touches state until the file checks out. */
+$('importJson').addEventListener('click', function(){ $('importFile').click(); });
+$('importFile').addEventListener('change', function(e){
+  var file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onerror = function(){ alert('Could not read that file — nothing was changed.'); };
+  reader.onload = function(){
+    var s;
+    try{ s = JSON.parse(reader.result); }
+    catch(err){ alert('That file is not valid JSON — nothing was changed.'); return; }
+    if(!validGrowDoc(s)){
+      alert("That doesn't look like a Mycro grow-log backup — nothing was changed.");
+      return;
+    }
+    if(typeof s.v==='number' && s.v>(state.v||1)){
+      alert('That backup was made by a newer version of Mycro. Refresh this page and try again — nothing was changed.');
+      return;
+    }
+    var had = freshTotal(freshCounts());
+    if(had && !confirm('Import this backup? This replaces what is currently saved in this browser ('+
+      countWord(state.sources.length,'source')+', '+countWord(state.cultures.length,'culture')+
+      ') with what is in the file.')) return;
+    state = s;
+    save(); paint();
+    if(window.track) try{ track('culture_import',{sources:s.sources.length,cultures:s.cultures.length}); }catch(_){}
+    alert('Imported '+countWord(s.sources.length,'source')+' and '+countWord(s.cultures.length,'culture')+' from the file.');
+  };
+  reader.readAsText(file);
 });
 
 /* ---- CSV export: one row per culture, with its full chain ---- */

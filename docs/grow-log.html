@@ -103,6 +103,8 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson">⬆ Import backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
@@ -606,10 +608,17 @@ function normAux(s){
   if(!s.seller || typeof s.seller!=='object' || Array.isArray(s.seller)) s.seller = undefined;
   return s;
 }
+/* The ONE shape check for "is this a real Mycro grow-log document" — shared by the on-load
+   reader, the cloud-restore handler (?log=<id>) and the file import below, so all three agree
+   on what a backup is (only-copy-is-the-browser: two copies of "what is valid" are free to
+   disagree, and the file picker is the wider door into the same crash). */
+function validGrowDoc(s){
+  return !!(s && typeof s==='object' && Array.isArray(s.batches) && s.batches.every(validBatch));
+}
 function load(){
   try{
     var s = JSON.parse(localStorage.getItem(KEY));
-    if(s && Array.isArray(s.batches) && s.batches.every(validBatch)){
+    if(validGrowDoc(s)){
       s.batches.forEach(function(b){ if(typeof b.yieldG!=='number') b.yieldG = b.yieldG==null?null:null;
         if(typeof b.notes!=='string') b.notes=''; normFlushes(b); });
       return normAux(s);
@@ -1318,6 +1327,48 @@ $('exportJson').addEventListener('click',function(){
   showNudge('export');
 });
 
+/* ---- import a downloaded backup (only-copy-is-the-browser) ---------------------------
+   `⬇ JSON` has existed for a long time; nothing on this site could ever read the file back
+   in. localStorage is not storage the grower controls — Safari evicts script-writable
+   storage after 7 days with no visit, clearing site data does it, and a second device never
+   had it. The cloud backup link (I61) covers most of that, but only once a device has been
+   linked; a JSON download with no way back in is a museum piece for everyone else. Refuses
+   rather than partly loading, and never touches state until the file has fully checked out. */
+$('importJson').addEventListener('click',function(){ $('importFile').click(); });
+$('importFile').addEventListener('change',function(e){
+  var file = e.target.files && e.target.files[0];
+  e.target.value = '';           // so choosing the same file twice still fires 'change'
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onerror = function(){ alert('Could not read that file — nothing was changed.'); };
+  reader.onload = function(){
+    var s;
+    try{ s = JSON.parse(reader.result); }
+    catch(err){ alert('That file is not valid JSON — nothing was changed.'); return; }
+    if(!validGrowDoc(s)){
+      alert("That doesn't look like a Mycro grow-log backup — nothing was changed.");
+      return;
+    }
+    if(typeof s.v==='number' && s.v>(state.v||1)){
+      alert('That backup was made by a newer version of Mycro. Refresh this page and try again — nothing was changed.');
+      return;
+    }
+    var had = state.batches.length;
+    if(had && !confirm('Import this backup? This replaces the '+countWord(had,'batch','batches')+
+      ' currently saved in this browser with what is in the file.')) return;
+    s.batches.forEach(normFlushes);
+    // Sources/cultures are the Culture Library's document, not validated here — same
+    // hands-off treatment load() already gives them. A file with none keeps what is here.
+    if(!Array.isArray(s.sources)) s.sources = state.sources;
+    if(!Array.isArray(s.cultures)) s.cultures = state.cultures;
+    state = normAux(s);
+    editingYieldId = null; save(); render();
+    if(window.track) try{ track('growlog_import',{batches:s.batches.length}); }catch(_){}
+    alert('Imported '+countWord(s.batches.length,'batch','batches')+' from the file.');
+  };
+  reader.readAsText(file);
+});
+
 /* ---- contacts, deliveries & delivery labels (I74) ------------------------------------
    Requested by a Founding Grower, and the label carries exactly the six things he said it
    has to carry: buyer, address, species, weight, batch number, seller contact number —
@@ -1807,7 +1858,7 @@ function isSampleOnly(){
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(j){
       var s=j&&j.data;
-      if(!(s && Array.isArray(s.batches) && s.batches.every(validBatch))) throw new Error('bad');
+      if(!validGrowDoc(s)) throw new Error('bad');
       if(state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) return;
       s.batches.forEach(normFlushes);
       state=s; setCloudId(id); editingYieldId=null; save(); render();
