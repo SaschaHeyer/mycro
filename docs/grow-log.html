@@ -30,7 +30,7 @@
 {"@type":"Question","name":"How do I work out my cost per pound of mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Add up what a run cost you — substrate, spawn, supplies and bags, and your labour — then divide by the fresh weight that run actually harvested. Cost per pound = total run cost ÷ fresh yield. Count your failed runs too: a contaminated batch cost real money and produced nothing, so leaving it out flatters the number. The free Mycro grow log does this per batch and then groups it by method and by strain, so you can see which recipe genuinely produces the cheapest pound rather than which one has the cheapest substrate."}},
 {"@type":"Question","name":"What should go on a mushroom delivery label?","acceptedAnswer":{"@type":"Answer","text":"A delivery label for fresh mushrooms should carry the buyer's name, the delivery address, the species, the weight in the box, your batch or lot number, and a contact number the buyer can reach you on. The batch number is the part growers most often leave off, and it is the one that matters: if a buyer calls about a delivery, the batch number is what lets you trace it back to the block, the spawn jar and the culture it came from. The free Mycro grow log prints all six on a label from a delivery you log, and adds a QR code the buyer can scan to call you or to text you about that batch."}},
 {"@type":"Question","name":"How do I keep track of who I sold mushrooms to?","acceptedAnswer":{"@type":"Answer","text":"Keep an address book of buyers and suppliers, and record each delivery against the batch it came out of — date, buyer, weight. That gives you two things a sales spreadsheet does not: you can see how much of a harvest has actually gone out and how much is still on the shelf, and if a buyer reports a problem you can trace that exact delivery back to the batch and its culture. The free Mycro grow log does this in the browser with no sign-up, and exports the deliveries to CSV."}},
-{"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 30–60 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
+{"@type":"Question","name":"Why track the cause of a mushroom contamination, not just the rate?","acceptedAnswer":{"@type":"Answer","text":"A contamination rate tells you how often you lose a run; it never tells you what to change. Green mould on grain, a bacterial wet spot in a block and cobweb in the fruiting room have three different fixes, so a single percentage groups together problems that have nothing to do with each other. Record what went wrong and which stage the run was in when it went, and the same losses turn into a shortlist: this mould took this many blocks, at this point in the grow, and cost this much. The free Mycro grow log asks for the cause when you mark a run contaminated, keeps the stage it was in before the mark overwrites it, and ranks your losses by the blocks they took. Losses you could not identify stay in the total and are counted separately, because a guessed cause is worse than a gap."}},{"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 30–60 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
 </script>
 </head>
 <body>
@@ -193,6 +193,32 @@
     <p class="muted strainBridge" style="font-size:.84rem;margin:10px 2px 0">
       Add costs to any run with the <b>💵 Costs</b> button on its card. Two runs of the same strain
       on different recipes, and this table tells you which one actually pays.
+      <a href="/#founding">Become a Founding Grower · $99</a>
+    </p>
+  </div>
+
+  <!-- What is actually costing you blocks (I113): a contamination rate says how often you lose
+       a run; it never says why, and the fix for green mould on grain is not the fix for a
+       bacterial block. Appears once one run has been marked contaminated. -->
+  <div class="results no-print" id="lossPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">What is actually costing you blocks</h3>
+      <span class="muted" style="font-size:.82rem">Your losses grouped by what went wrong, ranked by the blocks they took</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="lossTable">
+        <thead><tr>
+          <th>What went wrong</th><th>Runs lost</th><th>Blocks lost</th>
+          <th>Where it hit</th><th>Money in them</th>
+        </tr></thead>
+        <tbody id="lossBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="lossNote" style="font-size:.84rem;margin:12px 2px 0"></p>
+    <p class="muted strainBridge" style="font-size:.84rem;margin:10px 2px 0">
+      Set or correct the cause any time with the <b>🦠 Cause</b> button on a lost run. Not sure what
+      you are looking at? The <a href="/guides/contamination.html">contamination guide</a> names the
+      usual culprits from colour, texture and smell.
       <a href="/#founding">Become a Founding Grower · $99</a>
     </p>
   </div>
@@ -415,6 +441,17 @@
       to your process actually moved the needle. New to diagnosing contamination? Read the
       <a href="guides/contamination.html">contamination ID &amp; prevention guide</a>.</p>
 
+    <h3 style="margin-top:16px">What is actually costing you blocks</h3>
+    <p class="muted">A rate says how often you lose a run. It never says why, and green mould on grain,
+      a bacterial wet spot and cobweb in the fruiting room are three different problems with three
+      different fixes. When you mark a run contaminated the log asks what went wrong, using the same
+      names as the <a href="guides/contamination.html">contamination guide</a>, and quietly keeps the
+      stage the run was in before the mark overwrites it. Your losses are then grouped by cause and
+      ranked by the <i>blocks</i> they took, not the number of runs, with what those runs had cost you.
+      A loss you could not identify still counts as a loss and attributes nothing — and while there are
+      as many unidentified losses as identified ones, the log says the ranking cannot be trusted yet
+      rather than naming a culprit.</p>
+
     <h3 style="margin-top:16px">Your data stays on your device — and auto-syncs once you back it up</h3>
     <p class="muted">This free log saves in your browser only — no account, no upload. Want a copy off
       this machine? Tap <b>☁ Back up</b> once to get a private cloud link (opt-in — nothing leaves your
@@ -430,6 +467,9 @@
       doesn't.</p>
 
     <h2 style="margin-top:32px">Frequently asked questions</h2>
+
+    <h3 style="margin-top:22px">Why track the cause of a mushroom contamination, not just the rate?</h3>
+    <p>A contamination rate tells you how often you lose a run; it never tells you what to change. Green mould on grain, a bacterial wet spot in a block and cobweb in the fruiting room have three different fixes, so a single percentage groups together problems that have nothing to do with each other. Record what went wrong and which stage the run was in when it went, and the same losses turn into a shortlist: this mould took this many blocks, at this point in the grow, and cost this much. The free Mycro grow log asks for the cause when you mark a run contaminated, keeps the stage it was in before the mark overwrites it, and ranks your losses by the blocks they took. Losses you could not identify stay in the total and are counted separately, because a guessed cause is worse than a gap.</p>
 
     <h3 style="margin-top:22px">How do I keep a mushroom grow log?</h3>
     <p>For each batch record the species, dry substrate weight, number of blocks and the inoculation date, then update the stage as it moves through colonization, fruiting and harvest. At harvest, log the total fresh weight so you can calculate biological efficiency. This free grow log does all of that in the browser and saves on your device.</p>
@@ -492,6 +532,33 @@ var SPECIES = {
 };
 var STAGES = ['inoculated','colonizing','fruiting','harvested'];
 var STAGE_LABEL = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fruiting',harvested:'Harvested',contaminated:'Contaminated'};
+/* Why a run was lost (I113). The ids AND the wording are lifted verbatim from the contaminant
+   identifier on /guides/contamination.html, so a grower who worked out what they were looking
+   at there writes down the same thing here and the two surfaces can never drift into two
+   vocabularies for one mould. Two of these are deliberately NOT diagnoses:
+     'other'   — answered, but names nothing anyone can act on, so it can never win the headline.
+     'unknown' — not answered at all. It still counts as a loss (dropping it would shrink the
+                 denominator and flatter every named cause), it just attributes nothing. */
+var CAUSE = {
+  trich:     'Trichoderma, green mould',
+  cobweb:    'Cobweb mould, Dactylium',
+  black:     'Black or pin mould, Aspergillus or Rhizopus',
+  wetspot:   'Wet spot or sour rot, Bacillus',
+  bactyeast: 'A bacterial or yeast contamination',
+  blotch:    'Bacterial blotch, Pseudomonas',
+  other:     'Something else',
+  unknown:   'Not sure'
+};
+var CAUSE_ORDER = ['trich','cobweb','black','wetspot','bactyeast','blotch','other','unknown'];
+// A legacy loss carries no cause at all. It reads as 'unknown' and is never guessed at.
+function causeOf(b){ return (b && CAUSE[b.cause]) ? b.cause : 'unknown'; }
+// Does this cause name something a grower could actually change? 'other' and 'unknown' do not.
+function causeIsNamed(c){ return c!=='other' && c!=='unknown'; }
+// The stage a run was in when it was lost. Captured at the moment of marking, because
+// stage/stageSince are overwritten by the mark itself and the fact is gone forever after.
+// Never inferred for a record that predates this — it says so instead.
+var LOST_AT_LABEL = {inoculated:'inoculation', colonizing:'colonization', fruiting:'fruiting'};
+function lostAtLabel(b){ return (b && LOST_AT_LABEL[b.lostAt]) ? LOST_AT_LABEL[b.lostAt] : null; }
 
 var unit = 'lb';
 var editingYieldId = null;   // batch id whose harvest-yield form is open
@@ -552,6 +619,7 @@ function sampleState(){
     {id:'s8', name:'King Oyster #3', species:'king', dryG:5*LB, blocks:10,
      inoculatedOn:daysAgoIso(28), stage:'contaminated', stageSince:daysAgoIso(11), yieldG:null,
      method:"Master's Mix (50/50)", costs:{substrate:11,spawn:7,supplies:3,labor:18},
+     cause:'trich', lostAt:'colonizing',
      notes:'Green mold at several blocks → tossed batch'}
   ],
   // A buyer and a supplier, and two deliveries off the harvested batches, so the delivery
@@ -579,6 +647,8 @@ function validBatch(b){
     (b.method==null || typeof b.method==='string') &&       // optional method/recipe (I72)
     (b.code==null || typeof b.code==='string') &&           // optional lot / batch number (I74)
     (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
+    (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
+    (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -700,6 +770,7 @@ var COST_KEYS = [['substrate','Substrate'],['spawn','Spawn'],['supplies','Suppli
 var CURRENCIES = {'$':'$','€':'€','£':'£','CHF':'CHF '};
 var costGroup = 'method';     // 'method' | 'species' — how the money panel is grouped
 var editingCostId = null;     // batch id whose cost form is open
+var editingContamId = null;   // batch id whose 'what went wrong' form is open (I113)
 
 function curSym(){ var c = state && state.cur; return CURRENCIES[c] ? CURRENCIES[c] : '$'; }
 function money(n){
@@ -834,6 +905,77 @@ function renderSummary(){
   if(rate!=null){ if(rate<=15) card.classList.add('good'); else if(rate>20) card.classList.add('bad'); }
 }
 
+/* ---- what is actually costing you blocks (I113) ----
+   A contamination rate answers "how often", never "why", and the fix for green mould on grain
+   is not the fix for a bacterial block. Four rules here are load-bearing, and each one, if
+   dropped, points the answer in the flattering direction:
+     (a) BLOCKS, not runs, is the ranked number. Ranking by run count makes the cause that hits
+         your small test runs look like your biggest problem and hides the one that took 24 bags.
+     (b) A loss with no cause is still a loss. It stays in the total (dropping it would shrink
+         the denominator and inflate every named cause's share) and attributes nothing.
+     (c) No headline verdict while the unattributed losses are as many as the attributed ones.
+         "Trichoderma is your biggest problem, 2 of 3 named" is a guess wearing an answer's
+         clothes when 3 more losses were never diagnosed.
+     (d) 'Something else' can top the table and can never be the verdict — it names nothing to
+         change, so telling a grower to go and fix it is worse than saying nothing.
+   Money is shown per cause because it is what makes a loss argue for itself, but it is only
+   what was actually recorded: a run with no costs on it contributes nothing rather than zero. */
+function renderLoss(){
+  var panel=$('lossPanel'); if(!panel) return;
+  var lost=state.batches.filter(function(b){ return b.stage==='contaminated'; });
+  if(!lost.length){ panel.style.display='none'; return; }
+
+  var by={};
+  lost.forEach(function(b){
+    var k=causeOf(b);
+    var g=by[k]||(by[k]={cause:k,runs:0,blocks:0,money:0,priced:0,stages:{}});
+    g.runs++;
+    g.blocks += (typeof b.blocks==='number' && isFinite(b.blocks) && b.blocks>0) ? b.blocks : 0;
+    var ct=costTotal(b);
+    if(ct!=null){ g.money+=ct; g.priced++; }
+    var w=lostAtLabel(b); if(w) g.stages[w]=(g.stages[w]||0)+1;
+  });
+  // (a) blocks first; runs, then the fixed vocabulary order, break ties so the table is stable.
+  var rows=Object.keys(by).map(function(k){return by[k];})
+    .sort(function(x,y){ return (y.blocks-x.blocks) || (y.runs-x.runs) ||
+                                (CAUSE_ORDER.indexOf(x.cause)-CAUSE_ORDER.indexOf(y.cause)); });
+
+  var named   = lost.filter(function(b){ return causeIsNamed(causeOf(b)); }).length;
+  var unknown = lost.filter(function(b){ return causeOf(b)==='unknown'; }).length;
+
+  $('lossBody').innerHTML = rows.map(function(g){
+    var stg=Object.keys(g.stages).sort(function(a,b){ return g.stages[b]-g.stages[a]; });
+    var where = stg.length
+      ? stg.map(function(w){ return esc(w)+(stg.length>1?' \u00d7'+g.stages[w]:''); }).join(', ')
+      : '<span class="muted">not recorded</span>';
+    var spendCell = g.priced ? money(g.money)+(g.priced<g.runs?' <span class="muted">('+g.priced+' of '+g.runs+' costed)</span>':'') : '—';
+    return '<tr'+(causeIsNamed(g.cause)?'':' class="muted"')+'>'+
+      '<td>'+esc(CAUSE[g.cause])+'</td>'+
+      '<td>'+g.runs+'</td><td>'+g.blocks+'</td><td>'+where+'</td><td>'+spendCell+'</td></tr>';
+  }).join('');
+
+  // (c) + (d): the headline is only offered when it can be trusted and when it names something.
+  var top = rows.filter(function(g){ return causeIsNamed(g.cause) && g.blocks>0; })[0];
+  var note='';
+  if(unknown >= named){
+    note = unknown+' of your '+lost.length+' lost run'+(lost.length===1?'':'s')+
+           ' ha'+(unknown===1?'s':'ve')+' no cause recorded, so this ranking cannot tell you what to fix yet. '+
+           'Set one with 🦠 Cause on the run, or leave it — a guess in here is worse than a gap.';
+  } else if(top){
+    var named_causes = rows.filter(function(g){ return causeIsNamed(g.cause); }).length;
+    var tail = top.blocks+' block'+(top.blocks===1?'':'s')+' across '+top.runs+' run'+(top.runs===1?'':'s')+'.'+
+               (unknown ? ' '+unknown+' further loss'+(unknown===1?' is':'es are')+' unattributed and not counted toward that.' : '');
+    note = named_causes>1
+      ? '<b>'+esc(CAUSE[top.cause])+'</b> has taken the most blocks off you: '+tail
+      : 'The only cause you have named so far is <b>'+esc(CAUSE[top.cause])+'</b>: '+tail+
+        ' One cause is not a ranking yet — it becomes one when a second run goes a different way.';
+  } else {
+    note = 'Nothing here names a cause you can act on yet.';
+  }
+  $('lossNote').innerHTML = note;
+  panel.style.display='block';
+}
+
 /* ---- per-strain performance ---- */
 function renderStrains(){
   var panel=$('strainPanel'); if(!panel) return;
@@ -948,9 +1090,47 @@ function saveLink(e,id){
   return false;
 }
 
+/* Marking a run lost used to be a one-liner that set stage='contaminated' and threw away two
+   facts in the same instant: WHY it went, and WHICH STAGE it was in when it went (stage and
+   stageSince are both overwritten by the mark). A contamination rate without those is a number
+   you can look at and not act on — and our own buyer's guide tells readers a log should track
+   "any contamination with its cause". So the mark now asks, once, on the card.
+   It also opens on an ALREADY-lost run, because the ordinary order of work is bin it now and
+   work out what it was two days later (the I77 rule). */
+function contamFormHtml(b){
+  var cur = b.stage==='contaminated' ? causeOf(b) : 'unknown';
+  var opts = CAUSE_ORDER.map(function(k){
+    return '<option value="'+k+'"'+(cur===k?' selected':'')+'>'+esc(CAUSE[k])+'</option>';
+  }).join('');
+  var btn = b.stage==='contaminated' ? 'Save cause' : 'Mark contaminated';
+  return '<form class="yieldForm" onsubmit="return saveContam(event,\''+b.id+'\')">'+
+    '<label class="yl" style="min-width:250px">What went wrong?'+
+      '<select id="contamCause">'+opts+'</select></label>'+
+    '<button class="mini solid" type="submit">'+btn+'</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelContam">Cancel</button></form>';
+}
+function saveContam(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b) return false;
+  var v=($('contamCause')||{}).value;
+  b.cause = CAUSE[v] ? v : 'unknown';
+  if(b.stage!=='contaminated'){
+    // Capture the stage BEFORE the mark overwrites it. This is the only moment it is knowable.
+    b.lostAt = b.stage;
+    b.stage  = 'contaminated';
+    b.stageSince = today();
+    editingYieldId = null;
+  }
+  editingContamId=null; save(); render();
+  // Counts only, never content — the same shape as every other event on this page.
+  if(window.track) try{ track('growlog_contaminated',{known:causeIsNamed(b.cause)?1:0}); }catch(_){}
+  return false;
+}
+
 function actionsHtml(b){
   if(editingCostId===b.id) return costFormHtml(b);
   if(editingLinkId===b.id) return linkFormHtml(b);
+  if(editingContamId===b.id) return contamFormHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
     var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
@@ -974,6 +1154,9 @@ function actionsHtml(b){
       extra = '<button class="mini solid" data-act="logflush" data-id="'+b.id+'">+ Log another flush</button>'+
               '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>'+
               '<button class="mini" data-act="deliver" data-id="'+b.id+'">📦 Deliver</button>';
+    }
+    if(b.stage==='contaminated'){
+      extra = '<button class="mini" data-act="contam" data-id="'+b.id+'">🦠 Cause</button>';
     }
     return extra+costBtn+'<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
   }
@@ -1025,6 +1208,15 @@ function batchHtml(b){
       (rem!=null && rem>0 ? ' · '+fmtWt(rem)+' still to go out' : '')+'</div>';
   }
   var notes = b.notes ? '<div class="bnotes">'+esc(b.notes)+'</div>' : '';
+  // What took this run, and where in the grow it took it. A record from before causes existed
+  // says so plainly rather than being guessed at.
+  var lossLine='';
+  if(b.stage==='contaminated'){
+    var lc=causeOf(b), where=lostAtLabel(b);
+    lossLine = '<div class="flushline">✕ '+
+      (causeIsNamed(lc) ? 'Lost to '+esc(CAUSE[lc]) : (lc==='other' ? 'Lost to something else' : 'Cause not recorded'))+
+      (where ? ', at the '+esc(where)+' stage' : '')+'</div>';
+  }
   var cul = b.parentId ? cultureOf(b.parentId) : null;
   var flag = cul ? flaggedAncestor(cul.id) : null;
   var culLine = cul
@@ -1038,7 +1230,7 @@ function batchHtml(b){
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
       '<span class="bsp">'+esc(sp.label)+'</span></div>'+
     '<div class="bmeta">'+meta+'</div>'+
-    stepperHtml(b)+ culLine + beLine + costLine + delLine + odLine + notes +
+    stepperHtml(b)+ culLine + beLine + lossLine + costLine + delLine + odLine + notes +
     '<div class="bactions">'+actionsHtml(b)+'</div>'+
   '</div>';
 }
@@ -1053,6 +1245,7 @@ function paint(){
   renderSummary();
   renderStrains();
   renderCosts();
+  renderLoss();
   renderCultureSelect();
   renderDelivery();
   var list=$('batchList');
@@ -1147,7 +1340,8 @@ document.addEventListener('click',function(e){
   else if(act==='cancelCost'){ editingCostId=null; render(); }
   else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; render(); }
   else if(act==='cancelLink'){ editingLinkId=null; render(); }
-  else if(act==='contam' && b){ b.stage='contaminated'; b.stageSince=today(); editingYieldId=null; save(); render(); }
+  else if(act==='contam' && b){ editingContamId=(editingContamId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; render(); }
+  else if(act==='cancelContam'){ editingContamId=null; render(); }
   else if(act==='delete' && b){
     /* Counts only, never content. I79 could not answer "what happened to his batches" from
        data because a deletion left no trace whatsoever; the next time it is one query away. */
@@ -1280,7 +1474,7 @@ function startFreshFlow(){
     + '\n\nA full copy of everything has just been saved to your downloads.';
   if(!confirm(msg)) return false;
   state = freshState();
-  editingYieldId=null; editingCostId=null; editingLinkId=null;
+  editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null;
   save(); render();
   if(window.track) try{ track('growlog_start_fresh',{batches:had.batches,cultures:had.cultures,sources:had.sources,deliveries:had.deliveries}); }catch(_){}
   return true;
@@ -1295,7 +1489,7 @@ function download(name,text,type){
 }
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
-  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'notes']];
+  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
@@ -1312,6 +1506,8 @@ $('exportCsv').addEventListener('click',function(){
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
       dlv>0 ? toU(dlv).toFixed(2) : '',
+      b.stage==='contaminated' ? CAUSE[causeOf(b)] : '',
+      b.stage==='contaminated' ? (lostAtLabel(b)||'') : '',
       (b.notes||'').replace(/"/g,'""')]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
@@ -1824,7 +2020,7 @@ function isSampleOnly(){
     setState:   function(doc){
       if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return false;
       doc.batches.forEach(normFlushes);
-      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null;
+      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
       return true;

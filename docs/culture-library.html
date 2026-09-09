@@ -541,6 +541,8 @@ function validImportBatch(b){
     (b.method==null || typeof b.method==='string') &&
     (b.code==null || typeof b.code==='string') &&
     (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
+    (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
+    (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
     (b.priceG==null || typeof b.priceG==='number');
 }
 function validGrowDoc(s){
