@@ -22,7 +22,7 @@
 "description":"A practical guide to spawn ratio for mushroom growers: what it means, common ratios, the trade-offs for colonization speed, contamination resistance, and yield, and a worked example.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-08-06",
+"datePublished":"2026-06-13","dateModified":"2026-09-10",
 "mainEntityOfPage":"https://usemycro.com/guides/spawn-ratio.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -62,7 +62,7 @@
     <b style="color:var(--ink)">Spawn ratio is the weight of grain spawn as a percentage of the substrate: a 20% ratio is 1 lb of grain into 5 lb of substrate.</b> Most gourmet growers run 10–30% and start at 20%. Higher ratios colonise days faster and give mould less time to establish; lower ratios stretch scarce grain further, trading away that margin.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 6 August 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 10 September 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -103,13 +103,6 @@
         <tr><td><b>50%+</b></td><td>Spawn-to-spawn expansion (grain → grain), or rescuing a risky substrate</td><td>Expensive; rarely needed for fruiting blocks</td></tr>
       </tbody>
     </table>
-    <div class="note" style="margin:18px 0">
-      <b style="color:var(--ink)">Do the math for your batch.</b> The free
-      <a href="../calculator.html">Grow Calculator</a> takes your substrate weight and spawn ratio and
-      tells you exactly how much spawn to prep — and rolls it into your expected yield, cost, and
-      profit per block. No sign-up.
-    </div>
-
     <h2 style="margin-top:32px">A worked example</h2>
     <p>You're making a 5&nbsp;lb (hydrated) Masters Mix block and want a 20% spawn rate:</p>
     <table class="spec" style="margin:14px 0">
@@ -121,6 +114,37 @@
     </table>
     <p>So you'd mix 1&nbsp;lb of colonized grain into 5&nbsp;lb of substrate to fill a 6&nbsp;lb bag.
       Bump to 30% and you'd use 1.5&nbsp;lb of spawn — colonizing faster, at a higher grain cost.</p>
+
+    <div class="panel" id="srCalc" style="margin:18px 0">
+      <h3><span class="step">↳</span> Work out your spawn for this batch</h3>
+      <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Enter your substrate weight, block
+        count, and ratio — get the exact spawn weight and total block weight, scaled to your batch.</p>
+      <div class="inline-grid">
+        <div class="field"><label for="sr-blocks">Number of blocks</label>
+          <input id="sr-blocks" type="number" step="1" min="1" value="5">
+          <span class="hint">Fruiting blocks in this batch.</span></div>
+        <div class="field"><label>Substrate per block <span id="sr-u1" class="hint"></span></label>
+          <input id="sr-sub" type="number" step="0.1" min="0" value="5">
+          <span class="hint">Hydrated weight, before spawn. 5 lb matches the worked example above.</span></div>
+      </div>
+      <div class="field" style="margin-top:6px">
+        <label for="sr-ratio">Spawn ratio (%)</label>
+        <input id="sr-ratio" type="number" step="1" min="1" max="100" value="20">
+        <span class="hint">20% is the default sweet spot from the table above.</span>
+      </div>
+      <div class="toggle" id="srUnitToggle" role="group" aria-label="Units" style="margin-top:10px">
+        <button data-unit="lb" class="active">lb</button>
+        <button data-unit="kg">kg</button>
+      </div>
+      <div class="kpis" style="margin-top:16px">
+        <div class="kpi"><div class="v" id="sr-k-spawn">–</div><div class="l">Spawn / block</div></div>
+        <div class="kpi"><div class="v" id="sr-k-total">–</div><div class="l">Total weight / block</div></div>
+        <div class="kpi"><div class="v" id="sr-k-spawn-batch">–</div><div class="l">Spawn (whole batch)</div></div>
+        <div class="kpi"><div class="v" id="sr-k-total-batch">–</div><div class="l">Total (whole batch)</div></div>
+      </div>
+      <p class="muted" style="margin:14px 0 0;font-size:.9rem">Want yield, cost and profit worked out
+        from these same numbers? The full <a href="../calculator.html">Grow Calculator</a> takes it further.</p>
+    </div>
 
     <h2 style="margin-top:32px">How to choose your ratio</h2>
     <ol>
@@ -190,6 +214,41 @@
 </div></footer>
 
   <script src="../waitlist.js?v=2"></script>
+  <script>
+  (function(){
+    var unit='lb';
+    var $=function(id){return document.getElementById(id);};
+    function val(id){var n=parseFloat($(id).value);return isFinite(n)?n:0;}
+    function wt(v){var d=v<10?2:(v<100?1:0);return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+' '+unit;}
+    function calc(){
+      var blocks=Math.max(0,Math.round(val('sr-blocks')));
+      var subPB=Math.max(0,val('sr-sub'));
+      var ratio=Math.max(0,Math.min(100,val('sr-ratio')))/100;
+      var spawnPB=subPB*ratio;
+      var totalPB=subPB+spawnPB;
+      $('sr-k-spawn').textContent=wt(spawnPB);
+      $('sr-k-total').textContent=wt(totalPB);
+      $('sr-k-spawn-batch').textContent=wt(spawnPB*blocks);
+      $('sr-k-total-batch').textContent=wt(totalPB*blocks);
+    }
+    function setUnitLabel(){ $('sr-u1').textContent='('+unit+')'; }
+
+    $('sr-blocks').addEventListener('input',calc);
+    $('sr-sub').addEventListener('input',calc);
+    $('sr-ratio').addEventListener('input',calc);
+    document.querySelectorAll('#srUnitToggle button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var nu=this.dataset.unit; if(nu===unit) return;
+        var f = nu==='kg'? (1/2.2046226) : 2.2046226;
+        $('sr-sub').value=(val('sr-sub')*f).toFixed(2);
+        unit=nu;
+        document.querySelectorAll('#srUnitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+        setUnitLabel(); calc();
+      });
+    });
+    setUnitLabel(); calc();
+  })();
+  </script>
   <script src="/track.js" defer></script>
 </body>
 </html>
