@@ -185,7 +185,9 @@
         <div class="field"><label>Notes <span class="hint">(optional)</span></label>
           <input id="f-notes" type="text" maxlength="120" placeholder="strain, why you picked it…" autocomplete="off"></div>
       </div>
-      <div style="margin-top:12px"><button class="btn" type="submit" data-track="culture_add_source">Add source →</button></div>
+      <!-- _click = a PRESS (fires even when addSource rejects a duplicate tracking ID);
+           culture_add_source = a SOURCE THAT EXISTS. Same name until I115 = double-counted. -->
+      <div style="margin-top:12px"><button class="btn" type="submit" data-track="culture_add_source_click">Add source →</button></div>
       <p id="src-msg" class="muted" style="margin:10px 0 0;display:none;font-size:.88rem"></p>
     </form>
   </div>

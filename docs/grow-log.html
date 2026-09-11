@@ -338,7 +338,11 @@
         <div class="field"><label>Notes <span class="hint">(optional)</span></label>
           <input id="f-notes" type="text" maxlength="120" placeholder="strain, substrate, room…" autocomplete="off"></div>
       </div>
-      <div style="margin-top:12px"><button class="btn" type="submit" data-track="growlog_add">Add batch →</button></div>
+      <!-- The _click suffix is load-bearing. This attribute counts a PRESS (fires on any click,
+           including one addBatch then rejects); addBatch() counts an ADD. They were the same
+           name until I115, so every add made by clicking was counted twice and every failed
+           attempt counted as a success. Never name a data-track the same as a track() call. -->
+      <div style="margin-top:12px"><button class="btn" type="submit" data-track="growlog_add_click">Add batch →</button></div>
     </form>
   </div>
 

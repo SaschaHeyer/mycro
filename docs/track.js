@@ -104,7 +104,16 @@
   if (/interactive|complete/.test(document.readyState)) pv();
   else window.addEventListener("DOMContentLoaded", pv);
 
-  // declarative click tracking: <a data-track="event_name">…</a>
+  // Declarative click tracking: <a data-track="event_name">…</a>
+  // ⚠️ This fires on the CLICK, in the capture phase, before any handler runs and whether or
+  // not that handler does anything — so it counts an INTENTION, not an outcome. An explicit
+  // track() inside a submit handler counts the OUTCOME. Both are useful and they are not the
+  // same number. From 2026-07-27 to 2026-09-11 the Add-batch and Add-source buttons carried a
+  // data-track with the SAME name as their handler's call, so every add made by clicking was
+  // beaconed twice (48% of every growlog_add we ever counted was a duplicate) and every click
+  // that added nothing — an empty form, a duplicate tracking ID — was counted as a success.
+  // Rule, pinned by tests/track-collision.spec.js: a data-track name must never equal a name
+  // passed to track(). Suffix the attribute with _click and keep both counters.
   document.addEventListener("click", function (e) {
     var el = e.target.closest && e.target.closest("[data-track]");
     if (el) send(el.getAttribute("data-track"), { label: (el.textContent || "").trim().slice(0, 40) });
