@@ -409,6 +409,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
+<script src="/samples.js?v=1"></script>
 <script src="/account.js?v=13"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
@@ -753,32 +754,23 @@ function workingCultures(){
   }).sort(function(a,b){ return b.days - a.days; });
 }
 
-/* ---- the seeded examples (I78) ----
+/* ---- the seeded examples (I78, shared since I116) ----
    The library seeds two example sources so the traceback has something to show on a first
    visit. Once a grower logs their own they keep counting: the paying customer's strain
-   table was ranking OUR fictional North Spore source against his real backyard collection. */
-var SAMPLE_IDS = {src1:1,src2:1,c1:1,c2:1,c3:1,c4:1,c5:1,c6:1,c7:1,
-                  s1:1,s2:1,s3:1,s4:1,s5:1,s6:1,s7:1,s8:1};
-function isSample(id){ return SAMPLE_IDS[id]===1; }
-function sampleSources(){ return state.sources.filter(function(s){ return isSample(s.id); }); }
-/* The examples outlive their own sources (I84). Founding Grower #1 deleted both seeded
-   sources and kept every seeded culture under them, so his library counted 13 cultures for
-   7 real ones — including OUR fictional contaminated oyster LC, which is the whole of his
-   loss rate. The I78 note never appeared, because it asked whether a sample SOURCE was
-   left. The same mistake as the species bug: the check looked at the parent, and the parent
-   was the thing that had been deleted. Ask about every seeded record, not just the roots.
-   ⚠️ Named `leftoverSamples`, NOT `sampleCultures` — that name is already the seed FACTORY
-   above, and a second declaration of it silently replaced the seeder for the whole page. */
-function leftoverSamples(){ return state.cultures.filter(function(c){ return isSample(c.id); }); }
-function hasOwnData(){
-  return state.sources.some(function(s){ return !isSample(s.id); }) ||
-         state.cultures.some(function(c){ return !isSample(c.id); });
-}
-function holdsOwnWork(id){
-  var d = descendants(id);
-  return d.cultures.some(function(x){ return !isSample(x.id); }) ||
-         d.batches.some(function(b){ return !isSample(b.id); });
-}
+   table was ranking OUR fictional North Spore source against his real backyard collection.
+
+   The ids, the "has this grower own work" test and the sweep now live in `samples.js`,
+   because the Grow Log seeds into the SAME document and the two answers had drifted
+   apart (I116). Both bugs ran the same direction — towards leaving our fiction in place:
+     - `hasOwnData()` here read sources and cultures only, so a grower whose own work was a
+       BATCH (the flagship path, where every commercial lead lands) was shown no banner at
+       all, on either page;
+     - `clearSamples()` listed s1..s8 in its own id map and swept everything except them,
+       so "Remove the examples" left 8 fictional batches, 2 contacts and 2 deliveries.
+   ⚠️ Nothing here may be called `sampleCultures` — that name is already the seed
+   FACTORY below, and a second declaration of it silently replaced the seeder for the
+   whole page (I84). */
+function hasOwnData(){ return MycroSamples.hasOwnData(state); }
 /* ---- unattached cultures (I79) ----
    The tree is drawn from state.sources downwards, so a culture whose parent no longer
    exists used to render nowhere at all — still in the data, invisible on the page. Deleting
@@ -933,35 +925,19 @@ function renderArchive(){
   list.style.display='block';
 }
 function renderSampleNote(){
-  var box = $('sampleNote'), smp = sampleSources(), smc = leftoverSamples();
-  if((!smp.length && !smc.length) || !hasOwnData()){ box.style.display='none'; return; }
-  var parts = [];
-  if(smp.length) parts.push('<b>'+smp.length+' example source'+(smp.length>1?'s':'')+'</b>'+
-    ' ('+smp.map(function(s){ return '<b>'+esc(s.code)+'</b>'; }).join(', ')+')');
-  if(smc.length) parts.push('<b>'+smc.length+' example culture'+(smc.length>1?'s':'')+'</b>');
-  box.innerHTML = '<span>This library still holds '+parts.join(' and ')+
-    ' we seeded on your first visit — they are counted in the panels above alongside your own.</span>'+
+  var box = $('sampleNote'), S = window.MycroSamples;
+  if(!S.offerClear(state)){ box.innerHTML=''; box.style.display='none'; return; }
+  box.innerHTML = '<span>This log still holds ' + S.describe(state) +
+    ' we seeded on your first visit \u2014 they are counted in your totals alongside your own work.</span>'+
     '<button class="mini" id="clearSamples">Remove the examples</button>';
   box.style.display='flex';
 }
 function clearSamples(){
-  // Keep any example an own culture or batch still hangs off — deleting it would break a real chain.
-  var blocked = {}, kept = 0;
-  state.cultures.forEach(function(c){ if(isSample(c.id) && holdsOwnWork(c.id)){ blocked[c.id]=1; kept++; } });
-  state.cultures = state.cultures.filter(function(c){ return !isSample(c.id) || blocked[c.id]; });
-  state.sources = state.sources.filter(function(s){
-    if(!isSample(s.id)) return true;
-    var d = descendants(s.id);              // recomputed after the culture sweep
-    if(d.cultures.length || d.batches.length){ kept++; return true; }
-    return false;
-  });
-  // Don't leave a batch pointing at a culture that no longer exists: a dead link reads as
-  // "not linked" on the card while still being there in the data.
-  state.batches.forEach(function(b){ if(b.parentId && !findCulture(b.parentId)) b.parentId = null; });
+  var r = window.MycroSamples.sweep(state);
   save(); paint();
-  if(window.track) try{ track('culture_samples_clear',{}); }catch(_){}
-  if(kept) alert('Removed the examples, except '+kept+' your own cultures or batches still hang off — '+
-    'deleting those would have broken your chain.');
+  if(window.track) try{ track('culture_samples_clear', r.removed); }catch(_){}
+  if(r.kept) alert('Removed the examples, except '+r.kept+' your own work still hangs off \u2014 '+
+    'deleting those would have broken something you logged.');
 }
 function renderRisk(){
   var r = atRisk(), box=$('riskPanel');
@@ -1428,7 +1404,7 @@ $('workPanel').addEventListener('click', function(e){
 $('sampleNote').addEventListener('click', function(e){
   if(!e.target || e.target.id!=='clearSamples') return;
   e.preventDefault();
-  if(confirm('Remove the example sources and cultures we seeded? Your own stay exactly as they are.')) clearSamples();
+  if(confirm('Remove the example sources, cultures, batches, contacts and deliveries we seeded? Everything you logged yourself stays exactly as it is.')) clearSamples();
 });
 $('tree').addEventListener('click', function(e){
   var el = e.target.closest ? e.target.closest('[data-act]') : null;

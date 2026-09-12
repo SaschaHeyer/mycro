@@ -131,6 +131,9 @@
     </div>
   </div>
 
+  <!-- The examples we seeded keep counting once a grower has their own (I116). -->
+  <div id="sampleNote" class="samplebar" style="display:none"></div>
+
   <!-- Summary -->
   <div class="results" id="summary" style="margin-bottom:18px">
     <div class="kpis">
@@ -513,6 +516,7 @@
 </div></footer>
 
 <script src="/qr.js"></script>
+<script src="/samples.js?v=1"></script>
 <script src="/account.js?v=13"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
@@ -1250,6 +1254,7 @@ function paint(){
   renderStrains();
   renderCosts();
   renderLoss();
+  renderSampleNote();
   renderCultureSelect();
   renderDelivery();
   var list=$('batchList');
@@ -1484,6 +1489,43 @@ function startFreshFlow(){
   return true;
 }
 $('startFresh').addEventListener('click', startFreshFlow);
+
+/* ---- the examples we seeded (I116) ----
+   This log opens with 8 fictional batches, 2 contacts and 2 deliveries so a first visit
+   has something to read. They keep counting: after a grower adds their FIRST real batch
+   the page tells them, in the first person, "81% avg biological efficiency", "17%
+   contamination rate", "$1.01/lb cost per lb", "Your strains, ranked by yield: Shiitake",
+   and the loss panel asserts "the only cause you have named so far is Trichoderma, green
+   mould" about a run they never logged. Every one of those numbers is ours.
+
+   Until now the only way out was the Start fresh button, which also takes the grower's own
+   work, or deleting card by card. A real grower did exactly that on 2026-09-10: ten
+   deletes in 78 seconds, losing the two batches they had just created, then started over.
+   The Culture Library has had this banner since I78; the flagship never got one, which is
+   the I92 both-doors rule. The sweep lives in samples.js so both tools give the same
+   answer about one shared document. */
+function renderSampleNote(){
+  var box = $('sampleNote');
+  if(!box || !window.MycroSamples) return;
+  var S = window.MycroSamples;
+  if(!S.offerClear(state)){ box.innerHTML=''; box.style.display='none'; return; }
+  box.innerHTML = '<span>This log still holds ' + S.describe(state) +
+    ' we seeded on your first visit \u2014 they are counted in your totals alongside your own work.</span>' +
+    '<button class="btn secondary" style="padding:7px 12px;font-size:.86rem" id="clearSamples">Remove the examples</button>';
+  box.style.display='flex';
+}
+function clearSamples(){
+  var r = window.MycroSamples.sweep(state);
+  save(); render();
+  if(window.track) try{ track('growlog_samples_clear', r.removed); }catch(_){}
+  if(r.kept) alert('Removed the examples, except ' + r.kept +
+    ' your own work still hangs off \u2014 deleting those would have broken something you logged.');
+}
+$('sampleNote').addEventListener('click', function(e){
+  if(!e.target || e.target.id!=='clearSamples') return;
+  // Stated as a fact, not a promise: the examples are ours and nothing of theirs goes.
+  if(confirm('Remove the example batches, contacts and deliveries we seeded? Everything you logged yourself stays exactly as it is.')) clearSamples();
+});
 
 /* ---- export ---- */
 function download(name,text,type){
@@ -2197,6 +2239,10 @@ render();
 .yieldForm .yl{font-size:.84rem;font-weight:700;display:flex;flex-direction:column;gap:4px}
 .yieldForm input{font:inherit;font-size:.95rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);width:130px}
 /* per-strain performance panel */
+.samplebar{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 16px;margin:0 0 16px;font-size:.88rem;color:var(--muted);
+  gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.samplebar b{color:var(--ink)}
 #strainPanel .strainHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 table.strain{width:100%;border-collapse:collapse;font-size:.9rem}
 table.strain th{text-align:left;font-size:.74rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:0 12px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap}
