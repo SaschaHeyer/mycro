@@ -1114,7 +1114,7 @@ function contamFormHtml(b){
   var fl = cul ? flaggedAncestor(cul.id) : null;
   var clue = (fl && causeIsNamed(causeOf(fl)))
     ? '<div class="cluehint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">'+
-      'A clue, not the answer: <code>'+esc(fl.code)+'</code>, a culture this run came from, was flagged for '+
+      'A clue, not the answer: <code>'+esc(fl.code)+'</code>, a culture this run came from, was flagged contaminated: '+
       esc(CAUSE[causeOf(fl)])+'.</div>'
     : '';
   return '<form class="yieldForm" onsubmit="return saveContam(event,\''+b.id+'\')">'+clue+
@@ -1235,7 +1235,7 @@ function batchHtml(b){
   var flag = cul ? flaggedAncestor(cul.id) : null;
   // What the flagged culture was flagged FOR, when the grower said (I117). It describes the
   // culture, never this run: a block off a bacterial LC can still be lost to trich.
-  var flagWhat = (flag && causeIsNamed(causeOf(flag))) ? ' for '+esc(CAUSE[causeOf(flag)]) : '';
+  var flagWhat = (flag && causeIsNamed(causeOf(flag))) ? ' ('+esc(CAUSE[causeOf(flag)])+')' : '';
   var culLine = cul
     ? '<div class="culline">🧬 Spawned from <a href="culture-library.html"><code>'+esc(cul.code)+'</code></a>'+
       (flag ? (flag.id===cul.id

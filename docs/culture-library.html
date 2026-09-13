@@ -1128,8 +1128,8 @@ function cultureNodeHtml(c, depth){
   if(c.status==='contaminated'){
     var cc = MycroCauses.of(c);
     h += '<div class="perfline lossline">✕ '+
-      (MycroCauses.isNamed(cc) ? 'Contaminated by <b>'+esc(MycroCauses.CAUSE[cc])+'</b>'
-        : (cc==='other' ? 'Contaminated by something else' : 'Cause not recorded'))+'</div>';
+      (MycroCauses.isNamed(cc) ? 'Contaminated: <b>'+esc(MycroCauses.CAUSE[cc])+'</b>'
+        : (cc==='other' ? 'Contaminated: something else' : 'Cause not recorded'))+'</div>';
   }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   h += '<div class="nactions">';
