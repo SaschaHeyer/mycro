@@ -410,6 +410,7 @@
 </div></footer>
 
 <script src="/samples.js?v=1"></script>
+<script src="/causes.js?v=1"></script>
 <script src="/account.js?v=13"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
@@ -459,6 +460,7 @@ var addingUnder = null;   // {parentId, type} while an inline "add culture" form
 var recordingOn = null;   // culture id while its colonisation-performance form is open
 var attachingId = null;   // culture id while its "attach to a source" picker is open (I79)
 var speciesOn  = null;    // orphan-root id while its "set species" picker is open (I84)
+var contamOn   = null;    // culture id while its "what contaminated it" form is open (I117)
 
 /* ---- date helpers ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -499,7 +501,7 @@ function sampleCultures(){
        createdAt:daysAgoIso(115), colonisedAt:daysAgoIso(109), vigor:'medium',
        status:'healthy', notes:'Tissue clone'},
       {id:'c5', code:'PEA-01-P1-L1', type:'lc', parentKind:'culture', parentId:'c4',
-       createdAt:daysAgoIso(60), status:'contaminated', notes:'Cloudy at day 5 — bacterial'},
+       createdAt:daysAgoIso(60), status:'contaminated', cause:'bactyeast', notes:'Cloudy at day 5'},
       {id:'c6', code:'PEA-01-P1-L1-G1', type:'grain', parentKind:'culture', parentId:'c5',
        createdAt:daysAgoIso(50), jars:6, status:'used', notes:'Rye — inoculated before the LC turned'}
     ]
@@ -522,7 +524,11 @@ function validCulture(c){
     (c.colonisedAt==null || typeof c.colonisedAt==='string') && // fully-colonised date (I73)
     (c.shakenAt==null || typeof c.shakenAt==='string') &&    // grain shake milestone (I80)
     (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
-    (c.vigor==null || !!VIGOR[c.vigor]);                     // growth thickness (I73)
+    (c.vigor==null || !!VIGOR[c.vigor]) &&                   // growth thickness (I73)
+    // What contaminated it (I117). Any string passes: an unrecognised cause reads as 'not sure'
+    // rather than failing validation, because a failed cultures array is dropped on load and
+    // an unknown word must never cost a grower their whole library.
+    (c.cause==null || typeof c.cause==='string');
 }
 /* The strict, all-or-nothing check for "is this a real Mycro backup file", used only by the
    file import below. `load()` deliberately falls back per-field (a corrupt sources array
@@ -954,8 +960,13 @@ function renderRisk(){
   r.roots.forEach(function(c){
     var up = ancestry(c);
     var sib = childrenOf(c.parentId).filter(function(x){ return x.id!==c.id; });
+    var rc = MycroCauses.of(c);
     h += '<div class="riskrow"><b>'+esc(c.code)+'</b> <span class="muted">('+CTYPE[c.type].label+
-      (c.createdAt?', made '+daysSince(c.createdAt)+'d ago':'')+')</span>';
+      (c.createdAt?', made '+daysSince(c.createdAt)+'d ago':'')+')</span>'+
+      // Name the contaminant in the traceback when the grower did (I117), so the person checking
+      // the jars below knows what they are looking for rather than just that something is wrong.
+      (MycroCauses.isNamed(rc) ? ' — <b>'+esc(MycroCauses.CAUSE[rc])+'</b>'
+        : ' <span class="muted">— cause not recorded, <a href="#" data-act="goname" data-id="'+esc(c.id)+'">name it</a></span>');
     var d = descendants(c.id);
     if(d.cultures.length || d.batches.length){
       var dj = unitPhrase(d.cultures), db = countBlocks(d.batches), tot = [];
@@ -975,6 +986,17 @@ function renderRisk(){
       (sib.length ? sib.map(function(x){ return '<code>'+esc(x.code)+'</code> <span class="muted">'+CSTATUS[x.status].label.toLowerCase()+'</span>'; }).join(', ') +
         ' — if these are clean, it entered at your step; if they are failing too, it came in earlier.'
       : 'none — nothing else was made from that parent, so this one tells you nothing on its own yet.') + '</div>';
+    /* The one inference the cause earns (I117), and only in its strong form: the SAME named
+       contaminant on a sibling off the same parent. Two different moulds, or a shrug on either
+       side, say nothing about the parent, so nothing is said. */
+    if(MycroCauses.isNamed(rc)){
+      var same = sib.filter(function(x){ return x.status==='contaminated' && MycroCauses.of(x)===rc; });
+      if(same.length)
+        h += '<div class="riskline"><span class="rl">Same contaminant on a sibling:</span> '+
+          same.map(function(x){ return '<code>'+esc(x.code)+'</code>'; }).join(', ')+
+          ' was flagged for the same thing. Two cultures off one parent with one contaminant points at the parent'+
+          (up.length ? ' (<code>'+esc(up[0].item.code)+'</code>)' : '')+' or further up, more than at either transfer.</div>';
+    }
     h += '</div>';
   });
   $('riskBody').innerHTML = h;
@@ -1102,6 +1124,13 @@ function cultureNodeHtml(c, depth){
       (sd!=null ? ' <span class="muted">· '+(cd-sd)+' day'+((cd-sd)===1?'':'s')+' after the shake</span>' : '')+
       (c.vigor ? ' · <b>'+esc(VIGOR[c.vigor].short)+'</b> growth' : '')+'</div>';
   }
+  // What took it (I117). A flag from before causes existed says so rather than being guessed at.
+  if(c.status==='contaminated'){
+    var cc = MycroCauses.of(c);
+    h += '<div class="perfline lossline">✕ '+
+      (MycroCauses.isNamed(cc) ? 'Contaminated by <b>'+esc(MycroCauses.CAUSE[cc])+'</b>'
+        : (cc==='other' ? 'Contaminated by something else' : 'Cause not recorded'))+'</div>';
+  }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   h += '<div class="nactions">';
   if(c.status!=='contaminated')
@@ -1113,7 +1142,8 @@ function cultureNodeHtml(c, depth){
   });
   if(c.type==='grain') h += '<a class="mini" href="grow-log.html?spawn='+encodeURIComponent(c.id)+'">→ Use in a grow batch</a>';
   if(c.status!=='contaminated') h += '<button class="mini warn" data-act="contam" data-id="'+c.id+'">⚑ Mark contaminated</button>';
-  else h += '<button class="mini" data-act="ok" data-id="'+c.id+'">↺ Not contaminated</button>';
+  else h += '<button class="mini" data-act="contam" data-id="'+c.id+'">🦠 Cause</button>'+
+            '<button class="mini" data-act="ok" data-id="'+c.id+'">↺ Not contaminated</button>';
   if(c.status==='healthy') h += '<button class="mini" data-act="used" data-id="'+c.id+'">Mark used up</button>';
   // Finished work can be filed away instead of deleted — the chain below a used-up jar is
   // what makes a traceback work, so deleting it is the one thing that must not be the easy path.
@@ -1121,6 +1151,7 @@ function cultureNodeHtml(c, depth){
   h += '<button class="mini ghosty" data-act="del" data-id="'+c.id+'">Delete</button>';
   h += '</div>';
   if(recordingOn===c.id) h += perfFormHtml(c);
+  if(contamOn===c.id) h += contamFormHtml(c);
   if(addingUnder && addingUnder.parentId===c.id) h += addFormHtml(c.code, addingUnder.type);
   bts.forEach(function(b){
     h += '<div class="node blocknode" style="margin-left:18px">'+
@@ -1157,6 +1188,29 @@ function addFormHtml(parentCode, type){
 }
 /* Colonisation performance: the two things a grower already judges a plate on — how long it
    took to run the dish, and how thick the growth was. Both are optional. */
+/* "What contaminated it?" (I117). The flag used to be one click that recorded only THAT it
+   happened, so the place a contaminant is usually first seen — a cloudy broth, a green plate —
+   could never say what it was, and the traceback below it could only say "something". It now
+   asks once, on the node, and opens again on an already-flagged culture, because the ordinary
+   order of work is bin it now and work out what it was later (the I77 rule). */
+function contamFormHtml(c){
+  var cur = c.status==='contaminated' ? MycroCauses.of(c) : 'unknown';
+  var h = '<div class="addbox"><div class="abrow wide"><label>What contaminated it?</label><select id="cc-cause">';
+  var order = MycroCauses.CULTURE_ORDER.slice();
+  // An imported culture can carry a cause the picker does not offer; keep it selectable
+  // rather than silently rewriting it on the next save.
+  if(order.indexOf(cur)<0) order.unshift(cur);
+  order.forEach(function(k){
+    h += '<option value="'+k+'"'+(cur===k?' selected':'')+'>'+esc(MycroCauses.CAUSE[k])+'</option>';
+  });
+  h += '</select></div>'+
+    '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Not sure is a fine answer. '+
+      'The <a href="guides/contamination.html#idtool">contaminant identifier</a> can help you name it, and you can come back and change it.</p></div>'+
+    '<div class="abrow wide"><button class="mini solid" data-act="saveContam" data-id="'+c.id+'">'+
+      (c.status==='contaminated' ? 'Save cause' : 'Mark contaminated')+'</button>'+
+      '<button class="mini ghosty" data-act="cancelContam">Cancel</button></div></div>';
+  return h;
+}
 function perfFormHtml(c){
   var h = '<div class="addbox">';
   /* Grain only: the shake belongs between made and finished, and it is the milestone a grower
@@ -1401,6 +1455,18 @@ $('workPanel').addEventListener('click', function(e){
   var n = document.getElementById('node-'+id);
   if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
 });
+/* Same shortcut shape from the traceback (I117): "name it" opens the one cause form, on the
+   node itself, rather than growing a second editor inside the risk panel. */
+$('riskBody').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-act="goname"]') : null;
+  if(!el) return;
+  e.preventDefault();
+  var id = el.getAttribute('data-id');
+  if(!findCulture(id)) return;
+  contamOn = id; recordingOn = null; addingUnder = null; paint();
+  var n = document.getElementById('node-'+id);
+  if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
+});
 $('sampleNote').addEventListener('click', function(e){
   if(!e.target || e.target.id!=='clearSamples') return;
   e.preventDefault();
@@ -1510,9 +1576,23 @@ $('tree').addEventListener('click', function(e){
   }
   if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
   var id = el.getAttribute('data-id');
-  if(act==='contam'){ var c=findCulture(id); if(c){ c.status='contaminated'; save(); paint();
-      if(window.track) try{ track('culture_contaminated',{}); }catch(_){} } return; }
-  if(act==='ok'){ var c2=findCulture(id); if(c2){ c2.status='healthy'; save(); paint(); } return; }
+  // The flag asks what it was before it changes anything (I117) — opening the form writes nothing.
+  if(act==='contam'){ e.preventDefault(); contamOn=(contamOn===id?null:id); recordingOn=null; addingUnder=null; paint(); return; }
+  if(act==='cancelContam'){ e.preventDefault(); contamOn=null; paint(); return; }
+  if(act==='saveContam'){
+    e.preventDefault();
+    var c=findCulture(id); if(!c) return;
+    var v=($('cc-cause')||{}).value;
+    var first = c.status!=='contaminated';
+    c.cause = MycroCauses.has(v) ? v : 'unknown';
+    c.status='contaminated'; contamOn=null; save(); paint();
+    // Counts only, never content. `first` separates a new flag from naming an old one later.
+    if(window.track) try{ track('culture_contaminated',{known:MycroCauses.isNamed(c.cause)?1:0, first:first?1:0}); }catch(_){}
+    return;
+  }
+  // A culture that was not contaminated after all carries no cause: a healthy jar with
+  // "Trichoderma" on it in the export is a record that lies.
+  if(act==='ok'){ var c2=findCulture(id); if(c2){ c2.status='healthy'; delete c2.cause; contamOn=null; save(); paint(); } return; }
   if(act==='used'){ var c3=findCulture(id); if(c3){ c3.status='used'; save(); paint(); } return; }
   if(act==='del'){
     var d=descendants(id);
@@ -1698,7 +1778,7 @@ function chainOf(c){
 $('exportCsv').addEventListener('click', function(){
   // Archived rows are exported too, flagged — a CSV is the copy a grower keeps, so it holds
   // everything they have, not just what is on screen today.
-  var rows = [['code','type','status','made_on','containers','container','shaken_on','days_to_shake',
+  var rows = [['code','type','status','contam_cause','made_on','containers','container','shaken_on','days_to_shake',
     'colonised_on','days_to_colonise','growth','archived',
     'chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
   state.cultures.forEach(function(c){
@@ -1706,7 +1786,10 @@ $('exportCsv').addEventListener('click', function(){
     for(var i=0;i<an.length;i++) if(an[i].kind==='source') src = an[i].item;
     var bts = batchesOf(c.id).map(function(b){ return b.name; }).join('; ');
     var cd = colonisedDays(c), sd = shakenDays(c);
-    rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label, c.createdAt,
+    rows.push([c.code, CTYPE[c.type].label, CSTATUS[c.status].label,
+      // Same column name and wording as the grow log's export (I113), so one spreadsheet can
+      // hold both files and a mould is spelled one way in it.
+      c.status==='contaminated' ? MycroCauses.CAUSE[MycroCauses.of(c)] : '', c.createdAt,
       jarsOf(c)||'', jarsOf(c)?containerOf(c):'', c.shakenAt||'', sd==null?'':sd,
       c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
       isArchived(c)?'yes':'',
@@ -1815,7 +1898,7 @@ function isSampleOnly(){
       if(!doc || !Array.isArray(doc.batches)) return false;
       if(!Array.isArray(doc.sources) || !doc.sources.every(validSource)) return false;
       if(!Array.isArray(doc.cultures) || !doc.cultures.every(validCulture)) return false;
-      state = doc; recordingOn=null; attachingId=null; speciesOn=null;
+      state = doc; recordingOn=null; attachingId=null; speciesOn=null; contamOn=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       paint();
       return true;

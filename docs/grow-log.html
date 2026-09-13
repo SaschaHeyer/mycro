@@ -517,6 +517,7 @@
 
 <script src="/qr.js"></script>
 <script src="/samples.js?v=1"></script>
+<script src="/causes.js?v=1"></script>
 <script src="/account.js?v=13"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
@@ -546,22 +547,15 @@ var STAGE_LABEL = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fru
    vocabularies for one mould. Two of these are deliberately NOT diagnoses:
      'other'   — answered, but names nothing anyone can act on, so it can never win the headline.
      'unknown' — not answered at all. It still counts as a loss (dropping it would shrink the
-                 denominator and flatter every named cause), it just attributes nothing. */
-var CAUSE = {
-  trich:     'Trichoderma, green mould',
-  cobweb:    'Cobweb mould, Dactylium',
-  black:     'Black or pin mould, Aspergillus or Rhizopus',
-  wetspot:   'Wet spot or sour rot, Bacillus',
-  bactyeast: 'A bacterial or yeast contamination',
-  blotch:    'Bacterial blotch, Pseudomonas',
-  other:     'Something else',
-  unknown:   'Not sure'
-};
-var CAUSE_ORDER = ['trich','cobweb','black','wetspot','bactyeast','blotch','other','unknown'];
+                 denominator and flatter every named cause), it just attributes nothing.
+   Since I117 the list lives in causes.js, shared with the Culture Library's own flag, so a
+   culture and the blocks below it are described in one vocabulary. */
+var CAUSE = MycroCauses.CAUSE;
+var CAUSE_ORDER = MycroCauses.ORDER;
 // A legacy loss carries no cause at all. It reads as 'unknown' and is never guessed at.
-function causeOf(b){ return (b && CAUSE[b.cause]) ? b.cause : 'unknown'; }
+function causeOf(b){ return MycroCauses.of(b); }
 // Does this cause name something a grower could actually change? 'other' and 'unknown' do not.
-function causeIsNamed(c){ return c!=='other' && c!=='unknown'; }
+function causeIsNamed(c){ return MycroCauses.isNamed(c); }
 // The stage a run was in when it was lost. Captured at the moment of marking, because
 // stage/stageSince are overwritten by the mark itself and the fact is gone forever after.
 // Never inferred for a record that predates this — it says so instead.
@@ -1111,7 +1105,19 @@ function contamFormHtml(b){
     return '<option value="'+k+'"'+(cur===k?' selected':'')+'>'+esc(CAUSE[k])+'</option>';
   }).join('');
   var btn = b.stage==='contaminated' ? 'Save cause' : 'Mark contaminated';
-  return '<form class="yieldForm" onsubmit="return saveContam(event,\''+b.id+'\')">'+
+  /* If a culture above this run was flagged with a named cause, say so beside the question,
+     and DO NOT pre-select it (I117). The culture's cause is a clue about this run, never an
+     answer: a block spawned off a bacterial liquid culture can still go down to trich on the
+     shelf, and a pre-selected answer is the one that gets saved without being read. The loss
+     panel attributes only what the grower names (I113 rule b). */
+  var cul = b.parentId ? cultureOf(b.parentId) : null;
+  var fl = cul ? flaggedAncestor(cul.id) : null;
+  var clue = (fl && causeIsNamed(causeOf(fl)))
+    ? '<div class="cluehint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">'+
+      'A clue, not the answer: <code>'+esc(fl.code)+'</code>, a culture this run came from, was flagged for '+
+      esc(CAUSE[causeOf(fl)])+'.</div>'
+    : '';
+  return '<form class="yieldForm" onsubmit="return saveContam(event,\''+b.id+'\')">'+clue+
     '<label class="yl" style="min-width:250px">What went wrong?'+
       '<select id="contamCause">'+opts+'</select></label>'+
     '<button class="mini solid" type="submit">'+btn+'</button>'+
@@ -1227,11 +1233,14 @@ function batchHtml(b){
   }
   var cul = b.parentId ? cultureOf(b.parentId) : null;
   var flag = cul ? flaggedAncestor(cul.id) : null;
+  // What the flagged culture was flagged FOR, when the grower said (I117). It describes the
+  // culture, never this run: a block off a bacterial LC can still be lost to trich.
+  var flagWhat = (flag && causeIsNamed(causeOf(flag))) ? ' for '+esc(CAUSE[causeOf(flag)]) : '';
   var culLine = cul
     ? '<div class="culline">🧬 Spawned from <a href="culture-library.html"><code>'+esc(cul.code)+'</code></a>'+
       (flag ? (flag.id===cul.id
-        ? ' <b class="culbad">— that culture is flagged contaminated</b>'
-        : ' <b class="culbad">— descended from flagged '+esc(flag.code)+'</b>') : '')+'</div>'
+        ? ' <b class="culbad">— that culture is flagged contaminated'+flagWhat+'</b>'
+        : ' <b class="culbad">— descended from '+esc(flag.code)+', flagged contaminated'+flagWhat+'</b>') : '')+'</div>'
     : '';
   return '<div class="batch">'+
     '<div class="bhead"><div><span class="bname">'+esc(b.name||'Untitled batch')+'</span> '+
