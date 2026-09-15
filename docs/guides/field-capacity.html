@@ -22,7 +22,7 @@
 "description":"A practical guide to substrate moisture for mushroom growers: what field capacity means, the squeeze test, target moisture by substrate type, and how to fix substrate that is too wet or too dry.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-08-06",
+"datePublished":"2026-06-13","dateModified":"2026-09-15",
 "mainEntityOfPage":"https://usemycro.com/guides/field-capacity.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -63,7 +63,7 @@
     <b style="color:var(--ink)">Field capacity is the moisture level at which substrate holds all the water it can without releasing more when squeezed:</b> a few drops from a hard squeeze, never a stream. For wood-based substrates that lands around 60–65% moisture by weight, roughly 1.2–1.5 parts water to 1 part dry material. Too wet suffocates the mycelium; too dry stalls colonisation.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 6 August 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 15 September 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -110,11 +110,54 @@
     <p>Pellet-based substrates are the trap here: they look bone-dry going in and then balloon as they
       drink, so a ratio that felt right at minute one is soaking wet at minute thirty. <b>Always let a
       pelletized mix rest and swell before you judge it</b>, then squeeze-test.</p>
+    <!-- Inline water calculator (I119). The meta description has promised "a free calculator that
+         works it out" since this page was written; until now the only one was on another page, and it
+         treats pellets as bone-dry. The moisture ALREADY in the material is the input that matters:
+         ignoring it adds too much water, which this page calls the worse failure. Defaults are the
+         Master's Mix worked example (10 lb dry). Ranges quoted in the verdict are this page's own table. -->
+    <div class="panel" id="fcCalc" style="margin:18px 0">
+      <h3><span class="step">↳</span> Work out the water for your batch</h3>
+      <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Enter what you weighed out and how wet you
+        want it. You get the water to add, what the batch will weigh, and how that compares with the
+        ranges above.</p>
+      <div class="inline-grid">
+        <div class="field"><label for="fc-sub">Substrate</label>
+          <select id="fc-sub">
+            <option value="sawdust">Hardwood sawdust</option>
+            <option value="mm" selected>Masters Mix (sawdust + soy hull)</option>
+            <option value="soy">Soy hull pellets (alone)</option>
+            <option value="straw">Straw (chopped)</option>
+            <option value="other">Something else</option>
+          </select></div>
+        <div class="field"><label for="fc-dry">Dry material, as weighed <span id="fc-u1" class="hint"></span></label>
+          <input id="fc-dry" type="number" step="0.1" min="0" value="10">
+          <span class="hint">The whole batch, before any water.</span></div>
+        <div class="field"><label for="fc-start">Moisture already in it (%)</label>
+          <input id="fc-start" type="number" step="1" min="0" max="70" value="10">
+          <span class="hint">Bagged pellets are rarely bone-dry. Use 0 only for oven-dried material.</span></div>
+        <div class="field"><label for="fc-target">Target moisture (%)</label>
+          <input id="fc-target" type="number" step="1" min="30" max="80" value="60">
+          <span class="hint">Field capacity for wood-based substrates is about 60–65%.</span></div>
+      </div>
+      <div class="toggle" id="fcUnitToggle" role="group" aria-label="Units" style="margin-top:10px">
+        <button data-unit="lb" class="active">lb</button>
+        <button data-unit="kg">kg</button>
+      </div>
+      <div class="kpis" style="margin-top:16px">
+        <div class="kpi"><div class="v" id="fc-k-water">–</div><div class="l">Water to add</div></div>
+        <div class="kpi"><div class="v" id="fc-k-vol">–</div><div class="l">That is about</div></div>
+        <div class="kpi"><div class="v" id="fc-k-ratio">–</div><div class="l">Water per part dry</div></div>
+        <div class="kpi"><div class="v" id="fc-k-total">–</div><div class="l">Hydrated batch</div></div>
+      </div>
+      <p id="fc-verdict" style="margin:14px 0 0"></p>
+      <p id="fc-bone" class="muted" style="margin:8px 0 0;font-size:.92rem"></p>
+      <p class="muted" style="margin:8px 0 0;font-size:.92rem">This is where to start, not where to stop.
+        Add it gradually, let it rest, and confirm with the squeeze test.</p>
+    </div>
     <div class="note" style="margin:18px 0">
-      <b style="color:var(--ink)">Skip the mental math.</b> The free
-      <a href="../substrate-calculator.html">Substrate Recipe Calculator</a> takes your recipe and batch
-      size and tells you the exact dry weights <i>and</i> the water to add to reach field capacity — for
-      Masters Mix, supplemented sawdust, soy hull, or straw. No sign-up.
+      <b style="color:var(--ink)">Mixing a whole recipe?</b> The free
+      <a href="../substrate-calculator.html">Substrate Recipe Calculator</a> scales your recipe to any
+      number of blocks and gives every dry weight as well as the water. No sign-up.
     </div>
 
     <h2 style="margin-top:32px">Why too wet is worse than too dry</h2>
@@ -198,6 +241,70 @@
 </div></footer>
 
   <script src="../waitlist.js?v=2"></script>
+  <script>
+  (function(){
+    var unit='lb';
+    // This page's own starting ranges (the "How much water to add" table). Straw has none: soak and drain.
+    var RANGE={sawdust:{name:'hardwood sawdust',lo:1.1,hi:1.4},mm:{name:'Masters Mix',lo:1.2,hi:1.5},
+      soy:{name:'soy hull pellets',lo:1.5,hi:2}};
+    var $=function(id){return document.getElementById(id);};
+    function val(id){var n=parseFloat($(id).value);return isFinite(n)?n:0;}
+    function num(v,d){return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+    function wt(v){return num(v,v<10?2:(v<100?1:0))+' '+unit;}
+    function vol(v){ // 1 US gal of water = 8.345 lb; 1 kg of water = 1 L
+      if(unit==='kg') return num(v,v<10?1:0)+' L';
+      var g=v/8.345; return num(g,g<10?2:1)+' gal';
+    }
+    function calc(){
+      var dry=Math.max(0,val('fc-dry'));
+      var S=Math.max(0,Math.min(70,val('fc-start')))/100;
+      var T=Math.max(30,Math.min(80,val('fc-target')))/100;
+      // Mass balance: the dry matter stays fixed, so the finished batch weighs dryMatter/(1-T).
+      var dryMatter=dry*(1-S);
+      var water=Math.max(0,dryMatter/(1-T)-dry);
+      var total=dry+water;
+      var ratio=dry>0?water/dry:0;
+      $('fc-k-water').textContent=wt(water);
+      $('fc-k-vol').textContent=vol(water);
+      $('fc-k-ratio').textContent=num(ratio,2)+'×';
+      $('fc-k-total').textContent=wt(total);
+
+      var sub=$('fc-sub').value, r=RANGE[sub], msg='';
+      if(dry<=0) msg='Enter the weight of dry material you are about to hydrate.';
+      else if(S>=T) msg='<b>Add no water.</b> Material at '+Math.round(S*100)+'% already holds as much as a '+
+        Math.round(T*100)+'% target. If a squeeze sends out a stream, it is too wet: see the fixes below.';
+      else if(sub==='straw') msg='<b>Straw is easier to get right by soaking and draining</b> until it stops dripping than by weighing water in.';
+      else if(!r) msg='';
+      else if(ratio<r.lo) msg='<b>Below the '+num(r.lo,1)+'–'+num(r.hi,1)+'× starting range</b> this page gives for '+r.name+'. That is fine if your material is already damp; otherwise check the moisture figure.';
+      else if(ratio>r.hi) msg='<b>Above the '+num(r.lo,1)+'–'+num(r.hi,1)+'× starting range</b> this page gives for '+r.name+'. Too wet is the harder mistake to undo, so hold some back and squeeze-test before the last of it goes in.';
+      else msg='<b>Inside the '+num(r.lo,1)+'–'+num(r.hi,1)+'× starting range</b> this page gives for '+r.name+'.';
+      $('fc-verdict').innerHTML=msg;
+
+      // What treating the material as bone-dry would have done (the usual recipe formula).
+      var bone='';
+      if(dry>0 && S>0 && S<T){
+        var wb=dry*T/(1-T);
+        var lands=(dry*S+wb)/(dry+wb);
+        bone='Treating it as bone-dry would add '+wt(wb)+', which lands at about '+Math.round(lands*100)+'% moisture, not '+Math.round(T*100)+'%.';
+      }
+      $('fc-bone').textContent=bone;
+    }
+    function setUnitLabel(){ $('fc-u1').textContent='('+unit+')'; }
+    ['fc-dry','fc-start','fc-target'].forEach(function(id){ $(id).addEventListener('input',calc); });
+    $('fc-sub').addEventListener('change',calc);
+    document.querySelectorAll('#fcUnitToggle button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var nu=this.dataset.unit; if(nu===unit) return;
+        var f = nu==='kg'? (1/2.2046226) : 2.2046226;
+        $('fc-dry').value=(val('fc-dry')*f).toFixed(2);
+        unit=nu;
+        document.querySelectorAll('#fcUnitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+        setUnitLabel(); calc();
+      });
+    });
+    setUnitLabel(); calc();
+  })();
+  </script>
   <script src="/track.js" defer></script>
 </body>
 </html>
