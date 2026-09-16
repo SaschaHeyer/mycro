@@ -119,28 +119,32 @@
       the classic, and it's the ratio most gourmet farms default to.</p>
 
     <h2 style="margin-top:32px">A real batch: exact weights</h2>
-    <p>Here's a 10&nbsp;lb dry batch that yields roughly <b>25&nbsp;lb of hydrated substrate</b> — about
-      five 5&nbsp;lb fruiting blocks:</p>
+    <p>Here's a batch built on 10&nbsp;lb of pellets as bought, which yields roughly
+      <b>22.7&nbsp;lb of hydrated substrate</b> — about five 4.5&nbsp;lb fruiting blocks:</p>
     <table class="spec" style="margin:14px 0">
       <tbody>
         <tr><td>Hardwood sawdust pellets</td><td style="text-align:right">5.0 lb</td></tr>
         <tr><td>Soybean hull pellets</td><td style="text-align:right">5.0 lb</td></tr>
         <tr><td>Gypsum (~1%)</td><td style="text-align:right">~0.1 lb (2–3 tbsp)</td></tr>
-        <tr><td>Water (to field capacity)</td><td style="text-align:right">~15 lb (≈1.8 gal)</td></tr>
-        <tr><td><b>Hydrated total</b></td><td style="text-align:right"><b>~25 lb → ~5 blocks</b></td></tr>
+        <tr><td>Water (to field capacity)</td><td style="text-align:right">~12.6 lb (≈1.5 gal)</td></tr>
+        <tr><td><b>Hydrated total</b></td><td style="text-align:right"><b>~22.7 lb → ~5 blocks</b></td></tr>
       </tbody>
     </table>
     <div class="panel" id="mmCalc" style="margin:18px 0">
       <h3><span class="step">↳</span> Scale this recipe to your batch</h3>
       <p class="muted" style="font-size:.95rem;margin:.2em 0 1em">Locked to the 50/50 Master's Mix
-        ratio above (1% gypsum, 60% moisture) — enter your batch and get the exact weights.</p>
+        ratio above (1% gypsum, 60% moisture) — enter your batch and get the exact weights. The
+        water already in the pellets is subtracted, so the figure is what you actually pour in.</p>
       <div class="inline-grid">
         <div class="field"><label for="mm-blocks">Number of blocks</label>
           <input id="mm-blocks" type="number" step="1" min="1" value="5">
           <span class="hint">Fruiting blocks in this batch.</span></div>
-        <div class="field"><label>Dry sawdust + soy hull per block <span id="mm-u1" class="hint"></span></label>
+        <div class="field"><label for="mm-dry">Sawdust + soy hull per block, as weighed <span id="mm-u1" class="hint"></span></label>
           <input id="mm-dry" type="number" step="0.1" min="0" value="2">
           <span class="hint">Before gypsum &amp; water. 2 lb/block matches the worked example above.</span></div>
+        <div class="field"><label for="mm-start">Moisture already in the pellets %</label>
+          <input id="mm-start" type="number" step="1" min="0" max="70" value="10">
+          <span class="hint">Bagged pellets are rarely bone-dry. Use 0 only for oven-dried material.</span></div>
       </div>
       <div class="toggle" id="mmUnitToggle" role="group" aria-label="Units" style="margin-top:10px">
         <button data-unit="lb" class="active">lb</button>
@@ -279,11 +283,14 @@
     }
     function calc(){
       var blocks=Math.max(0,Math.round(val('mm-blocks')));
-      var basePB=Math.max(0,val('mm-dry'));          // dry sawdust+soyhull per block, before gypsum
+      var basePB=Math.max(0,val('mm-dry'));          // sawdust+soyhull per block as weighed, before gypsum
+      var S=Math.min(0.70,Math.max(0,val('mm-start')/100));   // water already in the pellets
       var sawPB=basePB/2, soyPB=basePB/2;
       var gypPB=basePB*GYP;
       var dryPB=basePB+gypPB;
-      var waterPB=(1-M)>0 ? M*dryPB/(1-M) : 0;
+      // Mass balance: the dry matter is fixed, so the finished block weighs dryMatter/(1-M).
+      // The pellets already carry S of that water, so only the difference is poured in.
+      var waterPB=(1-M)>0 ? Math.max(0, dryPB*(1-S)/(1-M) - dryPB) : 0;
       var hydPB=dryPB+waterPB;
 
       var html='';
@@ -303,6 +310,7 @@
 
     $('mm-blocks').addEventListener('input',calc);
     $('mm-dry').addEventListener('input',calc);
+    $('mm-start').addEventListener('input',calc);
     document.querySelectorAll('#mmUnitToggle button').forEach(function(b){
       b.addEventListener('click',function(){
         var nu=this.dataset.unit; if(nu===unit) return;

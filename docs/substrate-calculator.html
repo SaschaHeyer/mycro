@@ -22,7 +22,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"What is Masters Mix for mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Masters Mix is a popular gourmet-mushroom substrate of 50% hardwood sawdust and 50% soy hull pellets by dry weight, usually with about 1% gypsum, hydrated to roughly 60% moisture (field capacity). The soy hull supplies the nitrogen supplementation, so no separate bran is needed."}},
-{"@type":"Question","name":"How much water do I add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"To reach a target moisture content M, add water equal to M divided by (1 minus M) times the total dry weight. At 60% moisture that is 1.5 times the dry weight in water, so the hydrated substrate weighs about 2.5 times its dry weight."}},
+{"@type":"Question","name":"How much water do I add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"To reach a target moisture content M, work from the dry matter rather than the bag weight. Sawdust and soy hull pellets are usually about 10% water as bought, so 10 lb of pellets is 9 lb of dry matter. The finished batch weighs that dry matter divided by (1 minus M), and the water you add is the difference between that total and what you weighed out. At 60% moisture from 10%-moisture pellets that is about 1.25 times the weighed amount; from genuinely bone-dry material it is 1.5 times, the figure the plain M divided by (1 minus M) formula gives."}},
 {"@type":"Question","name":"How much gypsum should I add to mushroom substrate?","acceptedAnswer":{"@type":"Answer","text":"A common rate is about 1% of the dry substrate weight. Gypsum (calcium sulfate) adds calcium and sulfur, buffers pH, and reduces clumping so the substrate stays loose and well aerated."}}]}
 </script>
 </head>
@@ -106,10 +106,13 @@
         <span class="hint">~1% typical · buffers pH, reduces clumping.</span></div>
     </div>
     <p id="baseWarn" class="note" style="display:none;margin-top:10px;color:var(--warn)"></p>
-    <div class="field" style="margin-top:12px">
-      <label>Target moisture % (field capacity)</label>
-      <input id="moisture" type="number" step="1" min="40" max="75" value="60">
-      <span class="hint">~58–62% for most gourmet substrates. Squeeze test: damp, a drop or two, never streaming.</span>
+    <div class="inline-grid" style="margin-top:12px">
+      <div class="field"><label for="moisture">Target moisture % (field capacity)</label>
+        <input id="moisture" type="number" step="1" min="40" max="75" value="60">
+        <span class="hint">~58–62% for most gourmet substrates. Squeeze test: damp, a drop or two, never streaming.</span></div>
+      <div class="field"><label for="startMoist">Moisture already in the ingredients %</label>
+        <input id="startMoist" type="number" step="1" min="0" max="70" value="10">
+        <span class="hint">Bagged pellets are rarely bone-dry. Use 0 only for oven-dried material.</span></div>
     </div>
   </div>
 
@@ -163,10 +166,14 @@
       and weigh a recipe.</p>
 
     <h3 style="margin-top:14px">Hydration to field capacity</h3>
-    <p class="muted">To hit a target moisture content <b>M</b>, water added = <b>M ÷ (1 − M) × total
-      dry weight</b>. At 60% moisture that's 1.5× the dry weight in water, so a hydrated block ends
-      around 2.5× its dry weight. "Field capacity" means fully hydrated but not dripping when
-      squeezed firmly — a drop or two at most.</p>
+    <p class="muted">The dry matter is what stays fixed, so a batch at moisture <b>M</b> weighs
+      <b>dry matter ÷ (1 − M)</b>, and the water to add is that total minus what you put on the scale.
+      Bagged sawdust and soy hull pellets are not bone-dry — usually around 10% water — and that water
+      counts. At 60% from 10%-moisture pellets it works out near 1.25× the weighed amount; from
+      oven-dry material it is the familiar 1.5×. Ignoring the difference lands a batch nearer 64%
+      than 60%, and too wet is the harder mistake to undo. "Field capacity" means fully hydrated but
+      not dripping when squeezed firmly — a drop or two at most.
+      <a href="guides/field-capacity.html">More on field capacity</a>.</p>
 
     <h3 style="margin-top:14px">Why these recipes</h3>
     <p class="muted"><b><a href="guides/masters-mix-substrate-recipe.html">Masters Mix</a></b>
@@ -192,7 +199,7 @@
     <p>Masters Mix is a popular gourmet-mushroom substrate of 50% hardwood sawdust and 50% soy hull pellets by dry weight, usually with about 1% gypsum, hydrated to roughly 60% moisture (field capacity). The soy hull supplies the nitrogen supplementation, so no separate bran is needed.</p>
 
     <h3 style="margin-top:22px">How much water do I add to mushroom substrate?</h3>
-    <p>To reach a target moisture content M, add water equal to M divided by (1 minus M) times the total dry weight. At 60% moisture that is 1.5 times the dry weight in water, so the hydrated substrate weighs about 2.5 times its dry weight.</p>
+    <p>To reach a target moisture content M, work from the dry matter rather than the bag weight. Sawdust and soy hull pellets are usually about 10% water as bought, so 10 lb of pellets is 9 lb of dry matter. The finished batch weighs that dry matter divided by (1 minus M), and the water you add is the difference between that total and what you weighed out. At 60% moisture from 10%-moisture pellets that is about 1.25 times the weighed amount; from genuinely bone-dry material it is 1.5 times, the figure the plain M divided by (1 minus M) formula gives.</p>
 
     <h3 style="margin-top:22px">How much gypsum should I add to mushroom substrate?</h3>
     <p>A common rate is about 1% of the dry substrate weight. Gypsum (calcium sulfate) adds calcium and sulfur, buffers pH, and reduces clumping so the substrate stays loose and well aerated.</p>
@@ -255,6 +262,7 @@ function calc(){
   var pSaw=Math.max(0,val('pSaw')), pSoy=Math.max(0,val('pSoy'));
   var pBran=Math.max(0,val('pBran')), pGyp=Math.max(0,val('pGyp'));
   var M=Math.min(0.75,Math.max(0.40,val('moisture')/100));
+  var S=Math.min(0.70,Math.max(0,val('startMoist')/100));   // water already in the weighed material
   var isStraw = $('preset').value==='straw';
 
   // base split warning
@@ -273,7 +281,10 @@ function calc(){
   var branPB = baseDryPB*(pBran/100);
   var gypPB  = baseDryPB*(pGyp/100);
   var totalDryPB = baseDryPB+branPB+gypPB;
-  var waterPB = (1-M)>0 ? M*totalDryPB/(1-M) : 0;
+  // Mass balance: the dry matter is fixed, so the finished batch weighs dryMatter/(1-M).
+  // What you weighed out already contains S of water, so only the difference gets added.
+  var dryMatterPB = totalDryPB*(1-S);
+  var waterPB = (1-M)>0 ? Math.max(0, dryMatterPB/(1-M) - totalDryPB) : 0;
   var hydPB = totalDryPB+waterPB;
 
   // ingredient rows (only non-zero)
@@ -295,8 +306,24 @@ function calc(){
   $('k-hyd').textContent=wt(hydPB*bags);
   $('k-perblock').textContent=wt(hydPB);
   $('r-sub').textContent=bags+' blocks · '+($('preset').options[$('preset').selectedIndex].text.split('—')[0].trim());
-  $('r-note').textContent='Water shown is to reach '+Math.round(M*100)+'% moisture. Mix dry first, '+
-    'then add water gradually and let it absorb — aim for field capacity, not soaking.';
+  var note;
+  if(S>=M){
+    note='Material already holding '+Math.round(S*100)+'% water is at or above a '+Math.round(M*100)+
+      '% target, so no water is added. Check the moisture figure, or raise the target.';
+  } else {
+    // "already holding 0%" is a clumsy way of saying bone-dry, so say bone-dry.
+    note='Water shown is to reach '+Math.round(M*100)+'% moisture from '+
+      (S>0 ? 'ingredients already holding '+Math.round(S*100)+'%' : 'bone-dry ingredients')+
+      '. Mix dry first, then add water gradually and let it absorb — aim for field '+
+      'capacity, not soaking.';
+    if(totalDryPB>0 && S>0){
+      var wb=M*totalDryPB/(1-M);
+      var lands=(totalDryPB*S+wb)/(totalDryPB+wb);
+      note+=' Treating the ingredients as bone-dry would add '+wt(wb*bags)+', which lands at about '+
+        Math.round(lands*100)+'% moisture, not '+Math.round(M*100)+'%.';
+    }
+  }
+  $('r-note').textContent=note;
 }
 
 $('preset').addEventListener('change',function(){ applyPreset(); calc(); });
@@ -308,7 +335,7 @@ $('preset').addEventListener('change',function(){ applyPreset(); calc(); });
     calc();
   });
 });
-['bags','dryPerBag','moisture'].forEach(function(id){ $(id).addEventListener('input',calc); });
+['bags','dryPerBag','moisture','startMoist'].forEach(function(id){ $(id).addEventListener('input',calc); });
 
 // unit toggle: only the base weight converts; percentages are unitless
 document.querySelectorAll('#unitToggle button').forEach(function(b){
