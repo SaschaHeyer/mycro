@@ -516,9 +516,9 @@
 </div></footer>
 
 <script src="/qr.js"></script>
-<script src="/samples.js?v=1"></script>
+<script src="/samples.js?v=2"></script>
 <script src="/causes.js?v=1"></script>
-<script src="/account.js?v=13"></script>
+<script src="/account.js?v=14"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render
@@ -1536,7 +1536,16 @@ $('sampleNote').addEventListener('click', function(e){
   if(confirm('Remove the example batches, contacts and deliveries we seeded? Everything you logged yourself stays exactly as it is.')) clearSamples();
 });
 
-/* ---- export ---- */
+/* ---- export ----
+   The file NAME carries the mark when the document holds nothing but our examples (I127).
+   Deliberately not a column and not a row: the CSV schema is pinned by tests and read by
+   spreadsheets, and a file that lands in a Downloads folder is read weeks later by its
+   name. On 2026-09-20 an evaluator exported this log as JSON nineteen minutes after
+   being refused an account; every row in that file was ours. */
+function exportName(ext){
+  var only = !!(window.MycroSamples && MycroSamples.onlySeeded(state));
+  return 'mycro-grow-log' + (only ? '-example-data' : '') + '.' + ext;
+}
 function download(name,text,type){
   var blob=new Blob([text],{type:type}); var url=URL.createObjectURL(blob);
   var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a);
@@ -1566,14 +1575,14 @@ $('exportCsv').addEventListener('click',function(){
       (b.notes||'').replace(/"/g,'""')]);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c)+'"';}).join(',');}).join('\n');
-  download('mycro-grow-log.csv',csv,'text/csv');
+  download(exportName('csv'),csv,'text/csv');
   if(window.track) try{ track('growlog_export',{fmt:'csv'}); }catch(_){}
   showNudge('export');
 });
 $('exportJson').addEventListener('click',function(){
   // The WHOLE document, not state.batches alone (I100). A grower whose records are all in
   // the Culture Library used to be handed `[]` and told it was their log.
-  download('mycro-grow-log.json',JSON.stringify(fullExport(),null,2),'application/json');
+  download(exportName('json'),JSON.stringify(fullExport(),null,2),'application/json');
   if(window.track) try{ track('growlog_export',{fmt:'json'}); }catch(_){}
   showNudge('export');
 });
@@ -1904,10 +1913,20 @@ function labelQrUrl(){
   var id=cloudId();
   return id ? restoreUrl(id) : 'https://usemycro.com/grow-log.html';
 }
+/* Is this card one of OUR seeded examples (I127)? The mark goes on the CARD, not on the
+   sheet, because the card is the thing that gets cut out and taped to a block: a sheet
+   header stays on the screen and a label goes on a real bag for weeks. Asked per record
+   so a grower who has added their own runs gets clean labels for those and a marked one
+   for whatever of ours is still in the list — never all-or-nothing, because marking a
+   grower's own block EXAMPLE is worse than marking nothing. */
+function isSeededBatch(b){
+  return !!(b && window.MycroSamples && MycroSamples.isSample('batches', b.id));
+}
 function labelHtml(b,qr,scanNote){
   var sp=SPECIES[b.species], dry=(unit==='lb'? b.dryG/LB : b.dryG/1000);
-  return '<div class="lbl">'+
+  return '<div class="lbl'+(isSeededBatch(b)?' lex':'')+'">'+
     '<div class="lmain">'+
+      (isSeededBatch(b) ? '<div class="lexmark">Example \u00b7 not one of your blocks</div>' : '')+
       '<div class="lname">'+esc(b.name)+'</div>'+
       '<div class="lsp">'+esc(sp.label)+'</div>'+
       '<table class="lfacts"><tbody>'+
@@ -1928,8 +1947,14 @@ function buildLabelSheet(){
   var url=labelQrUrl(), qr=window.QR ? QR.svg(url,150) : '';
   var scanNote = cloudId() ? 'Scan → your grow log' : 'Scan → free grow log';
   var body=list.map(function(b){ return labelHtml(b,qr,scanNote); }).join('');
-  return labelDoc('Mycro block labels', list.length,
-    'cut along the cards and tape one to each block or bag.', body);
+  // Said before they press Print as well as on the card itself. Never a refusal: looking
+  // at the sheet to see what the labels are like is a reasonable thing to do.
+  var ex=list.filter(isSeededBatch).length;
+  var hint = ex===list.length
+    ? 'these are the example blocks we seeded, not your own \u2014 add a batch for real labels.'
+    : (ex ? ex+' of these '+(ex===1?'is an example we seeded':'are examples we seeded')+' \u2014 the rest are yours.'
+          : 'cut along the cards and tape one to each block or bag.');
+  return labelDoc('Mycro block labels', list.length, hint, body);
 }
 /* The shared print document for both label sheets (block labels and delivery labels).
    Standalone window, so this page's own layout and print rules stay untouched. */
@@ -1952,6 +1977,9 @@ function labelDoc(title, n, hint, body){
     '.lfacts td{padding:2px 0}'+
     '.dim{color:#8b8578}'+
     '.lnotes{font-size:.82rem;color:#6B6457;font-style:italic;margin-top:6px}'+
+    '.lex{border-style:dashed;background:#fbf7f4}'+
+    '.lexmark{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;'+
+      'color:#C0562C;margin-bottom:3px}'+
     '.lwrite{margin-top:9px;padding-top:8px;border-top:1px dashed #cfcabf;font-size:.8rem;color:#6B6457;letter-spacing:.01em}'+
     '.lqr{text-align:center;flex:0 0 auto}'+
     '.lqr svg{display:block;width:104px;height:104px}'+
@@ -2015,6 +2043,16 @@ function scheduleAutoSync(){
   _syncTimer=setTimeout(autoSync,1500);
 }
 
+/* What the private link actually contains (I127). The link is the thing a grower opens on
+   their phone, the thing the email capture would send, and the thing auto-sync keeps
+   overwriting from here on — so when the document is nothing but our demo farm it has to
+   say so. The backup still happens: a link to the examples is a perfectly reasonable thing
+   to make, it just must not be described as "your log". */
+function backedUpMsg(){
+  return (window.MycroSamples && MycroSamples.onlySeeded(state))
+    ? 'Backed up \u2014 this link holds the example log, not your own \u2713'
+    : 'Backed up to the cloud \u2713';
+}
 $('cloudBackup').addEventListener('click',function(){
   var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Backing up…';
   var body=JSON.stringify({ id:cloudId()||undefined, data:state });
@@ -2023,7 +2061,7 @@ $('cloudBackup').addEventListener('click',function(){
     .then(function(j){
       setCloudId(j.id);
       var box=$('backupBox'), url=restoreUrl(j.id);
-      $('backupMsg').textContent='Backed up to the cloud ✓';
+      $('backupMsg').textContent=backedUpMsg();
       $('backupUrl').value=url; box.style.display='block';
       if(window.track) try{ track('growlog_cloud_backup',{}); }catch(_){}
     })
@@ -2056,20 +2094,34 @@ $('backupEmailBtn').addEventListener('click',function(){
 /* ---- account wiring ----
    The document synced to an account is the SAME document the tools already share, so a
    signed-in grower gets their batches, cultures, contacts and deliveries on every device. */
-function isSampleOnly(){
-  var ids = state.batches.map(function(b){ return b.id; });
-  var sample = sampleState().batches.map(function(b){ return b.id; });
-  if(ids.length !== sample.length) return false;
-  return ids.every(function(id,i){ return id === sample[i]; });
+/* "Has this grower any work of their own, and how much of it" comes from samples.js and
+   nowhere else (I127). The local isSampleOnly() this replaces compared THIS page's batch
+   ids to the seed, in order and by length, so it was wrong in both directions: an own
+   culture with the untouched sample batches read as no work (the gate refuses the free
+   link, and the restore below replaces the document without asking), and deleting one
+   example with nothing of your own read as work (the gate offers to email a link to our
+   demo farm). Both reproduced in a browser before this was written. */
+/* If samples.js failed to load this errs toward "there IS work here", deliberately.
+   The two failures are not symmetric: over-counting costs a bad offer at the gate,
+   under-counting makes the sign-in below replace the document with no question asked.
+   Make the cheap failure the reachable one (I124). */
+function ownWorkCount(){
+  return window.MycroSamples ? MycroSamples.ownTotal(state) : state.batches.length;
 }
 (function initAccount(){
   if(!window.MycroAccount) return;
   MycroAccount.init({
     getState:   function(){ return state; },
     // The untouched sample seed is not work — a fresh device must not ask "replace your
-    // 8 batches?" about batches the grower never created.
-    countLocal: function(){ return isSampleOnly() ? 0 : state.batches.length; },
-    countOf:    function(doc){ return (doc && Array.isArray(doc.batches)) ? doc.batches.length : 0; },
+    // 8 batches?" about batches the grower never created. It counts the WHOLE shared
+    // document, not just batches: the number goes into a sentence a grower reads before
+    // their own records are overwritten, and a count that stops at one collection
+    // under-states what is about to go (I83 — a total and the number beside it must
+    // count the same population, which is why countOf measures the remote side the
+    // same way).
+    countLocal: function(){ return ownWorkCount(); },
+    countOf:    function(doc){ return window.MycroSamples ? MycroSamples.ownTotal(doc)
+                                 : ((doc && Array.isArray(doc.batches)) ? doc.batches.length : 0); },
     // Returns false when the document is not usable, so a restore reports failure
     // instead of quietly doing nothing (I79).
     setState:   function(doc){
@@ -2085,13 +2137,13 @@ function isSampleOnly(){
        and the nudge use; `src:'gate'` keeps this lead source separate on purpose, so the
        question "does the gate's free offer capture anyone the nudge never did" stays
        answerable. Nothing is offered on an untouched sample log — there is no work to save. */
-    hasWork:  function(){ return state.batches.length > 0 && !isSampleOnly(); },
+    hasWork:  function(){ return ownWorkCount() > 0; },
     keepSafe: function(em){
       return fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
         .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(j){
           setCloudId(j.id);
-          try{ $('backupMsg').textContent='Backed up to the cloud ✓'; $('backupUrl').value=restoreUrl(j.id); $('backupBox').style.display='block'; }catch(_){}
+          try{ $('backupMsg').textContent=backedUpMsg(); $('backupUrl').value=restoreUrl(j.id); $('backupBox').style.display='block'; }catch(_){}
           if(window.track) try{ track('growlog_cloud_backup',{src:'gate'}); }catch(_){}
           return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,src:'gate',first:mycroFirstTouch&&mycroFirstTouch()})});
         })
@@ -2170,7 +2222,7 @@ function showNudge(src){
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(j){
         setCloudId(j.id);
-        try{ $('backupMsg').textContent='Backed up to the cloud ✓'; $('backupUrl').value=restoreUrl(j.id); $('backupBox').style.display='block'; }catch(_){}
+        try{ $('backupMsg').textContent=backedUpMsg(); $('backupUrl').value=restoreUrl(j.id); $('backupBox').style.display='block'; }catch(_){}
         if(window.track) try{ track('growlog_cloud_backup',{src:'nudge'}); }catch(_){}
         return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,first:mycroFirstTouch&&mycroFirstTouch()})});
       })

@@ -89,6 +89,54 @@
     });
   }
 
+  /* How many records in this document are the GROWER'S OWN, per collection and in total.
+     I116 gave both tools one answer to "have they any work of their own" and then left the
+     account wiring on a per-page isSampleOnly() that compared ONE collection's ids to the
+     seed, in order and by length. Reproduced in a browser on 2026-09-21, it was wrong in
+     both directions and each direction has its own casualty:
+
+       - own culture + the untouched 8 sample batches -> isSampleOnly() true, so the grow
+         log reported NO work. The gate then refuses to hand over the free backup link
+         (I94) at the moment they asked for an account, and, far worse, countLocal() is 0
+         so signing in REPLACES the shared document with the account copy and never asks.
+         The one paying customer's log is 13 cultures and 0 batches: exactly this shape.
+       - delete one example and own nothing -> isSampleOnly() false, so the log reported
+         work. The gate then offers to email a private link to seven of OUR fictional
+         batches and writes the sender into the lead list as a grower.
+
+     A count, not a boolean, because the number goes into a sentence a grower reads before
+     something of theirs is overwritten, and it has to describe the whole document. */
+  function ownCounts(state) {
+    var out = {};
+    KINDS.forEach(function (k) {
+      out[k] = list(state, k).filter(function (r) {
+        return r && !isSample(k, r.id);
+      }).length;
+    });
+    return out;
+  }
+
+  function ownTotal(state) {
+    var c = ownCounts(state), n = 0;
+    KINDS.forEach(function (k) { n += c[k]; });
+    return n;
+  }
+
+  /* Everything in this document is ours and the grower has added nothing.
+
+     This is the condition every door that carries data OUT of the browser has to know
+     about, and until now not one of them asked. On 2026-09-20 a real evaluator arrived
+     from Google on the comparison page, spent 45 minutes in the Grow Log, was refused an
+     account, and then printed two QR labels, exported the log and made a private cloud
+     backup link -- all of it our demo farm, every record s1..s8, k1, k2, d1, d2, and not
+     one row of their own. The labels are a physical object that goes on a real block.
+
+     It is deliberately NOT a gate. A grower testing the printer or looking at the file
+     format is doing something reasonable; the artifact just has to say what it is. */
+  function onlySeeded(state) {
+    return seededTotal(state) > 0 && !hasOwnData(state);
+  }
+
   /* "8 example batches, 7 example cultures and 2 example sources" — one sentence, the
      same on both pages, so the two doors can never describe the document differently.
      It reads the REMOVABLE counts, not the seeded ones: a seeded record the grower's own
@@ -229,6 +277,9 @@
     seededCounts: seededCounts,
     seededTotal: seededTotal,
     hasOwnData: hasOwnData,
+    ownCounts: ownCounts,
+    ownTotal: ownTotal,
+    onlySeeded: onlySeeded,
     describe: describe,
     preview: preview,
     offerClear: offerClear,

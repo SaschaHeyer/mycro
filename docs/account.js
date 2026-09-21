@@ -410,13 +410,20 @@
         else setStatus('Signed in.');
         return;
       }
+      // Both sides count the SAME population: records the grower wrote themselves,
+      // across the whole shared document (I127). They used to disagree — one side counted
+      // every remote batch, the other counted this device's batches unless the ids matched
+      // the seed exactly — so the sentence put two different measures on one line, and a
+      // device whose own work sat in the other tool's collection counted 0 and was
+      // replaced with no question asked at all.
       var localCount = hooks.countLocal ? hooks.countLocal() : 0;
       var remoteCount = hooks.countOf ? hooks.countOf(j.data) : 0;
       var replace = true;
       if (localCount > 0) {
         replace = w.confirm(
-          'Your account has a saved log (' + remoteCount + ' batches). This device has ' +
-          localCount + '. Load the account copy and replace what is on this device?');
+          'Your account has a saved log (' + remoteCount + ' record' + (remoteCount === 1 ? '' : 's') +
+          ' you logged yourself). This device has ' + localCount +
+          '. Load the account copy and replace what is on this device?');
       }
       render();
       if (replace && hooks.setState) {
