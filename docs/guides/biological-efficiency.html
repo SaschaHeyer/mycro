@@ -333,7 +333,7 @@
 </div></footer>
 
   <script src="../waitlist.js?v=2"></script>
-  <script src="/tooluse.js?v=1"></script>
+  <script src="/tooluse.js?v=2"></script>
   <script>mycroToolUse("tool_be","#be-calc");</script>
   <script src="/track.js" defer></script>
 <script>
@@ -567,7 +567,21 @@
      The address is deliberately not cleared: asking twice for it is the small insult that
      ends a session (I94). */
   var beSentSig=null;
+  /* Whether the thing we actually sent was the page's own worked example. Recorded
+     from the SAME read that built the payload and only on success, exactly like the
+     signature beside it (I85/I93/I109): a failed attempt must never leave the page
+     describing an email nobody got. */
+  var beSentExample=false;
   function beSig(){ return JSON.stringify([beQuery(), beRows()]); }
+/* The one answer to "are these the reader's figures?", and it is the SAME listener
+   that feeds the `tool_*` denominator (docs/tooluse.js). Keeping a second opinion here
+   is how two surfaces drift apart (I113, I115, I116, I127). Defaults to TRUE when the
+   module is missing: an EXAMPLE label on a grower's real plan is worse than no label
+   on ours (I127 rule (e)). */
+function beTouched(){
+  try{ return window.mycroToolTouched ? window.mycroToolTouched('#be-calc') !== false : true; }
+  catch(_){ return true; }
+}
   function beSendView(sig){
     if(beSentSig==null) return {mode:'ask'};
     return {mode: beSentSig===sig ? 'done' : 'stale'};
@@ -578,7 +592,7 @@
     if(!msg||!btn) return;
     msg.style.display='block';
     if(v.mode==='done'){
-      msg.textContent='Sent ✓ Check your inbox for the report and a link that reopens it.';
+      msg.textContent=beSentExample ? 'Sent ✓ That is the worked example this page opens with, and the email says so. Put your own weights in above and send again for a reading of your own batch.' : 'Sent ✓ Check your inbox for the report and a link that reopens it.';
       btn.disabled=true;
     }else{
       msg.textContent='These numbers changed after you sent. Your inbox has the earlier version. Send this one too?';
@@ -604,16 +618,16 @@
        edits an input while it is in flight, the signature that gets recorded is still the one
        that was actually mailed, so the block correctly reads stale rather than confirming
        numbers nobody sent. */
-    var sig=beSig();
+    var sig=beSig(); var wasExample=!beTouched();
     var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
     fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
       method:'POST', headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({email:email,first:first,kind:'be',plan:{
+      body:JSON.stringify({email:email,first:first,touched:beTouched(),kind:'be',plan:{
         sub:'A '+spec().n+' batch on '+($('o-dry').textContent||'').trim().split(' (')[0]+' of dry substrate.',
         q:beQuery(), rows:rows}})
     }).then(function(r){return r.json();}).then(function(j){
       if(j&&j.ok){
-        beSentSig=sig; bePaintSend();
+        beSentSig=sig; beSentExample=wasExample; bePaintSend();
         if(window.mycroRememberEmail) mycroRememberEmail(email);
         if(window.track) track('be_report_email',{});
       } else {

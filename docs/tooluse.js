@@ -39,12 +39,59 @@
  *
  * Scoped by CONTAINER, never by a list of field ids — a field added to the tool next
  * month is covered on the day it ships (the I110 rule).
+ *
+ * ---------------------------------------------------------------------------------
+ * (f) THE SAME PREDICATE ANSWERS "IS THIS PLAN THE GROWER'S OWN?" (I128).
+ *
+ * On 2026-09-21 the first `farm-plan` lead this business has ever produced pressed
+ * `Email me this farm plan` having changed nothing, and was mailed a table of OUR
+ * worked example under the subject "Your mushroom farm plan" and the sentence "Here
+ * is the farm plan you just worked out": 50 blocks a week, $3,175 profit a month,
+ * payback in 1.3 months. `tool_farm_plan` read 0 for that week and `farm_plan_email`
+ * read 1, which is how it was found — the denominator shipped at I121 firing its
+ * first warning, correctly.
+ *
+ * That is I127's axis (an artifact LEAVES and is read later, with no screen beside
+ * it) applied to the one artifact that leaves by email. And the answer already lived
+ * here: `hit()` is exactly "the grower changed something in this tool". So the three
+ * capture pages read `mycroToolTouched(sel)` rather than keeping a second opinion —
+ * a shared module holding the right answer while a surface keeps its own copy is the
+ * shape behind I113, I115, I116 and I127 (backlog -80).
+ *
+ * (g) `touched` IS SET BEFORE THE `track` CHECK, AND `sent` AFTER. They are different
+ *     facts: "the grower changed something" does not depend on whether we managed to
+ *     count it. Conflating them means a page where track.js failed to load mails an
+ *     EXAMPLE label on a plan the grower really did fill in, which rule (h) says is
+ *     the worse error of the two.
+ *
+ * (h) AN UNKNOWN CONTAINER ANSWERS "THEIRS", NEVER "EXAMPLE". Marking a grower's own
+ *     plan as an example is worse than leaving an example unmarked (I127 rule (e)),
+ *     so the mark is applied only on a POSITIVE identification of untouched (I115
+ *     rule (b)). A page that never registered, a selector that matches nothing and a
+ *     module that failed to load all fall back to today's behaviour unchanged.
  */
 (function () {
+  // Keyed by the container selector the page registered, so the capture form on the same
+  // page can ask about the same tool without a second listener and without a second idea
+  // of what counts as a change.
+  var TOUCHED = {};
+
+  /* Did the grower change anything inside this tool? `true` when we cannot tell, because
+     the only consumer uses it to decide whether an artifact leaving the building is
+     labelled an example, and a wrong EXAMPLE on real work is the expensive direction
+     (rule (h)). hasOwnProperty, not a bare lookup: `TOUCHED["constructor"]` walks the
+     prototype chain and returns a truthy non-entry, which happens to be the safe answer
+     here but has been a real bug four times in this codebase (I91, I115, I116, I117). */
+  window.mycroToolTouched = function (sel) {
+    if (!sel) return true;
+    return Object.prototype.hasOwnProperty.call(TOUCHED, sel) ? TOUCHED[sel] === true : true;
+  };
+
   window.mycroToolUse = function (name, sel) {
     if (!name || !sel) return;
     var root = document.querySelector(sel);
     if (!root) return;
+    TOUCHED[sel] = false;
     var sent = false;
     function hit(e) {
       if (sent) return;
@@ -62,12 +109,23 @@
       var tag = t.tagName.toLowerCase();
       if (tag !== "input" && tag !== "select" && tag !== "textarea") return;   // rule (e)
       if (tag === "input" && String(t.type || "").toLowerCase() === "email") return; // rule (c)
+      // Rule (g): recorded here, ABOVE the `sent` guard and ABOVE the `track` check. A
+      // second change is not a second event but it is still a change, and a beacon we
+      // could not send is not a change that did not happen.
+      TOUCHED[sel] = true;
+      if (sent) return;                                                        // rule (b)
       if (typeof window.track !== "function") return;                          // rule (d)
-      sent = true;                                                             // rule (b)
+      sent = true;
       window.track(name);
     }
     // Capture phase, on the container: fires for fields that did not exist at init and
     // cannot be stopped by a handler further in.
+    // ONLY `input` and `change`, never `click`. Found at I128 by mutation: deleting rule
+    // (e)'s tag filter changed nothing, because what actually keeps a lb/kg button out is
+    // this line, not that one. The tag filter is defence in depth for a dispatched or
+    // synthetic `input` on a non-field, and for the day somebody adds a third event here.
+    // A documented rule that array order or event binding is really enforcing is how I102
+    // lost a loop; say which line does the work.
     root.addEventListener("input", hit, true);
     root.addEventListener("change", hit, true);
   };

@@ -369,7 +369,7 @@
 </div></footer>
 
   <script src="../waitlist.js?v=2"></script>
-  <script src="/tooluse.js?v=1"></script>
+  <script src="/tooluse.js?v=2"></script>
   <script>mycroToolUse("tool_farm_plan","#planner");</script>
   <script src="/track.js" defer></script>
 
@@ -594,7 +594,21 @@
      The address is deliberately not cleared: asking twice for it is the small insult that
      ends a session (I94). */
   var farmSentSig=null;
+  /* Whether the thing we actually sent was the page's own worked example. Recorded
+     from the SAME read that built the payload and only on success, exactly like the
+     signature beside it (I85/I93/I109): a failed attempt must never leave the page
+     describing an email nobody got. */
+  var farmSentExample=false;
   function farmSig(){ return JSON.stringify([planQuery(), planRows()]); }
+/* The one answer to "are these the reader's figures?", and it is the SAME listener
+   that feeds the `tool_*` denominator (docs/tooluse.js). Keeping a second opinion here
+   is how two surfaces drift apart (I113, I115, I116, I127). Defaults to TRUE when the
+   module is missing: an EXAMPLE label on a grower's real plan is worse than no label
+   on ours (I127 rule (e)). */
+function farmTouched(){
+  try{ return window.mycroToolTouched ? window.mycroToolTouched('#planner') !== false : true; }
+  catch(_){ return true; }
+}
   function farmSendView(sig){
     if(farmSentSig==null) return {mode:'ask'};
     return {mode: farmSentSig===sig ? 'done' : 'stale'};
@@ -605,7 +619,7 @@
     if(!msg||!btn) return;
     msg.style.display='block';
     if(v.mode==='done'){
-      msg.textContent='Sent ✓ Check your inbox for the plan and a link that reopens it.';
+      msg.textContent=farmSentExample ? 'Sent ✓ Those are the example figures this page opens with, and the email says so. Change any number above and send again for your own.' : 'Sent ✓ Check your inbox for the plan and a link that reopens it.';
       btn.disabled=true;
     }else{
       msg.textContent='These numbers changed after you sent. Your inbox has the earlier version. Send this one too?';
@@ -628,15 +642,15 @@
        edits an input while it is in flight, the signature that gets recorded is still the one
        that was actually mailed, so the block correctly reads stale rather than confirming
        numbers nobody sent. */
-    var sig=farmSig();
+    var sig=farmSig(); var wasExample=!farmTouched();
     var first=null; try{ first=window.mycroFirstTouch&&window.mycroFirstTouch(); }catch(_){}
     fetch((window.MYCRO_API||'https://mycro-806349486128.us-central1.run.app')+'/api/calc/email',{
       method:'POST', headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({email:email,first:first,kind:'farm',plan:{
+      body:JSON.stringify({email:email,first:first,touched:farmTouched(),kind:'farm',plan:{
         sub:'A farm running '+($('p-blocks').value||'0')+' blocks a week.', q:planQuery(), rows:rows}})
     }).then(function(r){return r.json();}).then(function(j){
       if(j&&j.ok){
-        farmSentSig=sig; farmPaintSend();
+        farmSentSig=sig; farmSentExample=wasExample; farmPaintSend();
         if(window.mycroRememberEmail) mycroRememberEmail(email);
         if(window.track) track('farm_plan_email',{});
       } else {
