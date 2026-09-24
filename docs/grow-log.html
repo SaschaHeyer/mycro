@@ -752,13 +752,30 @@ function renderCultureSelect(){
 function beOf(b){ var totalDry=b.dryG*b.blocks; return (b.stage==='harvested' && b.yieldG>0 && totalDry>0) ? (b.yieldG/totalDry*100) : null; }
 function isActive(b){ return b.stage==='inoculated'||b.stage==='colonizing'||b.stage==='fruiting'; }
 function overdueNote(b){
-  var sp=SPECIES[b.species], d=daysSince(b.stageSince);
-  if(b.stage==='colonizing' && d>sp.colonize)
-    return 'In colonization '+d+'d (typical ≤'+sp.colonize+'d for '+sp.label+') — check for a slow strain or hidden contamination.';
-  if(b.stage==='fruiting' && d>14)
-    return 'In fruiting '+d+'d — record your harvest to capture biological efficiency.';
-  if(b.stage==='inoculated' && daysSince(b.inoculatedOn)>4)
-    return 'Still marked inoculated after '+daysSince(b.inoculatedOn)+'d — advance it when mycelium starts running.';
+  var sp=SPECIES[b.species];
+  /* THE COLONISATION WINDOW IS MEASURED FROM INOCULATION, on every surface (I129).
+     SPECIES[].colonize means "days from inoculation to full colonisation" everywhere else it
+     is used: expectedIso() prints `inoculatedOn + colonize` on the QR label that gets taped to
+     the bag, and this page's own FAQ -- visible text AND FAQPage JSON-LD, i.e. what an answer
+     engine lifts as our definition -- says a block colonises "in 10-14 days". This flag used to
+     compare that same constant against `stageSince`, so ONE CONSTANT WAS BEING MEASURED AGAINST
+     TWO CLOCKS on the same batch card.
+     Found on a real farm's log: a lion's mane batch inoculated 2026-08-28 printed a label
+     reading "Colonised by 2026-09-18" while the card directly above said "inoculated 26d ago"
+     and flagged nothing at all, because pressing the stage button had set stageSince to today.
+     The error only ever runs ONE WAY -- it reports a batch as younger than it is -- so a hidden
+     contamination sitting for a month reads as a batch that started yesterday, which is the one
+     thing this flag exists to catch. */
+  var sinceInoc=daysSince(b.inoculatedOn);
+  if(b.stage==='colonizing' && sinceInoc>sp.colonize)
+    return 'Day '+sinceInoc+' since inoculation (typical ≤'+sp.colonize+'d for '+sp.label+') — check for a slow strain or hidden contamination.';
+  /* Fruiting DELIBERATELY keeps the stage clock: "how long since it started fruiting" is a
+     genuine in-stage question, and a batch that colonised 40 days and has been fruiting 2 would
+     otherwise be told to record a harvest that cannot exist yet. Do not "finish the job" here. */
+  if(b.stage==='fruiting' && daysSince(b.stageSince)>14)
+    return 'In fruiting '+daysSince(b.stageSince)+'d — record your harvest to capture biological efficiency.';
+  if(b.stage==='inoculated' && sinceInoc>4)
+    return 'Still marked inoculated after '+sinceInoc+'d — advance it when mycelium starts running.';
   return null;
 }
 
