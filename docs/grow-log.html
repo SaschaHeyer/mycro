@@ -314,7 +314,9 @@
             <option value="nameko">Nameko</option>
             <option value="reishi">Reishi</option>
             <option value="other">Other</option>
-          </select></div>
+          </select>
+          <input id="f-speciesName" type="text" maxlength="40" placeholder="Which species? e.g. Snow Oyster" autocomplete="off" style="display:none;margin-top:6px">
+          <span id="f-speciesHint" class="hint" style="display:none">Printed on your labels and used to rank this strain on its own.</span></div>
         <div class="field"><label>Dry substrate per block <span id="u-dry" class="hint"></span></label>
           <input id="f-dry" type="number" step="0.1" min="0" value="5">
           <span class="hint">Dry weight, before water. Used for biological efficiency.</span></div>
@@ -539,6 +541,23 @@ var SPECIES = {
   reishi:   {label:'Reishi', colonize:21},
   other:    {label:'Other', colonize:21}
 };
+/* WHAT A BATCH IS CALLED, ON EVERY SURFACE (I130). "Other" is a bucket, not a species, and it
+   used to be printed as one: on the card, the QR block label, the DELIVERY LABEL a buyer
+   receives ("Species: Other"), the pre-filled text in the SMS QR, the CSV, and the strain
+   panel, which merged every "Other" batch into one row. Found on a real farm's log: snow
+   oyster and Italian oyster, ten blocks between them, both filed as "Other" because the list
+   has neither, and ranked as one strain. So an "Other" batch carries the grower's own name for
+   it (`speciesName`), and this is the one function every surface reads. A name never changes
+   the species KEY: the colonisation window of a named "Other" is still our general one, and
+   the surfaces that quote it say so. */
+function speciesName(b){
+  var n = (b && b.species==='other' && typeof b.speciesName==='string') ? b.speciesName.trim() : '';
+  return n ? n.slice(0,40) : '';
+}
+function speciesLabel(b){ return speciesName(b) || (SPECIES[b.species]||SPECIES.other).label; }
+// Grouping key for per-strain panels: two differently named "Other" batches are two strains,
+// and "Snow oyster" / "snow Oyster " are one.
+function speciesKey(b){ var n=speciesName(b); return n ? 'other:'+n.toLowerCase().replace(/\s+/g,' ') : b.species; }
 var STAGES = ['inoculated','colonizing','fruiting','harvested'];
 var STAGE_LABEL = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fruiting',harvested:'Harvested',contaminated:'Contaminated'};
 /* Why a run was lost (I113). The ids AND the wording are lifted verbatim from the contaminant
@@ -651,6 +670,7 @@ function validBatch(b){
     (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
     (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
     (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
+    (b.speciesName==null || typeof b.speciesName==='string') && // grower's name for an "Other" (I130)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -725,6 +745,7 @@ function pickableCultures(keepId){
 // as the chain over there ("SHI-02-P1-L2 · Liquid culture").
 var CULTURE_LABEL = {petri:'Petri dish', lc:'Liquid culture', grain:'Grain spawn'};
 var editingLinkId = null;     // batch id whose lineage picker is open
+var editingSpNameId = null;   // "Other" batch whose species-name field is open (I130)
 function cultureOf(id){ var cs=cultures(); for(var i=0;i<cs.length;i++) if(cs[i].id===id) return cs[i]; return null; }
 /* The nearest contaminated culture at or above this one, so a block can warn that it
    came off a flagged line even when its own jar looked fine. */
@@ -768,7 +789,7 @@ function overdueNote(b){
      thing this flag exists to catch. */
   var sinceInoc=daysSince(b.inoculatedOn);
   if(b.stage==='colonizing' && sinceInoc>sp.colonize)
-    return 'Day '+sinceInoc+' since inoculation (typical ≤'+sp.colonize+'d for '+sp.label+') — check for a slow strain or hidden contamination.';
+    return 'Day '+sinceInoc+' since inoculation (typical ≤'+sp.colonize+'d for '+(speciesName(b)?speciesName(b)+', a general window, not a figure for that species':sp.label)+') — check for a slow strain or hidden contamination.';
   /* Fruiting DELIBERATELY keeps the stage clock: "how long since it started fruiting" is a
      genuine in-stage question, and a batch that colonised 40 days and has been fruiting 2 would
      otherwise be told to record a harvest that cannot exist yet. Do not "finish the job" here. */
@@ -850,7 +871,7 @@ function renderCosts(){
   // group the finished runs
   var by={};
   finished.forEach(function(b){
-    var k = costGroup==='method' ? methodOf(b) : SPECIES[b.species].label;
+    var k = costGroup==='method' ? methodOf(b) : speciesLabel(b);
     var g = by[k] || (by[k]={key:k,n:0,spend:0,yield:0,bes:[],rev:0,priced:0,contam:0,harv:0});
     g.n++; g.spend += costTotal(b);
     if(b.stage==='contaminated') g.contam++;
@@ -1004,8 +1025,9 @@ function renderStrains(){
   if(finished.length<2){ panel.style.display='none'; return; }
   var by={};
   bs.forEach(function(b){
-    var k=b.species; if(!SPECIES[k]) return;
-    var g=by[k]||(by[k]={sp:SPECIES[k].label,n:0,fin:0,harv:0,contam:0,yield:0,bes:[]});
+    if(!SPECIES[b.species]) return;
+    var k=speciesKey(b);
+    var g=by[k]||(by[k]={sp:speciesLabel(b),n:0,fin:0,harv:0,contam:0,yield:0,bes:[]});
     g.n++;
     if(b.stage==='harvested'||b.stage==='contaminated') g.fin++;
     if(b.stage==='contaminated') g.contam++;
@@ -1099,6 +1121,25 @@ function linkFormHtml(b){
     '<button class="mini solid" type="submit">Save lineage</button>'+
     '<button class="mini ghosty" type="button" data-act="cancelLink">Cancel</button></form>';
 }
+/* Name an "Other" batch that already exists (I130), for the same reason a batch can be linked
+   after the fact (I77): the grower who filed it as Other did so because the list had nothing
+   closer, and the name matters most later, at the moment a label is printed for a buyer. */
+function spNameFormHtml(b){
+  return '<form class="yieldForm" onsubmit="return saveSpName(event,\''+b.id+'\')">'+
+    '<label class="yl" style="min-width:200px">Which species is it?'+
+      '<input id="spNameInput" type="text" maxlength="40" autocomplete="off" placeholder="e.g. Snow Oyster" value="'+esc(speciesName(b))+'"></label>'+
+    '<button class="mini solid" type="submit">Save name</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelSpName">Cancel</button></form>';
+}
+function saveSpName(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b || b.species!=='other') return false;
+  var v=($('spNameInput').value||'').trim().slice(0,40);
+  b.speciesName = v || null;
+  editingSpNameId=null; save(); render();
+  if(window.track) try{ track('growlog_species_name',{named:v?1:0}); }catch(_){}
+  return false;
+}
 function saveLink(e,id){
   e.preventDefault();
   var b=find(id); if(!b) return false;
@@ -1161,6 +1202,7 @@ function saveContam(e,id){
 function actionsHtml(b){
   if(editingCostId===b.id) return costFormHtml(b);
   if(editingLinkId===b.id) return linkFormHtml(b);
+  if(editingSpNameId===b.id) return spNameFormHtml(b);
   if(editingContamId===b.id) return contamFormHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
@@ -1179,6 +1221,8 @@ function actionsHtml(b){
     ? '<button class="mini" data-act="link" data-id="'+b.id+'">🧬 '+(b.parentId?'Change lineage':'Link lineage')+'</button>'
     : '';
   costBtn += linkBtn;
+  if(b.species==='other')
+    costBtn += '<button class="mini" data-act="spname" data-id="'+b.id+'">🏷 '+(speciesName(b)?'Rename species':'Name species')+'</button>';
   if(b.stage==='contaminated' || b.stage==='harvested'){
     var extra='';
     if(b.stage==='harvested'){
@@ -1262,7 +1306,7 @@ function batchHtml(b){
   return '<div class="batch">'+
     '<div class="bhead"><div><span class="bname">'+esc(b.name||'Untitled batch')+'</span> '+
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
-      '<span class="bsp">'+esc(sp.label)+'</span></div>'+
+      '<span class="bsp">'+esc(speciesLabel(b))+'</span></div>'+
     '<div class="bmeta">'+meta+'</div>'+
     stepperHtml(b)+ culLine + beLine + lossLine + costLine + delLine + odLine + notes +
     '<div class="bactions">'+actionsHtml(b)+'</div>'+
@@ -1312,10 +1356,11 @@ function addBatch(e){
     parentId:parentId,
     method:($('f-method').value||'').trim()||null,
     code:($('f-code').value||'').trim()||null,
+    speciesName: $('f-species').value==='other' ? (($('f-speciesName').value||'').trim().slice(0,40)||null) : null,
     notes:($('f-notes').value||'').trim()
   });
   save(); render();
-  $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; $('f-date').value=today();
+  $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; $('f-speciesName').value=''; $('f-date').value=today();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value}); }catch(_){}
   showNudge('add');
   return false;
@@ -1375,6 +1420,8 @@ document.addEventListener('click',function(e){
   else if(act==='cancelCost'){ editingCostId=null; render(); }
   else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; render(); }
   else if(act==='cancelLink'){ editingLinkId=null; render(); }
+  else if(act==='spname' && b){ editingSpNameId=(editingSpNameId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; render(); }
+  else if(act==='cancelSpName'){ editingSpNameId=null; render(); }
   else if(act==='contam' && b){ editingContamId=(editingContamId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; render(); }
   else if(act==='cancelContam'){ editingContamId=null; render(); }
   else if(act==='delete' && b){
@@ -1509,7 +1556,7 @@ function startFreshFlow(){
     + '\n\nA full copy of everything has just been saved to your downloads.';
   if(!confirm(msg)) return false;
   state = freshState();
-  editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null;
+  editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null;
   save(); render();
   if(window.track) try{ track('growlog_start_fresh',{batches:had.batches,cultures:had.cultures,sources:had.sources,deliveries:had.deliveries}); }catch(_){}
   return true;
@@ -1581,7 +1628,7 @@ $('exportCsv').addEventListener('click',function(){
     var cul = b.parentId ? cultureOf(b.parentId) : null;
     var c=b.costs||{}, cpg=costPerG(b);
     var dlv=deliveredG(b.id);
-    rows.push([b.name,b.code||'',SPECIES[b.species].label,b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
+    rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
       cul?cul.code:'', (b.method||'').replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
@@ -1825,7 +1872,7 @@ function deliveryQrPayload(d,b){
   var sv=seller(), tel=telDigits(sv.phone);
   if(!tel) return null;
   if(($('d-qr')&&$('d-qr').value)==='text'){
-    var sp=b?SPECIES[b.species].label:'', code=b?batchNumber(b):'';
+    var sp=b?speciesLabel(b):'', code=b?batchNumber(b):'';
     return 'SMSTO:'+tel+':Question about batch '+code+(sp?' ('+sp+')':'')+' — ';
   }
   return 'MECARD:N:'+mecardEsc(sv.name||'')+';TEL:'+tel+';;';
@@ -1845,7 +1892,7 @@ function deliveryLabelHtml(d){
       '<div class="lname">'+esc(c?c.name:'—')+'</div>'+
       (addr ? '<div class="laddr">'+addr+'</div>' : '')+
       '<table class="lfacts"><tbody>'+
-        '<tr><th>Species</th><td>'+esc(b?SPECIES[b.species].label:'—')+'</td></tr>'+
+        '<tr><th>Species</th><td>'+esc(b?speciesLabel(b):'—')+'</td></tr>'+
         '<tr><th>Weight</th><td>'+fmtWt(d.weightG)+'</td></tr>'+
         '<tr><th>Batch no.</th><td>'+esc(b?batchNumber(b):'—')+'</td></tr>'+
       '</tbody></table>'+
@@ -1882,7 +1929,7 @@ $('exportDeliveries').addEventListener('click',function(){
   deliveries().forEach(function(d){
     var b=find(d.batchId), c=d.contactId?contactOf(d.contactId):null;
     rows.push([d.date, c?c.name:'', c?(c.addr||'').replace(/\n/g,', '):'', c?(c.phone||''):'',
-      b?SPECIES[b.species].label:'', (unit==='lb'? d.weightG/LB : d.weightG/1000).toFixed(2),
+      b?speciesLabel(b):'', (unit==='lb'? d.weightG/LB : d.weightG/1000).toFixed(2),
       b?batchNumber(b):'', b?b.name:'']);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
@@ -1907,6 +1954,13 @@ function syncDeliveryDefaults(){
   $('d-weight').value = (rem!=null && rem>0) ? (unit==='lb'? rem/LB : rem/1000).toFixed(1) : '';
 }
 $('d-batch').addEventListener('change',syncDeliveryDefaults);
+// The name field is only asked for when the list had nothing closer (I130).
+function syncSpeciesName(){
+  var o=$('f-species').value==='other';
+  $('f-speciesName').style.display = o ? '' : 'none';
+  $('f-speciesHint').style.display = o ? '' : 'none';
+}
+$('f-species').addEventListener('change',syncSpeciesName); syncSpeciesName();
 $('d-qr').addEventListener('change',function(){
   try{ state.labelQr=this.value; save(); }catch(e){}
 });
@@ -1945,10 +1999,10 @@ function labelHtml(b,qr,scanNote){
     '<div class="lmain">'+
       (isSeededBatch(b) ? '<div class="lexmark">Example \u00b7 not one of your blocks</div>' : '')+
       '<div class="lname">'+esc(b.name)+'</div>'+
-      '<div class="lsp">'+esc(sp.label)+'</div>'+
+      '<div class="lsp">'+esc(speciesLabel(b))+'</div>'+
       '<table class="lfacts"><tbody>'+
         '<tr><th>Spawned</th><td>'+esc(b.inoculatedOn)+' <span class="dim">(day '+daysSince(b.inoculatedOn)+')</span></td></tr>'+
-        '<tr><th>Colonised by</th><td>'+esc(expectedIso(b))+' <span class="dim">(~'+sp.colonize+'d typical)</span></td></tr>'+
+        '<tr><th>Colonised by</th><td>'+esc(expectedIso(b))+' <span class="dim">(~'+sp.colonize+'d '+(speciesName(b)?'general window':'typical')+')</span></td></tr>'+
         '<tr><th>Batch</th><td>'+b.blocks+' block'+(b.blocks===1?'':'s')+' · '+dry.toFixed(1)+' '+unit+' dry each</td></tr>'+
         '<tr><th>Stage</th><td>'+esc(STAGE_LABEL[b.stage])+'</td></tr>'+
       '</tbody></table>'+
@@ -2144,7 +2198,7 @@ function ownWorkCount(){
     setState:   function(doc){
       if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return false;
       doc.batches.forEach(normFlushes);
-      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null;
+      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
       return true;

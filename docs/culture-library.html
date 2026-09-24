@@ -552,6 +552,7 @@ function validImportBatch(b){
     (b.costs==null || (typeof b.costs==='object' && !Array.isArray(b.costs))) &&
     (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
     (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
+    (b.speciesName==null || typeof b.speciesName==='string') && // grow log's name for an "Other" (I130)
     (b.priceG==null || typeof b.priceG==='number');
 }
 function validGrowDoc(s){
