@@ -1303,7 +1303,7 @@ function batchHtml(b){
         ? ' <b class="culbad">— that culture is flagged contaminated'+flagWhat+'</b>'
         : ' <b class="culbad">— descended from '+esc(flag.code)+', flagged contaminated'+flagWhat+'</b>') : '')+'</div>'
     : '';
-  return '<div class="batch">'+
+  return '<div class="batch" id="batch-'+esc(b.id)+'">'+
     '<div class="bhead"><div><span class="bname">'+esc(b.name||'Untitled batch')+'</span> '+
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
       '<span class="bsp">'+esc(speciesLabel(b))+'</span></div>'+
@@ -2006,9 +2006,15 @@ function labelBatches(){
 function expectedIso(b){
   var d=parseIso(b.inoculatedOn); d.setDate(d.getDate()+SPECIES[b.species].colonize); return iso(d);
 }
-function labelQrUrl(){
+/* Each label's QR names ITS batch (I132). A label is taped to one bag, so a scan at the
+   bench is a question about that bag, and a link to the whole log answers it by making the
+   grower scroll a list of every batch on a phone. The batch id rides as `&b=`, only on a
+   linked device (an unlinked device's log does not exist on the phone that scans it), and
+   a label printed before this carries no `b` and keeps opening the log exactly as it did. */
+function labelQrUrl(b){
   var id=cloudId();
-  return id ? restoreUrl(id) : 'https://usemycro.com/grow-log.html';
+  if(!id) return 'https://usemycro.com/grow-log.html';
+  return restoreUrl(id) + (b && b.id ? '&b='+encodeURIComponent(b.id) : '');
 }
 /* Is this card one of OUR seeded examples (I127)? The mark goes on the CARD, not on the
    sheet, because the card is the thing that gets cut out and taped to a block: a sheet
@@ -2041,9 +2047,11 @@ function labelHtml(b,qr,scanNote){
 function buildLabelSheet(){
   var list=labelBatches();
   if(!list.length) return null;
-  var url=labelQrUrl(), qr=window.QR ? QR.svg(url,150) : '';
-  var scanNote = cloudId() ? 'Scan → your grow log' : 'Scan → free grow log';
-  var body=list.map(function(b){ return labelHtml(b,qr,scanNote); }).join('');
+  var scanNote = cloudId() ? 'Scan \u2192 this batch in your log' : 'Scan \u2192 free grow log';
+  var body=list.map(function(b){
+    var qr=window.QR ? QR.svg(labelQrUrl(b),150) : '';
+    return labelHtml(b,qr,scanNote);
+  }).join('');
   // Said before they press Print as well as on the card itself. Never a refusal: looking
   // at the sheet to see what the labels are like is a reasonable thing to do.
   var ex=list.filter(isSeededBatch).length;
@@ -2126,16 +2134,27 @@ function restoreUrl(id){ return 'https://usemycro.com/grow-log.html?log='+id; }
 var _syncTimer=null;
 function setSync(txt,isErr){ var el=$('syncStatus'); if(!el) return;
   el.textContent=txt; el.style.color=isErr?'#b23b3b':'var(--muted)'; el.style.display=txt?'block':'none'; }
+/* Does this device hold a change its link has not received yet (I132)? Auto-sync is
+   push-only, so "the device is the truth" was safe while a device only ever PUSHED. A
+   scanned label makes a phone PULL, and a phone at the bench is exactly where the signal
+   drops: log a harvest offline, scan the next bag, and the pull would replace that harvest
+   with the older copy on the link. The mark is a stamp, cleared only by a push that carried
+   it, so an edit made while a push is in flight keeps the device dirty. */
+function dirtyStamp(){ try{ return localStorage.getItem('mycro_growlog_unsynced')||''; }catch(e){ return ''; } }
+function markDirty(){ try{ localStorage.setItem('mycro_growlog_unsynced',String(Date.now())+Math.random().toString(36).slice(2,6)); }catch(e){} }
+function clearDirty(stamp){ try{ if(localStorage.getItem('mycro_growlog_unsynced')===stamp) localStorage.removeItem('mycro_growlog_unsynced'); }catch(e){} }
 function autoSync(){
   var id=cloudId(); if(!id || !state.batches.length) return;
+  var stamp=dirtyStamp();
   setSync('Syncing…');
   fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,data:state})})
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function(){ setSync('All changes synced to your private link ✓'); })
+    .then(function(){ clearDirty(stamp); setSync('All changes synced to your private link ✓'); })
     .catch(function(){ setSync('Saved on this device — we’ll sync when the connection is back.',true); });
 }
 function scheduleAutoSync(){
   if(typeof cloudId!=='function' || !cloudId()) return;   // only after the device is linked
+  markDirty();
   if(_syncTimer) clearTimeout(_syncTimer);
   _syncTimer=setTimeout(autoSync,1500);
 }
@@ -2250,25 +2269,68 @@ function ownWorkCount(){
   });
 })();
 
-/* Restore on load if the page was opened with ?log=<id> (e.g. on a phone). */
+/* Restore on load if the page was opened with ?log=<id> (e.g. on a phone, or a scanned
+   block label). Three cases, and only the first asks (I132):
+   (a) a device holding a DIFFERENT log, or none: confirm before replacing, as always;
+   (b) a device already linked to THIS log with nothing unpushed: take the link's copy
+       silently. It is the same log, possibly moved on from another device, and asking
+       "replace your batches?" on every scan of every bag teaches people to press OK;
+   (c) a device already linked to this log that holds changes the link has not received:
+       KEEP them and push. The link is older than this device, so pulling would destroy
+       the grower's newest work, most likely a harvest logged where the signal dropped.
+   Then, if the label named a batch (&b=), open that batch. That runs whatever happened
+   above, including a failed fetch, because at the bench the log on the phone is still
+   the log. */
 (function restoreFromLink(){
   var m=/[?&]log=([a-z0-9]{16,40})\b/.exec(location.search); if(!m) return;
-  var id=m[1];
+  var id=m[1], bm=/[?&]b=([A-Za-z0-9_-]{1,40})(?:&|$)/.exec(location.search), want=bm?bm[1]:'';
+  function done(){ if(want) setTimeout(function(){ focusScanned(want); },0); }
+  var linkedHere = cloudId()===id;
+  if(linkedHere && dirtyStamp()){
+    $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
+    $('backupMsg').textContent='This device has changes your link does not have yet.';
+    $('backupHint').innerHTML='Kept them, and sending them to your link now, so nothing logged on this device is lost.';
+    autoSync(); done(); return;
+  }
   fetch(API+'/api/growlog/backup/'+id)
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(j){
       var s=j&&j.data;
       if(!validGrowDoc(s)) throw new Error('bad');
-      if(state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) return;
+      if(!linkedHere && state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) { done(); return; }
       s.batches.forEach(normFlushes);
-      state=s; setCloudId(id); editingYieldId=null; save(); render();
-      $('backupMsg').textContent='Restored from your backup link ✓';
+      state=s; setCloudId(id); editingYieldId=null;
+      try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push, no dirty mark
+      render();
+      $('backupMsg').textContent= linkedHere ? 'Up to date with your backup link \u2713' : 'Restored from your backup link \u2713';
       $('backupHint').innerHTML='This device is now linked to that backup. From now on, <b>every change syncs to this link automatically.</b>';
       $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
-      if(window.track) try{ track('growlog_cloud_restore',{}); }catch(_){}
+      if(window.track) try{ track('growlog_cloud_restore',{same: linkedHere?'1':'0'}); }catch(_){}
+      done();
     })
-    .catch(function(){ /* silent — keep whatever is on the device */ });
+    .catch(function(){ /* silent — keep whatever is on the device */ done(); });
 })();
+
+/* Open the batch a scanned label names (I132). Scrolls to it, rings it, says it was the
+   label that brought them here. A batch that is no longer in this log (deleted, or a
+   label printed from another log) says so rather than silently landing on the top of the
+   page, which would read as "the scan did nothing". Counted, because a scan at the bench
+   is the one sign that the physical label is part of someone's work. */
+function focusScanned(bid){
+  var b=null; for(var i=0;i<state.batches.length;i++) if(state.batches[i].id===bid){ b=state.batches[i]; break; }
+  var el=b && document.getElementById('batch-'+bid);
+  if(window.track) try{ track('growlog_label_scan',{found: el?'1':'0'}); }catch(_){}
+  if(!el){
+    var list=$('batchList'); if(!list) return;
+    var n=document.createElement('div'); n.className='scanmiss'; n.id='scanMiss';
+    n.textContent='The label you scanned is for a batch that is no longer in this log. Everything else is below.';
+    list.parentNode.insertBefore(n,list); n.scrollIntoView({block:'start'}); return;
+  }
+  el.classList.add('scanned');
+  var tag=document.createElement('div'); tag.className='scanline'; tag.textContent='\u2193 The batch on the label you scanned';
+  el.insertBefore(tag, el.firstChild);
+  el.scrollIntoView({block:'start'});
+}
 
 /* On load, if this device is already linked to a backup (and we're not mid-restore),
    surface the link + auto-sync status so returning growers see their log is syncing. */
@@ -2357,6 +2419,9 @@ render();
 @media print{.no-print{display:none!important}}
 .batch{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
+.batch.scanned{border-color:var(--accent,#C0562C);box-shadow:0 0 0 3px rgba(192,86,44,.22)}
+.scanline{font-size:.8rem;font-weight:700;color:var(--accent,#C0562C);margin-bottom:6px}
+.scanmiss{background:#fbf3ee;border:1px solid #efd6c8;border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:.9rem}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .bname{font-weight:750;font-size:1.05rem;letter-spacing:-.01em}
 .bsp{color:var(--muted);font-size:.88rem;font-weight:600}
