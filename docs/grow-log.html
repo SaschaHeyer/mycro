@@ -267,7 +267,7 @@
       <form class="dform" id="deliveryForm" onsubmit="return saveDelivery(event)">
         <label class="yl">Batch<select id="d-batch"></select></label>
         <label class="yl">Buyer<select id="d-buyer"></select></label>
-        <label class="yl"><span>Weight <span id="u-del" class="muted"></span></span><input id="d-weight" type="number" step="0.1" min="0" required autocomplete="off"></label>
+        <label class="yl"><span>Weight <span id="u-del" class="muted"></span></span><input id="d-weight" type="number" step="any" min="0" required autocomplete="off"></label>
         <label class="yl">Date<input id="d-date" type="date"></label>
         <label class="yl">Batch number<input id="d-code" type="text" maxlength="24" placeholder="your lot code" autocomplete="off"></label>
         <button class="mini solid" type="submit">Log delivery</button>
@@ -318,7 +318,7 @@
           <input id="f-speciesName" type="text" maxlength="40" placeholder="Which species? e.g. Snow Oyster" autocomplete="off" style="display:none;margin-top:6px">
           <span id="f-speciesHint" class="hint" style="display:none">Printed on your labels and used to rank this strain on its own.</span></div>
         <div class="field"><label>Dry substrate per block <span id="u-dry" class="hint"></span></label>
-          <input id="f-dry" type="number" step="0.1" min="0" value="5">
+          <input id="f-dry" type="number" step="any" min="0" value="5">
           <span class="hint">Dry weight, before water. Used for biological efficiency.</span></div>
         <div class="field"><label>Number of blocks / bags</label>
           <input id="f-blocks" type="number" step="1" min="1" value="20"></div>
@@ -1211,7 +1211,7 @@ function actionsHtml(b){
     var btn = yieldMode==='edit' ? 'Save total' : (n?'Add flush':'Save harvest');
     return '<form class="yieldForm" onsubmit="return saveYield(event,\''+b.id+'\')">'+
       '<label class="yl">'+lbl+' '+
-      '<input id="yieldInput" type="number" step="0.1" min="0" autocomplete="off" required></label>'+
+      '<input id="yieldInput" type="number" step="any" min="0" autocomplete="off" required></label>'+
       '<button class="mini solid" type="submit">'+btn+'</button>'+
       '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button></form>';
   }
@@ -1319,6 +1319,7 @@ function render(){
     try{ save(); paint(); }catch(e2){} }
 }
 function paint(){
+  syncUnit();
   setUnitLabels();
   renderSummary();
   renderStrains();
@@ -1472,11 +1473,35 @@ document.querySelectorAll('#costGroupToggle button').forEach(function(bt){
 
 /* ---- unit toggle ---- */
 function setUnitLabels(){ $('u-dry').textContent='('+unit+')'; }
+/* The lb/kg choice is the grower's own and lives in THEIR document (I131), like the currency,
+   so it survives a reload and follows a restore link to the phone. It used to be a page
+   variable that reset to lb on every visit, so a grower who weighs in kg had to remember to
+   switch before typing anything, and every number typed without switching was stored 2.2x off.
+   The unit is DERIVED from the document on every paint, so every path that replaces `state`
+   (a restore link, a file import, a sign-in, a reset) lands in that document's unit without
+   each path having to remember to. A document with no `unit` reads lb, as it always did, and
+   loading never writes the key.
+   A weight already TYPED into a standing form keeps its physical meaning when the unit
+   changes: "4.5" typed as lb becomes 2.04 kg, never 4.5 kg. Only those two fields survive a
+   repaint; the per-card forms are rebuilt empty, which is visible, not silent. */
+function unitOfState(){ return (state && state.unit==='kg') ? 'kg' : 'lb'; }
+function syncUnit(){
+  var u = unitOfState();
+  if(u===unit) return;
+  ['f-dry','d-weight'].forEach(function(id){
+    var el=$(id); if(!el || el.value==='') return;
+    var v=parseFloat(el.value); if(!isFinite(v)) return;
+    var g = unit==='lb' ? v*LB : v*1000;
+    el.value = String(Math.round((u==='lb' ? g/LB : g/1000)*100)/100);
+  });
+  unit = u;
+  document.querySelectorAll('#unitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
+}
 document.querySelectorAll('#unitToggle button').forEach(function(bt){
   bt.addEventListener('click',function(){
-    var u=this.dataset.unit; if(u===unit) return; unit=u;
-    document.querySelectorAll('#unitToggle button').forEach(function(x){x.classList.toggle('active',x.dataset.unit===unit);});
-    render();
+    var u=this.dataset.unit; if(u===unit) return;
+    state.unit=u; save(); render();
+    if(window.track) try{ track('growlog_unit',{unit:u}); }catch(_){}
   });
 });
 
@@ -1512,7 +1537,7 @@ $('seedLink').addEventListener('click',function(e){ e.preventDefault(); state=sa
    `parentId`s pointing at cultures that no longer exist, which reads on the card as "not
    linked" while still sitting in the data (I78). */
 function fullExport(){
-  return { v:state.v||1, cur:state.cur, labelQr:state.labelQr, seller:state.seller,
+  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
            sources:state.sources, cultures:state.cultures };
 }
@@ -1528,6 +1553,7 @@ function freshTotal(c){ return c.batches+c.deliveries+c.cultures+c.sources; }
 function freshState(){
   var s = { v:state.v||1, batches:[], sources:[], cultures:[] };
   if(state.cur) s.cur = state.cur;
+  if(state.unit) s.unit = state.unit;
   if(state.labelQr) s.labelQr = state.labelQr;
   if(state.seller) s.seller = state.seller;
   if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
@@ -1548,7 +1574,7 @@ function startFreshFlow(){
   var keeps=[];
   if(Array.isArray(state.contacts) && state.contacts.length) keeps.push('your address book');
   if(state.seller) keeps.push('your own seller details');
-  keeps.push('your currency and label settings');
+  keeps.push('your currency, weight unit and label settings');
   var msg = 'Clear this log and start fresh?\n\n'
     + 'This removes ' + list + ' from this device'
     + ((window.MycroAccount && MycroAccount.signedIn()) ? ' and from your account' : '')

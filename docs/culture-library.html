@@ -1680,7 +1680,7 @@ $('seedLink').addEventListener('click', function(e){
    chain are one document, and a half-clear leaves `parentId`s pointing at cultures that no
    longer exist (I78). */
 function fullExport(){
-  return { v:state.v||1, cur:state.cur, labelQr:state.labelQr, seller:state.seller,
+  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
            sources:state.sources, cultures:state.cultures };
 }
@@ -1700,6 +1700,7 @@ function freshTotal(c){ return c.batches+c.deliveries+c.cultures+c.sources; }
 function freshState(){
   var s = { v:state.v||1, batches:[], sources:[], cultures:[] };
   if(state.cur) s.cur = state.cur;
+  if(state.unit) s.unit = state.unit;
   if(state.labelQr) s.labelQr = state.labelQr;
   if(state.seller) s.seller = state.seller;
   if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
@@ -1719,7 +1720,7 @@ function startFreshFlow(){
   var keeps=[];
   if(Array.isArray(state.contacts) && state.contacts.length) keeps.push('your address book');
   if(state.seller) keeps.push('your own seller details');
-  keeps.push('your currency and label settings');
+  keeps.push('your currency, weight unit and label settings');
   var msg = 'Clear this library and start fresh?\n\n'
     + 'Your library and your grow log are one record, so this removes ' + list + ' from this device'
     + ((window.MycroAccount && MycroAccount.signedIn()) ? ' and from your account' : '')
