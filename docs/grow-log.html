@@ -324,9 +324,9 @@
           <input id="f-blocks" type="number" step="1" min="1" value="20"></div>
         <div class="field"><label>Inoculation date</label>
           <input id="f-date" type="date"></div>
-        <div class="field" id="f-culture-wrap" style="display:none"><label>Spawn from <span class="hint">(culture)</span></label>
+        <div class="field" id="f-culture-wrap" style="display:none"><label>Spawn from <span class="hint">(optional)</span></label>
           <select id="f-culture"></select>
-          <span class="hint">Links this batch to the jar it came from, so a contamination can be traced back.</span></div>
+          <span class="hint">The jar or bag this batch came from, logged here or in the Culture Library, so a contamination can be traced back.</span></div>
         <div class="field"><label>Method / recipe <span class="hint">(optional)</span></label>
           <input id="f-method" type="text" maxlength="48" list="methodList" placeholder="e.g. Master's Mix (50/50)" autocomplete="off">
           <datalist id="methodList">
@@ -518,7 +518,7 @@
 </div></footer>
 
 <script src="/qr.js"></script>
-<script src="/samples.js?v=2"></script>
+<script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/account.js?v=14"></script>
 <script>
@@ -671,6 +671,7 @@ function validBatch(b){
     (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
     (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
     (b.speciesName==null || typeof b.speciesName==='string') && // grower's name for an "Other" (I130)
+    (b.labelAt==null || typeof b.labelAt==='string') &&     // day its block label was last printed (I133)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -758,14 +759,104 @@ function flaggedAncestor(id){
   }
   return null;
 }
+
+/* ---- spawn made in this log (I133) ----
+   Growers log their grain spawn HERE, as batches, because this is the page that counts days.
+   Two real farms have done it without being asked (I77: LC jars and a millet test; 2026-09-26:
+   six "Gen 1" bags on oats, 2 kg each). Until now a block could only name a culture from the
+   library as its spawn, so the bag and the blocks it went into sat side by side with no link,
+   and a bag marked contaminated warned nothing below it.
+   `parentId` still holds one id. A culture wins if both could match (it is what the field
+   always meant, so nothing written before this changes meaning); otherwise it may name another
+   batch in this log. Rules:
+   (a) never itself and never its own descendant, or the walk up has no top;
+   (b) a seeded example is never offered as a parent, because the example sweep removes it and
+       the grower's own block would lose its link to our fiction;
+   (c) a batch already lost is not offered for a NEW link, but a link that exists stays in its
+       own picker, selected (the pickableCultures rule: a picker that drops the current value
+       unlinks the batch on save);
+   (d) every walk carries a depth guard: a synced document can arrive in any shape. */
+function parentBatchOf(b){
+  if(!b || !b.parentId || cultureOf(b.parentId)) return null;
+  var p=find(b.parentId);
+  return (p && p.id!==b.id) ? p : null;
+}
+function batchCode(b){ return (b.code && String(b.code).trim()) || b.name; }
+function isSeededBatch(b){
+  var S=window.MycroSamples;
+  return !!(S && S.isSample && S.isSample('batches', b.id));
+}
+// True if `candidate` sits somewhere below `ancestorId` (or is it).
+function descendsFrom(candidate, ancestorId){
+  var cur=candidate, guard=0;
+  while(cur && guard++ < 200){
+    if(cur.id===ancestorId) return true;
+    cur=parentBatchOf(cur);
+  }
+  return false;
+}
+function pickableParentBatches(b, keepId){
+  return state.batches.filter(function(p){
+    if(p.id===keepId) return true;
+    if(b && descendsFrom(p, b.id)) return false;       // (a), which also covers p === b
+    if(isSeededBatch(p)) return false;                 // (b)
+    return p.stage!=='contaminated';                   // (c)
+  });
+}
+// The culture at the top of this batch's line, through any spawn batches in between.
+function lineCulture(b){
+  var cur=b, guard=0;
+  while(cur && guard++ < 200){
+    var c = cur.parentId ? cultureOf(cur.parentId) : null;
+    if(c) return c;
+    cur=parentBatchOf(cur);
+  }
+  return null;
+}
+/* The nearest contaminated record above this batch: a spawn batch in this log, or a culture in
+   the library. {kind, code, cause, self} where self means it is the direct parent. */
+function flaggedLine(b){
+  var cur=b, guard=0, first=true;
+  while(cur && guard++ < 200){
+    var c = cur.parentId ? cultureOf(cur.parentId) : null;
+    if(c){
+      var f=flaggedAncestor(c.id);
+      return f ? {kind:'culture', code:f.code, cause:causeOf(f), self:first && f.id===c.id} : null;
+    }
+    var p=parentBatchOf(cur);
+    if(!p) return null;
+    if(p.stage==='contaminated') return {kind:'batch', code:batchCode(p), cause:causeOf(p), self:first};
+    cur=p; first=false;
+  }
+  return null;
+}
+function childBatches(b){ return state.batches.filter(function(x){ return x.parentId===b.id && x.id!==b.id && !cultureOf(b.id); }); }
+function parentOptionsHtml(b, keepId, labelled){
+  var cs=pickableCultures(keepId), bs=pickableParentBatches(b, keepId), h='';
+  if(cs.length) h += '<optgroup label="From the Culture Library">'+cs.map(function(c){
+    return '<option value="'+esc(c.id)+'"'+(keepId===c.id?' selected':'')+'>'+
+      esc(c.code)+(labelled?' · '+esc(CULTURE_LABEL[c.type]||c.type):'')+'</option>'; }).join('')+'</optgroup>';
+  if(bs.length) h += '<optgroup label="Spawn in this log">'+bs.map(function(p){
+    return '<option value="'+esc(p.id)+'"'+(keepId===p.id?' selected':'')+'>'+
+      esc(batchCode(p))+' · '+esc(speciesLabel(p))+'</option>'; }).join('')+'</optgroup>';
+  return h;
+}
+// Is `v` something this batch may name as its spawn? (null b = a batch not yet created)
+function validParentFor(b, v){
+  if(!v) return false;
+  if(cultureOf(v)) return true;
+  var p=find(v);
+  if(!p || (b && descendsFrom(p, b.id))) return false;
+  return !isSeededBatch(p) || !!(b && b.parentId===v);
+}
 function renderCultureSelect(){
-  var cs=pickableCultures(), wrap=$('f-culture-wrap'), sel=$('f-culture');
+  var wrap=$('f-culture-wrap'), sel=$('f-culture');
   if(!wrap||!sel) return;
-  if(!cs.length){ wrap.style.display='none'; sel.innerHTML=''; return; }
+  var opts=parentOptionsHtml(null, null, false);
+  if(!opts){ wrap.style.display='none'; sel.innerHTML=''; return; }
   wrap.style.display='flex';
   var cur=sel.value;
-  sel.innerHTML='<option value="">— not linked —</option>'+cs.map(function(c){
-    return '<option value="'+esc(c.id)+'">'+esc(c.code)+'</option>'; }).join('');
+  sel.innerHTML='<option value="">— not linked —</option>'+opts;
   if(cur) sel.value=cur;
 }
 
@@ -842,7 +933,11 @@ function costPerG(b){
 function revenueOf(b){
   return (typeof b.priceG==='number' && b.stage==='harvested' && b.yieldG>0) ? b.priceG*b.yieldG : null;
 }
-function methodOf(b){ return (b.method||'').trim() || 'Unspecified method'; }
+function methodOf(b){ return (b.method||'').trim().replace(/\s+/g,' ') || 'Unspecified method'; }
+/* One recipe typed "oats" on one batch and "Oats" on the next is one recipe (seen on a real
+   farm's log, 2026-09-26). Group on a folded key and show the first spelling seen, the same rule
+   speciesKey() follows for a named "Other" (I130 rule b). */
+function methodKey(b){ return methodOf(b).toLowerCase(); }
 
 /* ---- cost & margin panel ---- */
 function renderCosts(){
@@ -871,8 +966,9 @@ function renderCosts(){
   // group the finished runs
   var by={};
   finished.forEach(function(b){
-    var k = costGroup==='method' ? methodOf(b) : speciesLabel(b);
-    var g = by[k] || (by[k]={key:k,n:0,spend:0,yield:0,bes:[],rev:0,priced:0,contam:0,harv:0});
+    // Prefixed so a recipe named "constructor" is never read off Object.prototype (I91/I115).
+    var k = 'k:'+(costGroup==='method' ? methodKey(b) : speciesKey(b));
+    var g = by[k] || (by[k]={key:(costGroup==='method' ? methodOf(b) : speciesLabel(b)),n:0,spend:0,yield:0,bes:[],rev:0,priced:0,contam:0,harv:0});
     g.n++; g.spend += costTotal(b);
     if(b.stage==='contaminated') g.contam++;
     if(b.stage==='harvested'){ g.harv++; g.yield += (b.yieldG||0); }
@@ -1109,14 +1205,11 @@ function costFormHtml(b){
    Culture Library was built for: flag a contaminated jar and the traceback can only find
    blocks that carry the link, so it reports "0 blocks affected" and looks fine. */
 function linkFormHtml(b){
-  var cs=pickableCultures(b.parentId);
   return '<form class="yieldForm" onsubmit="return saveLink(event,\''+b.id+'\')">'+
     '<label class="yl" style="min-width:200px">Spawned from'+
       '<select id="linkSel">'+
         '<option value="">— not linked —</option>'+
-        cs.map(function(c){
-          return '<option value="'+esc(c.id)+'"'+(b.parentId===c.id?' selected':'')+'>'+
-            esc(c.code)+' · '+esc(CULTURE_LABEL[c.type]||c.type)+'</option>'; }).join('')+
+        parentOptionsHtml(b, b.parentId, true)+
       '</select></label>'+
     '<button class="mini solid" type="submit">Save lineage</button>'+
     '<button class="mini ghosty" type="button" data-act="cancelLink">Cancel</button></form>';
@@ -1144,9 +1237,9 @@ function saveLink(e,id){
   e.preventDefault();
   var b=find(id); if(!b) return false;
   var v=($('linkSel').value||'').trim();
-  b.parentId = (v && cultureOf(v)) ? v : null;
+  b.parentId = validParentFor(b, v) ? v : null;
   editingLinkId=null; save(); render();
-  if(window.track) try{ track('growlog_link_culture',{linked:b.parentId?1:0}); }catch(_){}
+  if(window.track) try{ track('growlog_link_culture',{linked:b.parentId?1:0, kind:parentBatchOf(b)?'batch':(b.parentId?'culture':'')}); }catch(_){}
   return false;
 }
 
@@ -1168,12 +1261,11 @@ function contamFormHtml(b){
      answer: a block spawned off a bacterial liquid culture can still go down to trich on the
      shelf, and a pre-selected answer is the one that gets saved without being read. The loss
      panel attributes only what the grower names (I113 rule b). */
-  var cul = b.parentId ? cultureOf(b.parentId) : null;
-  var fl = cul ? flaggedAncestor(cul.id) : null;
-  var clue = (fl && causeIsNamed(causeOf(fl)))
+  var fl = flaggedLine(b);   // a culture in the library, or spawn logged here (I133)
+  var clue = (fl && causeIsNamed(fl.cause))
     ? '<div class="cluehint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">'+
-      'A clue, not the answer: <code>'+esc(fl.code)+'</code>, a culture this run came from, was flagged contaminated: '+
-      esc(CAUSE[causeOf(fl)])+'.</div>'
+      'A clue, not the answer: <code>'+esc(fl.code)+'</code>, '+(fl.kind==='batch'?'spawn':'a culture')+' this run came from, was flagged contaminated: '+
+      esc(CAUSE[fl.cause])+'.</div>'
     : '';
   return '<form class="yieldForm" onsubmit="return saveContam(event,\''+b.id+'\')">'+clue+
     '<label class="yl" style="min-width:250px">What went wrong?'+
@@ -1217,7 +1309,7 @@ function actionsHtml(b){
   }
   var costBtn = '<button class="mini" data-act="cost" data-id="'+b.id+'">💵 Costs</button>';
   // Only offered once there is something to link to — an empty picker is worse than no button.
-  var linkBtn = pickableCultures(b.parentId).length
+  var linkBtn = parentOptionsHtml(b, b.parentId, false)
     ? '<button class="mini" data-act="link" data-id="'+b.id+'">🧬 '+(b.parentId?'Change lineage':'Link lineage')+'</button>'
     : '';
   costBtn += linkBtn;
@@ -1293,16 +1385,25 @@ function batchHtml(b){
       (where ? ', at the '+esc(where)+' stage' : '')+'</div>';
   }
   var cul = b.parentId ? cultureOf(b.parentId) : null;
-  var flag = cul ? flaggedAncestor(cul.id) : null;
-  // What the flagged culture was flagged FOR, when the grower said (I117). It describes the
-  // culture, never this run: a block off a bacterial LC can still be lost to trich.
-  var flagWhat = (flag && causeIsNamed(causeOf(flag))) ? ' ('+esc(CAUSE[causeOf(flag)])+')' : '';
+  var pb = cul ? null : parentBatchOf(b);   // spawn logged in this log (I133)
+  var flag = flaggedLine(b);
+  // What the flagged record was flagged FOR, when the grower said (I117). It describes the
+  // parent, never this run: a block off a bacterial LC can still be lost to trich.
+  var flagWhat = (flag && causeIsNamed(flag.cause)) ? ' ('+esc(CAUSE[flag.cause])+')' : '';
+  var flagTxt = !flag ? '' : (flag.self
+    ? ' <b class="culbad">— that '+(flag.kind==='batch'?'spawn is marked':'culture is flagged')+' contaminated'+flagWhat+'</b>'
+    : ' <b class="culbad">— descended from '+esc(flag.code)+', flagged contaminated'+flagWhat+'</b>');
   var culLine = cul
-    ? '<div class="culline">🧬 Spawned from <a href="culture-library.html"><code>'+esc(cul.code)+'</code></a>'+
-      (flag ? (flag.id===cul.id
-        ? ' <b class="culbad">— that culture is flagged contaminated'+flagWhat+'</b>'
-        : ' <b class="culbad">— descended from '+esc(flag.code)+', flagged contaminated'+flagWhat+'</b>') : '')+'</div>'
+    ? '<div class="culline">🧬 Spawned from <a href="culture-library.html"><code>'+esc(cul.code)+'</code></a>'+flagTxt+'</div>'
+    : pb
+    ? '<div class="culline">🧬 Spawned from <a href="#batch-'+esc(pb.id)+'"><code>'+esc(batchCode(pb))+'</code></a> in this log'+flagTxt+'</div>'
     : '';
+  var kids = childBatches(b);
+  if(kids.length){
+    var kb = kids.reduce(function(a,x){ return a+(x.blocks||0); },0);
+    culLine += '<div class="culline">↳ Went into '+kids.length+' batch'+(kids.length===1?'':'es')+
+      ' ('+kb+' block'+(kb===1?'':'s')+'): '+kids.map(function(x){ return '<code>'+esc(batchCode(x))+'</code>'; }).join(', ')+'</div>';
+  }
   return '<div class="batch" id="batch-'+esc(b.id)+'">'+
     '<div class="bhead"><div><span class="bname">'+esc(b.name||'Untitled batch')+'</span> '+
       '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
@@ -1350,6 +1451,7 @@ function addBatch(e){
   if(!isFinite(dry)||dry<=0||!isFinite(blocks)||blocks<=0) return false;
   var d=$('f-date').value||today();
   var culSel=$('f-culture'), parentId=(culSel && culSel.value) || null;
+  if(parentId && !validParentFor(null, parentId)) parentId=null;
   state.batches.push({
     id:newId(), name:($('f-name').value||'').trim()||'Batch '+(state.batches.length+1),
     species:$('f-species').value, dryG:gFromInput(dry), blocks:blocks,
@@ -1429,6 +1531,13 @@ document.addEventListener('click',function(e){
     /* Counts only, never content. I79 could not answer "what happened to his batches" from
        data because a deletion left no trace whatsoever; the next time it is one query away. */
     var wasStage=b.stage, hadYield=(typeof b.yieldG==='number' && b.yieldG>0)?1:0;
+    /* Spawn that other batches came off (I133). Deleting it breaks their trail (I80), so say so
+       first; and a link to a record that is gone is nulled, never left dangling (I78). */
+    var kidsOf = childBatches(b);
+    if(kidsOf.length && !confirm(countWord(kidsOf.length,'batch was','batches were')+' spawned from '+batchCode(b)+
+      '. Deleting it removes that link from '+(kidsOf.length===1?'it':'them')+', so a contamination here could no longer be traced to '+
+      (kidsOf.length===1?'it':'them')+'. Delete anyway?')) return;
+    kidsOf.forEach(function(x){ x.parentId=null; });
     state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render();
     if(window.track) try{ track('growlog_batch_delete',{stage:wasStage, harvested:hadYield, left:state.batches.length}); }catch(_){}
   }
@@ -1651,12 +1760,12 @@ $('exportCsv').addEventListener('click',function(){
     var y = b.yieldG!=null ? toU(b.yieldG) : '';
     var flu = (b.flushes||[]).map(function(x){return toU(x).toFixed(2);}).join('; ');
     var be=beOf(b);
-    var cul = b.parentId ? cultureOf(b.parentId) : null;
+    var cul = b.parentId ? cultureOf(b.parentId) : null, pbt = cul ? null : parentBatchOf(b);
     var c=b.costs||{}, cpg=costPerG(b);
     var dlv=deliveredG(b.id);
     rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
-      cul?cul.code:'', (b.method||'').replace(/"/g,'""'),
+      cul?cul.code:(pbt?batchCode(pbt):''), (b.method||'').replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
       dlv>0 ? toU(dlv).toFixed(2) : '',
@@ -2025,10 +2134,13 @@ function labelQrUrl(b){
 function isSeededBatch(b){
   return !!(b && window.MycroSamples && MycroSamples.isSample('batches', b.id));
 }
-function labelHtml(b,qr,scanNote){
+function labelHtml(b,qr,scanNote,on){
   var sp=SPECIES[b.species], dry=(unit==='lb'? b.dryG/LB : b.dryG/1000);
-  return '<div class="lbl'+(isSeededBatch(b)?' lex':'')+'">'+
+  return '<div class="lbl'+(isSeededBatch(b)?' lex':'')+(on===false?' off':'')+'" data-id="'+esc(b.id)+'" data-new="'+(b.labelAt?'0':'1')+'">'+
     '<div class="lmain">'+
+      '<label class="lpick"><input type="checkbox"'+(on===false?'':' checked')+'> Print this label'+
+        (b.labelAt ? ' <span class="dim">(last printed '+esc(b.labelAt)+')</span>' : ' <span class="dim">(never printed)</span>')+
+      '</label>'+
       (isSeededBatch(b) ? '<div class="lexmark">Example \u00b7 not one of your blocks</div>' : '')+
       '<div class="lname">'+esc(b.name)+'</div>'+
       '<div class="lsp">'+esc(speciesLabel(b))+'</div>'+
@@ -2044,13 +2156,38 @@ function labelHtml(b,qr,scanNote){
     '<div class="lqr">'+qr+'<div class="lcap">'+esc(scanNote)+'</div></div>'+
   '</div>';
 }
+/* Which cards start ticked (I133). A real farm printed its 7 labels, added 6 batches three
+   days later and printed all 13 again, because the sheet had no way to leave out the bags
+   that already carry one. So a batch remembers the day its label was printed (`labelAt`),
+   and when the sheet holds BOTH printed and never-printed batches only the never-printed
+   ones start ticked. Every other case starts with everything ticked, exactly as before:
+   a first print, or a reprint where every bag already has a label. Never a refusal: every
+   card is still on the sheet and one click puts it back. */
+function labelPreselect(list){
+  var fresh=list.filter(function(b){ return !b.labelAt; });
+  var mixed=fresh.length>0 && fresh.length<list.length;
+  var on={}; list.forEach(function(b){ on[b.id] = mixed ? !b.labelAt : true; });
+  return {on:on, mixed:mixed, fresh:fresh.length};
+}
+/* Called by the label window when the grower prints (its Print button, or the browser's
+   own print). Stamps only the cards that were ticked, so an unticked bag stays "never
+   printed" and is offered again next time. */
+window.mycroLabelsPrinted=function(ids){
+  if(!Array.isArray(ids)) return 0;
+  var t=today(), n=0;
+  ids.forEach(function(id){ var b=find(String(id)); if(b && b.labelAt!==t){ b.labelAt=t; n++; } });
+  if(n) save();
+  if(window.track) try{ track('growlog_labels_printed',{n:ids.length}); }catch(_){}
+  return n;
+};
 function buildLabelSheet(){
   var list=labelBatches();
   if(!list.length) return null;
   var scanNote = cloudId() ? 'Scan \u2192 this batch in your log' : 'Scan \u2192 free grow log';
+  var pre=labelPreselect(list);
   var body=list.map(function(b){
     var qr=window.QR ? QR.svg(labelQrUrl(b),150) : '';
-    return labelHtml(b,qr,scanNote);
+    return labelHtml(b,qr,scanNote,pre.on[b.id]);
   }).join('');
   // Said before they press Print as well as on the card itself. Never a refusal: looking
   // at the sheet to see what the labels are like is a reasonable thing to do.
@@ -2059,11 +2196,15 @@ function buildLabelSheet(){
     ? 'these are the example blocks we seeded, not your own \u2014 add a batch for real labels.'
     : (ex ? ex+' of these '+(ex===1?'is an example we seeded':'are examples we seeded')+' \u2014 the rest are yours.'
           : 'cut along the cards and tape one to each block or bag.');
-  return labelDoc('Mycro block labels', list.length, hint, body);
+  if(pre.mixed) hint = pre.fresh+' of these '+(pre.fresh===1?'has':'have')+' never been printed, so only '+
+    (pre.fresh===1?'that one is':'those are')+' ticked. '+hint.charAt(0).toUpperCase()+hint.slice(1);
+  return labelDoc('Mycro block labels', list.length, hint, body, {pick:true, autoPrint:!pre.mixed});
 }
 /* The shared print document for both label sheets (block labels and delivery labels).
    Standalone window, so this page's own layout and print rules stay untouched. */
-function labelDoc(title, n, hint, body){
+function labelDoc(title, n, hint, body, opts){
+  opts=opts||{};
+  var pick=!!opts.pick, auto=opts.autoPrint!==false;
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
     '<title>'+title+'</title><meta name="robots" content="noindex">'+
     '<style>'+
@@ -2094,13 +2235,34 @@ function labelDoc(title, n, hint, body){
     '.lseller{margin-top:10px;padding-top:8px;border-top:1px dashed #cfcabf;font-size:.85rem;color:#6B6457}'+
     '.lseller b{color:#1a1a17}'+
     '.foot{max-width:760px;margin:8px auto 0;font-size:.72rem;color:#8b8578;text-align:center}'+
-    '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}}'+
+    '.lpick{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#6B6457;margin-bottom:6px;cursor:pointer}'+
+    '.lbl.off{opacity:.4}.bar .ghost{background:transparent;color:#C0562C;border:1.5px solid #C0562C}'+
+    '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}.lpick{display:none}.lbl.off{display:none}}'+
     '</style></head><body>'+
-    '<div class="bar"><span><b>'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
-    '<button type="button" onclick="window.print()">Print</button></div>'+
+    '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
+    '<span>'+(pick?'<button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> ':'')+
+    '<button type="button" id="lprint">Print</button></span></div>'+
     '<div class="sheet">'+body+'</div>'+
     '<div class="foot">Mycro Grow Log · usemycro.com/grow-log.html</div>'+
-    '<script>window.onload=function(){setTimeout(function(){try{window.print();}catch(e){}},250);};<\/script>'+
+    '<script>(function(){'+
+      'var pick='+(pick?'true':'false')+',total='+n+';'+
+      'function cards(){return Array.prototype.slice.call(document.querySelectorAll(".lbl[data-id]"));}'+
+      'function box(c){return c.querySelector(".lpick input");}'+
+      'function sync(){if(!pick)return;var k=cards().filter(function(c){return box(c).checked;}).length;'+
+        'cards().forEach(function(c){c.classList.toggle("off",!box(c).checked);});'+
+        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked";}'+
+      'var last=null;'+
+      'function stamp(){if(!pick)return;var ids=cards().filter(function(c){return box(c).checked;}).map(function(c){return c.getAttribute("data-id");});'+
+        'if(ids.join(",")===last)return;last=ids.join(",");'+
+        'try{if(window.opener&&window.opener.mycroLabelsPrinted)window.opener.mycroLabelsPrinted(ids);}catch(e){}}'+
+      'document.addEventListener("change",sync);'+
+      'if(pick){document.getElementById("lnew").onclick=function(){cards().forEach(function(c){box(c).checked=c.getAttribute("data-new")==="1";});sync();};'+
+        'document.getElementById("lall").onclick=function(){cards().forEach(function(c){box(c).checked=true;});sync();};}'+
+      'document.getElementById("lprint").onclick=function(){stamp();window.print();};'+
+      'window.addEventListener("beforeprint",stamp);'+
+      'sync();'+
+      (auto?'window.onload=function(){setTimeout(function(){try{window.print();}catch(e){}},250);};':'')+
+    '})();<\/script>'+
     '</body></html>';
 }
 $('printLabels').addEventListener('click',function(){
@@ -2110,7 +2272,7 @@ $('printLabels').addEventListener('click',function(){
   if(!w){ alert('Your browser blocked the label window. Allow pop-ups for usemycro.com and try again.'); return; }
   // fire tracking + the nudge FIRST — the child window's print dialog is modal and would
   // otherwise sit in front of them.
-  if(window.track) try{ track('growlog_labels_print',{n:labelBatches().length,cloud:cloudId()?1:0}); }catch(_){}
+  if(window.track) try{ track('growlog_labels_print',{n:labelBatches().length,cloud:cloudId()?1:0,fresh:labelPreselect(labelBatches()).fresh}); }catch(_){}
   showNudge('labels');
   w.document.open(); w.document.write(html); w.document.close();
 });

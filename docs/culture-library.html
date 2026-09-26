@@ -409,7 +409,7 @@
     <span class="disclaimer">© 2026 Mycro · Built for small mushroom farms · <a href="https://github.com/SaschaHeyer/mycro-grow">Open source</a></span></div>
 </div></footer>
 
-<script src="/samples.js?v=2"></script>
+<script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/account.js?v=14"></script>
 <script>
@@ -553,6 +553,7 @@ function validImportBatch(b){
     (b.cause==null || typeof b.cause==='string') &&         // optional loss cause (I113)
     (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
     (b.speciesName==null || typeof b.speciesName==='string') && // grow log's name for an "Other" (I130)
+    (b.labelAt==null || typeof b.labelAt==='string') &&     // grow log's last label print (I133)
     (b.priceG==null || typeof b.priceG==='number');
 }
 function validGrowDoc(s){
@@ -655,11 +656,32 @@ function nextCultureCode(parentCode, type){
 /* ---- traceback ----
    Downstream: everything descended from an item (cultures + grow-log batches).
    Upstream: the parent chain back to the source. */
-function descendants(id, out){
+function descendants(id, out, depth){
   out = out || {cultures:[], batches:[]};
-  childrenOf(id).forEach(function(c){ out.cultures.push(c); descendants(c.id, out); });
-  batchesOf(id).forEach(function(b){ out.batches.push(b); });
+  depth = (depth||0) + 1;
+  if(depth > 200) return out;   // a synced document can arrive in any shape
+  childrenOf(id).forEach(function(c){ out.cultures.push(c); descendants(c.id, out, depth); });
+  /* A grain bag logged in the GROW LOG can be the spawn for more batches there (I133), so the
+     walk continues through a batch: flag the LC above that bag and the blocks it went into are
+     in the traceback too, not only the bag. */
+  batchesOf(id).forEach(function(b){
+    if(out.batches.indexOf(b) >= 0) return;
+    out.batches.push(b);
+    if(b.id !== id && !findCulture(b.id)) descendants(b.id, out, depth);
+  });
   return out;
+}
+// The culture at the top of a batch's line, through any spawn batches in the grow log (I133).
+function lineCultureOfBatch(b){
+  var cur=b, guard=0;
+  while(cur && guard++ < 200){
+    var c=findCulture(cur.parentId); if(c) return c;
+    var p=null, id=cur.parentId;
+    if(!id) return null;
+    for(var i=0;i<state.batches.length;i++) if(state.batches[i].id===id && state.batches[i]!==cur){ p=state.batches[i]; break; }
+    cur=p;
+  }
+  return null;
 }
 function ancestry(c){
   var chain=[], guard=0, cur=c;
@@ -850,7 +872,7 @@ function renderSummary(){
   var live = pool.filter(function(c){ return c.status==='healthy'; }).length;
   var finished = pool.filter(isFinished).length;
   var lost = pool.filter(function(c){ return c.status==='contaminated'; }).length;
-  var traced = state.batches.filter(function(b){ var p=findCulture(b.parentId); return p && !isArchived(p); })
+  var traced = state.batches.filter(function(b){ var p=lineCultureOfBatch(b); return p && !isArchived(p); })
     .reduce(function(a,b){ return a + (typeof b.blocks==='number'?b.blocks:0); },0);
   $('k-sources').textContent = liveSources().length || '–';
   $('k-live').textContent = live;
