@@ -187,7 +187,12 @@
       }
     });
     list(state, 'batches').forEach(function (b) {
-      if (b && b.parentId === id) out.batches.push(b);
+      // A batch can be spawn for other batches in the same log (I133), so the walk goes on
+      // through it. The `indexOf` stops a batch listed twice from being walked twice.
+      if (b && b.parentId === id && out.batches.indexOf(b) < 0) {
+        out.batches.push(b);
+        if (b.id !== id) descendantsOf(state, b.id, out, depth);
+      }
     });
     return out;
   }
@@ -261,10 +266,13 @@
 
     // A link to a record that is gone reads as "not linked" on the card while still
     // sitting in the data (I78). Null it; never delete the row that carries it.
-    var liveCulture = {};
-    list(state, 'cultures').forEach(function (c) { if (c && typeof c.id === 'string') liveCulture[c.id] = 1; });
+    // A batch may also name another batch as its spawn (I133): a surviving batch is a live
+    // parent too, or this sweep would erase every link a grower made inside their own log.
+    var liveParent = {};
+    list(state, 'cultures').forEach(function (c) { if (c && typeof c.id === 'string') liveParent[c.id] = 1; });
+    list(state, 'batches').forEach(function (b) { if (b && typeof b.id === 'string') liveParent[b.id] = 1; });
     list(state, 'batches').forEach(function (b) {
-      if (b && b.parentId && !has(liveCulture, b.parentId)) b.parentId = null;
+      if (b && b.parentId && (b.parentId === b.id || !has(liveParent, b.parentId))) b.parentId = null;
     });
 
     return { kept: kept, removed: removed };
