@@ -96,8 +96,8 @@
       if (mm) { u = mm[1]; bare = 'dry_per_block'; }
       var mp = k.match(/^price_per_(lb|kg|g)$/);
       if (mp) { u = mp[1]; bare = 'price_per'; }
-      for (var f in COLS) {
-        if (!has(COLS, f) || has(out, f)) continue;
+      for (var f in COLS) {             // COLS is a literal: for-in sees its own keys only
+        if (has(out, f)) continue;
         if (COLS[f].indexOf(bare) >= 0 || COLS[f].indexOf(k) >= 0) { out[f] = { i: i, unit: u }; break; }
       }
     });
