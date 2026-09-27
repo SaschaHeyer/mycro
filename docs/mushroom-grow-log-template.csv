@@ -1,0 +1,3 @@
+"batch_id","species_strain","substrate","spawn_type_ratio","inoculation_date","dry_substrate_weight","unit","num_blocks","colonized_date","pinning_date","harvest_date","fresh_yield","biological_efficiency_pct","contaminated_yn","contam_cause_stage","notes"
+"B-001","Blue oyster","Masters mix","grain 20%","2026-07-01","1.5","kg","1","2026-07-13","2026-07-17","2026-07-22","1.20","80","N","","first flush, strong pins"
+"B-002","Lion's mane","Supplemented sawdust","grain 25%","2026-07-03","1.4","kg","1","2026-07-16","","","","","Y","trich (green) at colonization","spawn may have been under-shaken"

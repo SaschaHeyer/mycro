@@ -67,8 +67,9 @@
     <h2 style="margin:0 0 6px;font-size:1.25rem">Download the template</h2>
     <p style="margin:0 0 16px;font-size:1rem" class="muted">A clean CSV with the recommended columns and two
       example rows. Opens in Excel, Google Sheets or Apple Numbers — delete the examples and start logging.</p>
-    <button id="dlCsv" class="btn" style="background:var(--brand)">⬇ Download CSV template</button>
+    <a id="dlCsv" href="mushroom-grow-log-template.csv" download="mushroom-grow-log-template.csv" class="btn" style="background:var(--brand)">⬇ Download CSV template</a>
     <a href="grow-log.html" id="ctaApp" class="btn secondary" style="margin-left:10px;border-color:var(--brand);color:var(--brand-ink)">Or use the free auto-calculating log →</a>
+    <p id="dlDone" hidden style="margin:14px 0 0;font-size:.95rem">Saved as <b>mushroom-grow-log-template.csv</b> in your downloads. On a phone it opens in Google Sheets, Excel or any spreadsheet app. If you would rather not keep a spreadsheet on your phone, the <a href="grow-log.html">free Grow Log</a> works right here in the browser and does the maths for you.</p>
   </div>
 
   <article style="font-size:1.05rem;line-height:1.7">
@@ -170,23 +171,11 @@
 
 <script>
 (function(){
-  var HEAD = ['batch_id','species_strain','substrate','spawn_type_ratio','inoculation_date',
-    'dry_substrate_weight','unit','num_blocks','colonized_date','pinning_date','harvest_date',
-    'fresh_yield','biological_efficiency_pct','contaminated_yn','contam_cause_stage','notes'];
-  var EX = [
-    ['B-001','Blue oyster','Masters mix','grain 20%','2026-07-01','1.5','kg','1','2026-07-13','2026-07-17','2026-07-22','1.20','80','N','','first flush, strong pins'],
-    ['B-002','Lion\'s mane','Supplemented sawdust','grain 25%','2026-07-03','1.4','kg','1','2026-07-16','','','','','Y','trich (green) at colonization','spawn may have been under-shaken']
-  ];
-  function csvCell(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }
-  function buildCsv(){
-    var rows=[HEAD].concat(EX);
-    return rows.map(function(r){return r.map(csvCell).join(',');}).join('\r\n');
-  }
+  /* A real file, not a blob (I134). The blob was revoked a second after the tap, and Chrome
+     on Android reads it only after the grower answers its "Download file?" sheet, so two
+     phone visitors on 2026-09-26 tapped 2 and 3 times each. A static file cannot expire. */
   document.getElementById('dlCsv').addEventListener('click',function(){
-    var blob=new Blob([buildCsv()],{type:'text/csv'}); var url=URL.createObjectURL(blob);
-    var a=document.createElement('a'); a.href=url; a.download='mushroom-grow-log-template.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    var done=document.getElementById('dlDone'); if(done) done.hidden=false;
     if(window.track) try{ track('template_download',{fmt:'csv'}); }catch(_){}
   });
   var ctaApp=document.getElementById('ctaApp');

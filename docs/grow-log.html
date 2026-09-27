@@ -103,8 +103,8 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="cloudBackup">☁ Back up</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
-      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson">⬆ Import backup</button>
-      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson" title="A Mycro backup (.json), or a spreadsheet grow log saved as CSV">⬆ Import backup or CSV</button>
+      <input type="file" id="importFile" accept="application/json,.json,text/csv,.csv" style="display:none">
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
@@ -518,8 +518,10 @@
 </div></footer>
 
 <script src="/qr.js"></script>
+<script src="/savefile.js?v=1"></script>
 <script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
+<script src="/csvimport.js?v=1"></script>
 <script src="/account.js?v=14"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
@@ -1688,7 +1690,7 @@ function startFreshFlow(){
     + 'This removes ' + list + ' from this device'
     + ((window.MycroAccount && MycroAccount.signedIn()) ? ' and from your account' : '')
     + '.\n\nKept: ' + (keeps.length>1 ? keeps.slice(0,-1).join(', ')+' and '+keeps[keeps.length-1] : keeps[0]) + '.'
-    + '\n\nA full copy of everything has just been saved to your downloads.';
+    + '\n\nA full copy of everything was just handed to your browser as mycro-log-backup.json. If you cannot see it in your downloads yet, press Cancel: nothing is removed until you press OK.';
   if(!confirm(msg)) return false;
   state = freshState();
   editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null;
@@ -1745,10 +1747,12 @@ function exportName(ext){
   var only = !!(window.MycroSamples && MycroSamples.onlySeeded(state));
   return 'mycro-grow-log' + (only ? '-example-data' : '') + '.' + ext;
 }
+/* savefile.js keeps the file alive past Android's "Download file?" sheet (I134). If it failed
+   to load, the fallback never revokes at all: a leaked few KB beats a backup that never lands. */
 function download(name,text,type){
-  var blob=new Blob([text],{type:type}); var url=URL.createObjectURL(blob);
-  var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a);
-  a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  if(window.mycroSaveFile) return mycroSaveFile(name,text,type);
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:type}));
+  a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
@@ -1801,6 +1805,9 @@ $('importFile').addEventListener('change',function(e){
   var reader = new FileReader();
   reader.onerror = function(){ alert('Could not read that file — nothing was changed.'); };
   reader.onload = function(){
+    if(window.MycroCsvImport && MycroCsvImport.looksLikeCsv(reader.result, file.name)){
+      importCsv(reader.result, file.name); return;
+    }
     var s;
     try{ s = JSON.parse(reader.result); }
     catch(err){ alert('That file is not valid JSON — nothing was changed.'); return; }
@@ -1827,6 +1834,39 @@ $('importFile').addEventListener('change',function(e){
   };
   reader.readAsText(file);
 });
+/* ---- bring a spreadsheet grow log in (I134) ----------------------------------------
+   /grow-log-template.html hands out a CSV to keep a grow log in a spreadsheet, and until
+   now the only way from that spreadsheet into this page was to retype every row. The
+   parsing is csvimport.js (pure, tested on its own); this is only the asking and the
+   adding. It ADDS, never replaces: an import is history arriving, not a restore. */
+function importCsv(text, filename){
+  var lang = (navigator.language||'en-US');
+  var p = MycroCsvImport.plan(text, {SPECIES:SPECIES, STAGE_LABEL:STAGE_LABEL, CAUSE:CAUSE,
+    pageUnit:unit, existing:state.batches, today:today(), dayFirst:!/^en-(US|CA|PH)$/i.test(lang), newId:newId});
+  if(!p.ok){ alert(p.error+' Nothing was changed.'); return; }
+  p.batches = p.batches.filter(validBatch);
+  var why = [];
+  if(p.examples) why.push(countWord(p.examples,'example row')+' from our template (left out on purpose)');
+  if(p.dupes) why.push(countWord(p.dupes,'row')+' already in your log');
+  Object.keys(p.skipped).forEach(function(k){ why.push(countWord(p.skipped[k],'row')+' with '+k); });
+  var skipped = why.length ? '\n\nLeft out: '+why.join('; ')+'.' : '';
+  if(!p.batches.length){
+    alert('There was nothing new to add from '+(filename||'that file')+'. Nothing was changed.'+skipped);
+    return;
+  }
+  var blocks = p.batches.reduce(function(a,b){ return a+b.blocks; },0);
+  var msg = 'Add '+countWord(p.batches.length,'batch','batches')+' ('+countWord(blocks,'block')+') from '+
+    (filename||'this file')+'?\n\nWeights read in '+p.units.join(' and ')+
+    '. Nothing already in your log is changed or removed.'+
+    (p.dryAmbiguous ? '\n\nThe dry weight is read as the weight of ONE block, so a row of 3 blocks at 1.5 is 4.5 of substrate. If your sheet has the whole batch there, cancel and divide it by the number of blocks first.' : '')+skipped;
+  if(!confirm(msg)) return;
+  p.batches.forEach(function(b){ normFlushes(b); state.batches.push(b); });
+  editingYieldId = null; save(); render();
+  if(window.track) try{ track('growlog_import',{fmt:'csv',batches:p.batches.length,
+    skipped:p.dupes+p.examples+Object.keys(p.skipped).reduce(function(a,k){return a+p.skipped[k];},0)}); }catch(_){}
+  alert('Added '+countWord(p.batches.length,'batch','batches')+'. Check the weights and stages on a couple of them: a spreadsheet only knows what was typed into it.');
+  showNudge('import');
+}
 
 /* ---- contacts, deliveries & delivery labels (I74) ------------------------------------
    Requested by a Founding Grower, and the label carries exactly the six things he said it
@@ -2519,7 +2559,8 @@ function showNudge(src){
   if(lead) lead.textContent = (src==='export') ? "Exporting by hand?"
     : (src==='labels') ? "Labels on the blocks?"
     : (src==='cost') ? "That's your cost per pound."
-    : (src==='delivery') ? "Out the door and on paper." : "Nice — that's logged.";
+    : (src==='delivery') ? "Out the door and on paper."
+    : (src==='import') ? "Your spreadsheet is in." : "Nice — that's logged.";
   n.style.display='block';
   if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
 }
