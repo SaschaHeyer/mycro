@@ -1026,6 +1026,14 @@ function renderCosts(){
 }
 
 /* ---- summary ---- */
+/* A contamination rate counts BAGS, not batches (I136b). Once a batch can be split (one bad
+   bag of five goes to its own batch and is marked lost), counting runs would read that as one
+   loss in two runs, 50%, when one bag in five went: 20%. It was already wrong before splits
+   existed, just less visibly: a 1-bag test run lost counted the same as a 24-bag run lost, and
+   the loss panel below ranks by blocks (I113 rule a), so the headline and its own panel
+   disagreed. A run with no usable bag count still counts as one, so a loss is never invisible. */
+function bagsOf(b){ return (typeof b.blocks==='number' && isFinite(b.blocks) && b.blocks>0) ? b.blocks : 1; }
+function sumBags(list){ return list.reduce(function(a,b){ return a+bagsOf(b); },0); }
 function renderSummary(){
   var bs=state.batches;
   var active=bs.filter(isActive);
@@ -1034,7 +1042,7 @@ function renderSummary(){
   var avgBe = bes.length ? bes.reduce(function(a,x){return a+x;},0)/bes.length : null;
   var finished=bs.filter(function(b){return b.stage==='harvested'||b.stage==='contaminated';});
   var contam=bs.filter(function(b){return b.stage==='contaminated';});
-  var rate = finished.length ? contam.length/finished.length*100 : null;
+  var rate = finished.length ? sumBags(contam)/sumBags(finished)*100 : null;
   $('k-active').textContent=active.length;
   $('k-blocks').textContent=blocks;
   $('k-be').textContent = avgBe!=null ? Math.round(avgBe)+'%' : '—';
@@ -1125,10 +1133,10 @@ function renderStrains(){
   bs.forEach(function(b){
     if(!SPECIES[b.species]) return;
     var k=speciesKey(b);
-    var g=by[k]||(by[k]={sp:speciesLabel(b),n:0,fin:0,harv:0,contam:0,yield:0,bes:[]});
+    var g=by[k]||(by[k]={sp:speciesLabel(b),n:0,fin:0,harv:0,contam:0,finBags:0,lostBags:0,yield:0,bes:[]});
     g.n++;
-    if(b.stage==='harvested'||b.stage==='contaminated') g.fin++;
-    if(b.stage==='contaminated') g.contam++;
+    if(b.stage==='harvested'||b.stage==='contaminated'){ g.fin++; g.finBags+=bagsOf(b); }
+    if(b.stage==='contaminated'){ g.contam++; g.lostBags+=bagsOf(b); }
     if(b.stage==='harvested'){ g.harv++; g.yield+=(b.yieldG||0); }
     var be=beOf(b); if(be!=null) g.bes.push(be);
   });
@@ -1136,7 +1144,7 @@ function renderStrains(){
     var g=by[k];
     g.avgBe = g.bes.length ? g.bes.reduce(function(a,x){return a+x;},0)/g.bes.length : null;
     g.bestBe = g.bes.length ? Math.max.apply(null,g.bes) : null;
-    g.loss = g.fin ? g.contam/g.fin*100 : null;
+    g.loss = g.fin ? g.lostBags/g.finBags*100 : null;   // bags, like the headline (I136b)
     return g;
   });
   // rank: strains with a BE first (highest avg BE), then the rest
