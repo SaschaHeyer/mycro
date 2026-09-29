@@ -1703,7 +1703,7 @@ $('seedLink').addEventListener('click', function(e){
    chain are one document, and a half-clear leaves `parentId`s pointing at cultures that no
    longer exist (I78). */
 function fullExport(){
-  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, seller:state.seller,
+  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
            sources:state.sources, cultures:state.cultures };
 }
@@ -1727,6 +1727,7 @@ function freshState(){
   if(state.cur) s.cur = state.cur;
   if(state.unit) s.unit = state.unit;
   if(state.labelQr) s.labelQr = state.labelQr;
+  if(state.labelPerBag) s.labelPerBag = true;
   if(state.seller) s.seller = state.seller;
   if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
   return s;

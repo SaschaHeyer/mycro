@@ -1293,11 +1293,133 @@ function saveContam(e,id){
   return false;
 }
 
+/* Correct a batch after it was added (I136). A real farm wrote in: "once we enter a batch in
+   the log, we are unable to edit the batch". Every other field already had its own editor
+   (costs, lineage, cause, species name); the facts typed on the add form had none, so a typo
+   in a name or a date meant delete and retype. This edits exactly those facts and nothing
+   that is a record of what HAPPENED (stage, harvests, losses keep their own buttons).
+   Lowering the bag count here is a correction, not a loss: a bag that went bad is split off
+   and marked (below), or the contamination rate never sees it. The form says so. */
+var editingBatchId = null;    // batch id whose "Edit details" form is open
+var splittingId = null;       // batch id whose "Split off bags" form is open
+function editFormHtml(b){
+  var dry = (unit==='lb' ? b.dryG/LB : b.dryG/1000);
+  return '<form class="yieldForm editForm" onsubmit="return saveEdit(event,\''+b.id+'\')">'+
+    '<label class="yl" style="min-width:170px">Name<input id="editName" type="text" maxlength="40" value="'+esc(b.name)+'" autocomplete="off"></label>'+
+    '<label class="yl">Batch number<input id="editCode" type="text" maxlength="24" value="'+esc(b.code||'')+'" placeholder="optional" autocomplete="off"></label>'+
+    '<label class="yl">Blocks / bags<input id="editBlocks" type="number" step="1" min="1" value="'+b.blocks+'"></label>'+
+    '<label class="yl">Dry substrate each ('+unit+')<input id="editDry" type="number" step="any" min="0" value="'+(+dry.toFixed(3))+'"></label>'+
+    '<label class="yl">Spawned on<input id="editDate" type="date" value="'+esc(b.inoculatedOn)+'"></label>'+
+    '<label class="yl" style="min-width:200px">Notes<input id="editNotes" type="text" maxlength="120" value="'+esc(b.notes||'')+'" autocomplete="off"></label>'+
+    (isActive(b) && b.blocks>1
+      ? '<div class="edithint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">Lost a bag, or some are ahead of the rest? Use <b>✂ Split off bags</b> instead, so the lost ones count in your contamination rate.</div>'
+      : '')+
+    '<button class="mini solid" type="submit">Save details</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelEdit">Cancel</button></form>';
+}
+function saveEdit(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b) return false;
+  var blocks=Math.round(parseFloat($('editBlocks').value)), dry=parseFloat($('editDry').value);
+  var d=($('editDate').value||'').trim();
+  if(!isFinite(blocks)||blocks<1||!isFinite(dry)||dry<=0) return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) d=b.inoculatedOn;
+  // A run still in its first stage started its stage clock on the spawn day, so the two
+  // move together; once it has moved on, stageSince is its own fact and is left alone.
+  if(b.stage==='inoculated' && b.stageSince===b.inoculatedOn) b.stageSince=d;
+  b.inoculatedOn=d;
+  b.name=($('editName').value||'').trim().slice(0,40)||b.name;
+  b.code=($('editCode').value||'').trim().slice(0,24)||null;
+  b.blocks=blocks;
+  b.dryG=gFromInput(dry);
+  b.notes=($('editNotes').value||'').trim().slice(0,120);
+  editingBatchId=null; save(); render();
+  if(window.track) try{ track('growlog_batch_edit',{stage:b.stage}); }catch(_){}
+  return false;
+}
+
+/* Split some bags of a batch into their own batch (I136). The same farm: "only one bag in a
+   5 bag batch got contaminated, the others are fine", and "3/6 bags were ready to move to
+   fruiting before the other 3". A batch was all-or-nothing, so the log could only lie in one
+   direction or the other: mark all five lost, or none. A split keeps both halves true:
+   - the separated bags become a batch of their own with the same spawn date, species,
+     lineage, method and dry weight, so every per-block number stays the same;
+   - COSTS ARE SHARED OUT by bag count, never copied, or a split would double the spend and
+     every cost-per-pound figure after it (I72);
+   - a contaminated split opens the cause question on the NEW batch, the same step every loss
+     goes through (I113); a "ready to harvest" split opens the harvest form on it;
+   - the new batch has never had a label printed (the bags carry the old batch's label), so the
+     label sheet offers it as new (I133). */
+function splitNext(b){
+  return {inoculated:['colonizing','Started colonizing'],colonizing:['fruiting','Ready to move to fruiting'],fruiting:['harvest','Ready to harvest']}[b.stage];
+}
+function splitName(b){
+  var names={}; state.batches.forEach(function(x){ names[x.name]=1; });
+  for(var i=0;i<26;i++){ var n=b.name+'-'+String.fromCharCode(66+i); if(!Object.prototype.hasOwnProperty.call(names,n)) return n.slice(0,40); }
+  return b.name.slice(0,36)+' (2)';
+}
+function splitFormHtml(b){
+  var nx=splitNext(b);
+  return '<form class="yieldForm splitForm" onsubmit="return saveSplit(event,\''+b.id+'\')">'+
+    '<label class="yl">Bags to separate (of '+b.blocks+')<input id="splitN" type="number" step="1" min="1" max="'+(b.blocks-1)+'" value="1" required></label>'+
+    '<label class="yl" style="min-width:230px">What is different about them?'+
+      '<select id="splitWhy">'+
+        '<option value="next">'+esc(nx[1])+'</option>'+
+        '<option value="contam">Contaminated, these are lost</option>'+
+        '<option value="same">Nothing yet, just track them apart</option>'+
+      '</select></label>'+
+    '<label class="yl" style="min-width:170px">Name for the new batch<input id="splitName" type="text" maxlength="40" value="'+esc(splitName(b))+'" autocomplete="off"></label>'+
+    '<button class="mini solid" type="submit">Split</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelSplit">Cancel</button></form>';
+}
+/* Share a run's costs by bag count. The part leaving is rounded to the cent and the part
+   staying is the remainder, so the two always add back to exactly what was spent. */
+function splitCosts(costs, k, n){
+  if(!costs) return [null,null];
+  var out={}, keep={};
+  Object.keys(costs).forEach(function(key){
+    var v=costs[key]; if(typeof v!=='number' || !isFinite(v)) return;
+    var part=Math.round(v*k/n*100)/100;
+    out[key]=part; keep[key]=Math.round((v-part)*100)/100;
+  });
+  return [keep,out];
+}
+function saveSplit(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b || !isActive(b) || b.blocks<2) return false;
+  var k=Math.round(parseFloat($('splitN').value));
+  if(!isFinite(k) || k<1 || k>=b.blocks) return false;
+  var why=$('splitWhy').value, nx=splitNext(b);
+  var c=splitCosts(b.costs, k, b.blocks);
+  var nb={
+    id:newId(), name:(($('splitName').value||'').trim().slice(0,40))||splitName(b),
+    species:b.species, speciesName:b.speciesName||null, dryG:b.dryG, blocks:k,
+    inoculatedOn:b.inoculatedOn, stage:b.stage, stageSince:b.stageSince, yieldG:null,
+    parentId:b.parentId||null, method:b.method||null, code:null,
+    costs:c[1], priceG:(typeof b.priceG==='number'?b.priceG:null),
+    notes:b.notes||'', labelAt:null
+  };
+  b.blocks -= k; b.costs=c[0];
+  // The new batch sits right after the one it came from, so the two read together.
+  var at=state.batches.indexOf(b); state.batches.splice(at+1,0,nb);
+  editingBatchId=null; splittingId=null; editingYieldId=null; editingContamId=null;
+  if(why==='contam'){ editingContamId=nb.id; }
+  else if(why==='next'){
+    if(nx[0]==='harvest'){ editingYieldId=nb.id; yieldMode='append'; }
+    else { nb.stage=nx[0]; nb.stageSince=today(); }
+  }
+  save(); render();
+  if(window.track) try{ track('growlog_batch_split',{why:why, moved:k, left:b.blocks}); }catch(_){}
+  return false;
+}
+
 function actionsHtml(b){
   if(editingCostId===b.id) return costFormHtml(b);
   if(editingLinkId===b.id) return linkFormHtml(b);
   if(editingSpNameId===b.id) return spNameFormHtml(b);
   if(editingContamId===b.id) return contamFormHtml(b);
+  if(editingBatchId===b.id) return editFormHtml(b);
+  if(splittingId===b.id) return splitFormHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
     var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
@@ -1315,6 +1437,9 @@ function actionsHtml(b){
     ? '<button class="mini" data-act="link" data-id="'+b.id+'">🧬 '+(b.parentId?'Change lineage':'Link lineage')+'</button>'
     : '';
   costBtn += linkBtn;
+  costBtn += '<button class="mini" data-act="edit" data-id="'+b.id+'">✏️ Edit</button>';
+  if(isActive(b) && b.blocks>1)
+    costBtn += '<button class="mini" data-act="split" data-id="'+b.id+'">✂ Split off bags</button>';
   if(b.species==='other')
     costBtn += '<button class="mini" data-act="spname" data-id="'+b.id+'">🏷 '+(speciesName(b)?'Rename species':'Name species')+'</button>';
   if(b.stage==='contaminated' || b.stage==='harvested'){
@@ -1521,14 +1646,18 @@ document.addEventListener('click',function(e){
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='edityield' && b){ editingYieldId=id; yieldMode='edit'; render(); }
   else if(act==='cancelYield'){ editingYieldId=null; yieldMode='append'; render(); }
-  else if(act==='cost' && b){ editingCostId=(editingCostId===id?null:id); editingYieldId=null; editingLinkId=null; render(); }
+  else if(act==='cost' && b){ editingCostId=(editingCostId===id?null:id); editingYieldId=null; editingLinkId=null; editingBatchId=null; splittingId=null; render(); }
   else if(act==='cancelCost'){ editingCostId=null; render(); }
-  else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; render(); }
+  else if(act==='link' && b){ editingLinkId=(editingLinkId===id?null:id); editingYieldId=null; editingCostId=null; editingBatchId=null; splittingId=null; render(); }
   else if(act==='cancelLink'){ editingLinkId=null; render(); }
-  else if(act==='spname' && b){ editingSpNameId=(editingSpNameId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; render(); }
+  else if(act==='spname' && b){ editingSpNameId=(editingSpNameId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingBatchId=null; splittingId=null; render(); }
   else if(act==='cancelSpName'){ editingSpNameId=null; render(); }
-  else if(act==='contam' && b){ editingContamId=(editingContamId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; render(); }
+  else if(act==='contam' && b){ editingContamId=(editingContamId===id?null:id); editingYieldId=null; editingCostId=null; editingLinkId=null; editingBatchId=null; splittingId=null; render(); }
   else if(act==='cancelContam'){ editingContamId=null; render(); }
+  else if(act==='edit' && b){ editingBatchId=(editingBatchId===id?null:id); splittingId=null; editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; render(); }
+  else if(act==='cancelEdit'){ editingBatchId=null; render(); }
+  else if(act==='split' && b){ splittingId=(splittingId===id?null:id); editingBatchId=null; editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; render(); }
+  else if(act==='cancelSplit'){ splittingId=null; render(); }
   else if(act==='delete' && b){
     /* Counts only, never content. I79 could not answer "what happened to his batches" from
        data because a deletion left no trace whatsoever; the next time it is one query away. */
@@ -1648,7 +1777,7 @@ $('seedLink').addEventListener('click',function(e){ e.preventDefault(); state=sa
    `parentId`s pointing at cultures that no longer exist, which reads on the card as "not
    linked" while still sitting in the data (I78). */
 function fullExport(){
-  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, seller:state.seller,
+  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
            sources:state.sources, cultures:state.cultures };
 }
@@ -1666,6 +1795,7 @@ function freshState(){
   if(state.cur) s.cur = state.cur;
   if(state.unit) s.unit = state.unit;
   if(state.labelQr) s.labelQr = state.labelQr;
+  if(state.labelPerBag) s.labelPerBag = true;
   if(state.seller) s.seller = state.seller;
   if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
   return s;
@@ -1693,7 +1823,7 @@ function startFreshFlow(){
     + '\n\nA full copy of everything was just handed to your browser as mycro-log-backup.json. If you cannot see it in your downloads yet, press Cancel: nothing is removed until you press OK.';
   if(!confirm(msg)) return false;
   state = freshState();
-  editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null;
+  editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; editingBatchId=null; splittingId=null;
   save(); render();
   if(window.track) try{ track('growlog_start_fresh',{batches:had.batches,cultures:had.cultures,sources:had.sources,deliveries:had.deliveries}); }catch(_){}
   return true;
@@ -2174,13 +2304,15 @@ function labelQrUrl(b){
 function isSeededBatch(b){
   return !!(b && window.MycroSamples && MycroSamples.isSample('batches', b.id));
 }
-function labelHtml(b,qr,scanNote,on){
+function labelHtml(b,qr,scanNote,on,copies){
   var sp=SPECIES[b.species], dry=(unit==='lb'? b.dryG/LB : b.dryG/1000);
-  return '<div class="lbl'+(isSeededBatch(b)?' lex':'')+(on===false?' off':'')+'" data-id="'+esc(b.id)+'" data-new="'+(b.labelAt?'0':'1')+'">'+
+  copies = Math.max(1, Math.min(99, copies||1));
+  return '<div class="lbl'+(isSeededBatch(b)?' lex':'')+(on===false?' off':'')+'" data-id="'+esc(b.id)+'" data-new="'+(b.labelAt?'0':'1')+'" data-blocks="'+b.blocks+'">'+
     '<div class="lmain">'+
       '<label class="lpick"><input type="checkbox"'+(on===false?'':' checked')+'> Print this label'+
         (b.labelAt ? ' <span class="dim">(last printed '+esc(b.labelAt)+')</span>' : ' <span class="dim">(never printed)</span>')+
       '</label>'+
+      '<label class="lcopy">Copies <input type="number" min="1" max="99" step="1" value="'+copies+'"></label>'+
       (isSeededBatch(b) ? '<div class="lexmark">Example \u00b7 not one of your blocks</div>' : '')+
       '<div class="lname">'+esc(b.name)+'</div>'+
       '<div class="lsp">'+esc(speciesLabel(b))+'</div>'+
@@ -2220,6 +2352,13 @@ window.mycroLabelsPrinted=function(ids){
   if(window.track) try{ track('growlog_labels_printed',{n:ids.length}); }catch(_){}
   return n;
 };
+/* The "one label per bag" choice is remembered in the grower's document, like the QR choice,
+   so a farm that labels every bag does not have to say so on every print (I136). */
+window.mycroLabelPerBag=function(on){
+  var v=!!on; if(!!state.labelPerBag===v) return;
+  if(v) state.labelPerBag=true; else delete state.labelPerBag;
+  save();
+};
 function buildLabelSheet(){
   var list=labelBatches();
   if(!list.length) return null;
@@ -2227,7 +2366,7 @@ function buildLabelSheet(){
   var pre=labelPreselect(list);
   var body=list.map(function(b){
     var qr=window.QR ? QR.svg(labelQrUrl(b),150) : '';
-    return labelHtml(b,qr,scanNote,pre.on[b.id]);
+    return labelHtml(b,qr,scanNote,pre.on[b.id], state.labelPerBag ? b.blocks : 1);
   }).join('');
   // Said before they press Print as well as on the card itself. Never a refusal: looking
   // at the sheet to see what the labels are like is a reasonable thing to do.
@@ -2276,11 +2415,13 @@ function labelDoc(title, n, hint, body, opts){
     '.lseller b{color:#1a1a17}'+
     '.foot{max-width:760px;margin:8px auto 0;font-size:.72rem;color:#8b8578;text-align:center}'+
     '.lpick{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#6B6457;margin-bottom:6px;cursor:pointer}'+
+    '.lcopy{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#6B6457;margin:0 0 6px}'+
+    '.lcopy input{width:56px;font:inherit;padding:2px 6px;border:1px solid #d9d5cc;border-radius:6px}'+
     '.lbl.off{opacity:.4}.bar .ghost{background:transparent;color:#C0562C;border:1.5px solid #C0562C}'+
-    '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}.lpick{display:none}.lbl.off{display:none}}'+
+    '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}.lpick{display:none}.lcopy{display:none}.lbl.off{display:none}}'+
     '</style></head><body>'+
     '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
-    '<span>'+(pick?'<button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> ':'')+
+    '<span>'+(pick?'<button type="button" class="ghost" id="lbag">One per bag</button> <button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> ':'')+
     '<button type="button" id="lprint">Print</button></span></div>'+
     '<div class="sheet">'+body+'</div>'+
     '<div class="foot">Mycro Grow Log · usemycro.com/grow-log.html</div>'+
@@ -2288,9 +2429,18 @@ function labelDoc(title, n, hint, body, opts){
       'var pick='+(pick?'true':'false')+',total='+n+';'+
       'function cards(){return Array.prototype.slice.call(document.querySelectorAll(".lbl[data-id]"));}'+
       'function box(c){return c.querySelector(".lpick input");}'+
-      'function sync(){if(!pick)return;var k=cards().filter(function(c){return box(c).checked;}).length;'+
+      'function cp(c){var i=c.querySelector(".lcopy input");var v=i?Math.round(+i.value):1;return v>=1&&v<=99?v:1;}'+
+      'function sync(){if(!pick)return;var on=cards().filter(function(c){return box(c).checked;}),k=on.length,m=0;'+
+        'on.forEach(function(c){m+=cp(c);});'+
         'cards().forEach(function(c){c.classList.toggle("off",!box(c).checked);});'+
-        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked";}'+
+        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked"+(m>k?" \u00b7 "+m+" to print":"");}'+
+      /* Copies (I136): a farm labels every bag, so one card per batch meant printing the same
+         sheet once per bag. The extra copies are clones laid out on the same sheet at print
+         time and removed after, and they carry no data-id, so stamping and counting still see
+         one batch per card. */
+      'function unexpand(){Array.prototype.slice.call(document.querySelectorAll(".lclone")).forEach(function(x){x.parentNode.removeChild(x);});}'+
+      'function expand(){unexpand();cards().forEach(function(c){if(pick&&!box(c).checked)return;var n=cp(c);'+
+        'for(var i=1;i<n;i++){var x=c.cloneNode(true);x.removeAttribute("data-id");x.classList.add("lclone");c.parentNode.insertBefore(x,c.nextSibling);}});}'+
       'var last=null;'+
       'function stamp(){if(!pick)return;var ids=cards().filter(function(c){return box(c).checked;}).map(function(c){return c.getAttribute("data-id");});'+
         'if(ids.join(",")===last)return;last=ids.join(",");'+
@@ -2298,10 +2448,15 @@ function labelDoc(title, n, hint, body, opts){
       'document.addEventListener("change",sync);'+
       'if(pick){document.getElementById("lnew").onclick=function(){cards().forEach(function(c){box(c).checked=c.getAttribute("data-new")==="1";});sync();};'+
         'document.getElementById("lall").onclick=function(){cards().forEach(function(c){box(c).checked=true;});sync();};}'+
-      'document.getElementById("lprint").onclick=function(){stamp();window.print();};'+
-      'window.addEventListener("beforeprint",stamp);'+
+      'document.getElementById("lprint").onclick=function(){stamp();expand();window.print();};'+
+      'window.addEventListener("beforeprint",function(){stamp();expand();});'+
+      'window.addEventListener("afterprint",unexpand);'+
+      'if(pick){var perBag=cards().some(function(c){return cp(c)>1;});var bb=document.getElementById("lbag");'+
+        'function bagLabel(){bb.textContent=perBag?"One each":"One per bag";}bagLabel();'+
+        'bb.onclick=function(){perBag=!perBag;cards().forEach(function(c){var i=c.querySelector(".lcopy input");if(i)i.value=perBag?(c.getAttribute("data-blocks")||1):1;});bagLabel();sync();'+
+          'try{if(window.opener&&window.opener.mycroLabelPerBag)window.opener.mycroLabelPerBag(perBag);}catch(e){}};}'+
       'sync();'+
-      (auto?'window.onload=function(){setTimeout(function(){try{window.print();}catch(e){}},250);};':'')+
+      (auto?'window.onload=function(){setTimeout(function(){try{expand();window.print();}catch(e){}},250);};':'')+
     '})();<\/script>'+
     '</body></html>';
 }
@@ -2445,7 +2600,7 @@ function ownWorkCount(){
     setState:   function(doc){
       if(!(doc && Array.isArray(doc.batches) && doc.batches.every(validBatch))) return false;
       doc.batches.forEach(normFlushes);
-      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null;
+      state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; editingBatchId=null; splittingId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
       return true;
