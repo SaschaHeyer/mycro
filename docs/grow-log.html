@@ -674,6 +674,7 @@ function validBatch(b){
     (b.lostAt==null || typeof b.lostAt==='string') &&       // stage it was in when lost (I113)
     (b.speciesName==null || typeof b.speciesName==='string') && // grower's name for an "Other" (I130)
     (b.labelAt==null || typeof b.labelAt==='string') &&     // day its block label was last printed (I133)
+    (b.splitFrom==null || typeof b.splitFrom==='string') && // batch its bags were split off (I137)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -1380,6 +1381,43 @@ function splitFormHtml(b){
     '<button class="mini solid" type="submit">Split</button>'+
     '<button class="mini ghosty" type="button" data-act="cancelSplit">Cancel</button></form>';
 }
+/* Put split-off bags back (I137). The same farm split one bag off LM-NS-01 and deleted the new
+   batch 61 seconds later: the only undo there was, and it left LM-NS-01 a bag short for good.
+   Bags can go back only while the two halves are still the same thing: both still growing, in
+   the same stage, same species and spawn date. Once one half is lost, harvested or has moved
+   ahead, they are genuinely different runs and merging them would make the log lie again. */
+function putBackTarget(b){
+  if(!b || !b.splitFrom || !isActive(b)) return null;
+  var o=find(b.splitFrom);
+  if(!o || o===b || !isActive(o)) return null;
+  if(o.stage!==b.stage || o.species!==b.species || o.inoculatedOn!==b.inoculatedOn) return null;
+  return o;
+}
+/* Costs come back by adding, key by key, so a split followed by a put-back leaves the spend
+   exactly where it started. */
+function mergeCosts(a, b){
+  if(!a && !b) return null;
+  var out={};
+  [a||{}, b||{}].forEach(function(c){
+    Object.keys(c).forEach(function(key){
+      var v=c[key]; if(typeof v!=='number' || !isFinite(v)) return;
+      out[key]=Math.round(((out[key]||0)+v)*100)/100;
+    });
+  });
+  return Object.keys(out).length ? out : null;
+}
+function putBack(b){
+  var o=putBackTarget(b); if(!o) return false;
+  var n=b.blocks;
+  o.blocks += n;
+  o.costs = mergeCosts(o.costs, b.costs);
+  // Anything spawned from the split-off bags now comes from the batch they went back into.
+  childBatches(b).forEach(function(x){ x.parentId=o.id; });
+  state.batches.forEach(function(x){ if(x.splitFrom===b.id) x.splitFrom=o.id; });
+  (state.deliveries||[]).forEach(function(d){ if(d.batchId===b.id) d.batchId=o.id; });
+  state.batches=state.batches.filter(function(x){ return x!==b; });
+  return n;
+}
 /* Share a run's costs by bag count. The part leaving is rounded to the cent and the part
    staying is the remainder, so the two always add back to exactly what was spent. */
 function splitCosts(costs, k, n){
@@ -1405,7 +1443,10 @@ function saveSplit(e,id){
     inoculatedOn:b.inoculatedOn, stage:b.stage, stageSince:b.stageSince, yieldG:null,
     parentId:b.parentId||null, method:b.method||null, code:null,
     costs:c[1], priceG:(typeof b.priceG==='number'?b.priceG:null),
-    notes:b.notes||'', labelAt:null
+    notes:b.notes||'', labelAt:null,
+    // Where these bags came from, so they can go back (I137). Without it the only "undo" was
+    // Delete, which takes the bags out of the log and leaves the original a bag short.
+    splitFrom:b.id
   };
   b.blocks -= k; b.costs=c[0];
   // The new batch sits right after the one it came from, so the two read together.
@@ -1448,6 +1489,9 @@ function actionsHtml(b){
   costBtn += '<button class="mini" data-act="edit" data-id="'+b.id+'">✏️ Edit</button>';
   if(isActive(b) && b.blocks>1)
     costBtn += '<button class="mini" data-act="split" data-id="'+b.id+'">✂ Split off bags</button>';
+  var backTo=putBackTarget(b);
+  if(backTo)
+    costBtn += '<button class="mini" data-act="putback" data-id="'+b.id+'">↩ Put back into '+esc(backTo.name)+'</button>';
   if(b.species==='other')
     costBtn += '<button class="mini" data-act="spname" data-id="'+b.id+'">🏷 '+(speciesName(b)?'Rename species':'Name species')+'</button>';
   if(b.stage==='contaminated' || b.stage==='harvested'){
@@ -1666,6 +1710,11 @@ document.addEventListener('click',function(e){
   else if(act==='cancelEdit'){ editingBatchId=null; render(); }
   else if(act==='split' && b){ splittingId=(splittingId===id?null:id); editingBatchId=null; editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; render(); }
   else if(act==='cancelSplit'){ splittingId=null; render(); }
+  else if(act==='putback' && b){
+    var into=putBackTarget(b), moved=putBack(b);
+    if(moved){ splittingId=null; editingBatchId=null; save(); render();
+      if(window.track) try{ track('growlog_batch_putback',{moved:moved, now:into.blocks}); }catch(_){} }
+  }
   else if(act==='delete' && b){
     /* Counts only, never content. I79 could not answer "what happened to his batches" from
        data because a deletion left no trace whatsoever; the next time it is one query away. */
@@ -1676,7 +1725,16 @@ document.addEventListener('click',function(e){
     if(kidsOf.length && !confirm(countWord(kidsOf.length,'batch was','batches were')+' spawned from '+batchCode(b)+
       '. Deleting it removes that link from '+(kidsOf.length===1?'it':'them')+', so a contamination here could no longer be traced to '+
       (kidsOf.length===1?'it':'them')+'. Delete anyway?')) return;
+    /* Deleting a split-off batch looks like "undo the split" and is not: its bags leave the log
+       and the batch they came from stays short (I137). Say so, and name the button that does
+       what they probably meant. */
+    var backInto=putBackTarget(b);
+    if(backInto && !confirm('Deleting '+b.name+' takes its '+countWord(b.blocks,'bag','bags')+' out of your log. '+
+      backInto.name+' stays at '+countWord(backInto.blocks,'bag','bags')+'.\n\nTo return '+(b.blocks===1?'it':'them')+' to '+backInto.name+
+      ' instead, press Cancel and use ↩ Put back. Delete anyway?')) return;
     kidsOf.forEach(function(x){ x.parentId=null; });
+    // A split-off batch pointing at the one being deleted keeps no dead link (I78).
+    state.batches.forEach(function(x){ if(x.splitFrom===id) x.splitFrom=null; });
     state.batches=state.batches.filter(function(x){return x.id!==id;}); editingYieldId=null; save(); render();
     if(window.track) try{ track('growlog_batch_delete',{stage:wasStage, harvested:hadYield, left:state.batches.length}); }catch(_){}
   }
@@ -1785,7 +1843,7 @@ $('seedLink').addEventListener('click',function(e){ e.preventDefault(); state=sa
    `parentId`s pointing at cultures that no longer exist, which reads on the card as "not
    linked" while still sitting in the data (I78). */
 function fullExport(){
-  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, seller:state.seller,
+  return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, labelSize:state.labelSize, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
            sources:state.sources, cultures:state.cultures };
 }
@@ -1804,6 +1862,7 @@ function freshState(){
   if(state.unit) s.unit = state.unit;
   if(state.labelQr) s.labelQr = state.labelQr;
   if(state.labelPerBag) s.labelPerBag = true;
+  if(state.labelSize==='small') s.labelSize = 'small';
   if(state.seller) s.seller = state.seller;
   if(Array.isArray(state.contacts) && state.contacts.length) s.contacts = state.contacts;
   return s;
@@ -2367,6 +2426,19 @@ window.mycroLabelPerBag=function(on){
   if(v) state.labelPerBag=true; else delete state.labelPerBag;
   save();
 };
+/* Label size (I137). The same farm that asked for one label per bag wrote back that the
+   labels "printed off exactly how I needed", and that they get them to the right size with
+   the SCALE setting in the print dialog (before that, two pages per sheet). A card as wide
+   as the page is too big for a grow bag, and a print dialog forgets its scale. So the sheet
+   offers a small, fixed size: business-card size, 3.5 x 2 in, two across and five down, which
+   fits Letter and A4 alike. Remembered in the grower's document, like the per-bag choice. */
+window.mycroLabelSize=function(size){
+  var v = size==='small' ? 'small' : '';
+  if((state.labelSize||'')===v) return;
+  if(v) state.labelSize=v; else delete state.labelSize;
+  save();
+  if(window.track) try{ track('growlog_label_size',{size:v||'full'}); }catch(_){}
+};
 function buildLabelSheet(){
   var list=labelBatches();
   if(!list.length) return null;
@@ -2385,13 +2457,13 @@ function buildLabelSheet(){
           : 'cut along the cards and tape one to each block or bag.');
   if(pre.mixed) hint = pre.fresh+' of these '+(pre.fresh===1?'has':'have')+' never been printed, so only '+
     (pre.fresh===1?'that one is':'those are')+' ticked. '+hint.charAt(0).toUpperCase()+hint.slice(1);
-  return labelDoc('Mycro block labels', list.length, hint, body, {pick:true, autoPrint:!pre.mixed});
+  return labelDoc('Mycro block labels', list.length, hint, body, {pick:true, autoPrint:!pre.mixed, small:state.labelSize==='small'});
 }
 /* The shared print document for both label sheets (block labels and delivery labels).
    Standalone window, so this page's own layout and print rules stay untouched. */
 function labelDoc(title, n, hint, body, opts){
   opts=opts||{};
-  var pick=!!opts.pick, auto=opts.autoPrint!==false;
+  var pick=!!opts.pick, auto=opts.autoPrint!==false, small=pick && !!opts.small;
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
     '<title>'+title+'</title><meta name="robots" content="noindex">'+
     '<style>'+
@@ -2427,9 +2499,23 @@ function labelDoc(title, n, hint, body, opts){
     '.lcopy input{width:56px;font:inherit;padding:2px 6px;border:1px solid #d9d5cc;border-radius:6px}'+
     '.lbl.off{opacity:.4}.bar .ghost{background:transparent;color:#C0562C;border:1.5px solid #C0562C}'+
     '@media print{body{background:#fff;padding:0}.bar{display:none}.lbl{border-color:#999}.lpick{display:none}.lcopy{display:none}.lbl.off{display:none}}'+
-    '</style></head><body>'+
+    /* Small labels (I137): 3.5 x 2 in cards in a two-column grid, cut lines dashed. The fixed
+       height applies on paper only, so the tick box and copies box still fit on screen. Every
+       line that could run long is held to one line, so nothing is pushed off the card. */
+    'body.small .sheet{max-width:7.1in;display:grid;grid-template-columns:3.5in 3.5in;gap:0 .1in}'+
+    'body.small .lbl{width:3.5in;min-height:2in;margin:0 0 .1in;border-radius:0;border:1px dashed #b8b2a6;padding:.1in .12in;gap:.08in;overflow:hidden}'+
+    'body.small .lname,body.small .lsp,body.small .lnotes,body.small .lwrite,body.small .lexmark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    'body.small .lname{font-size:11pt}'+
+    'body.small .lsp{font-size:7.5pt;margin-bottom:2pt}'+
+    'body.small .lexmark{font-size:5.5pt;margin-bottom:1pt}'+
+    'body.small .lfacts{font-size:7pt}body.small .lfacts th{width:.72in;padding:0 4pt 0 0}body.small .lfacts td{padding:0;white-space:nowrap}'+
+    'body.small .lnotes{font-size:6.5pt;margin-top:2pt}'+
+    'body.small .lwrite{font-size:6pt;letter-spacing:0;word-spacing:-1px;margin-top:3pt;padding-top:2pt}'+
+    'body.small .lcap{font-size:5.5pt;max-width:104px;margin-top:2pt}'+
+    '@media print{@page{margin:.4in}body.small .sheet{gap:0;max-width:7in}body.small .lbl{height:2in;min-height:0;margin:0;border-color:#b8b2a6}}'+
+    '</style></head><body'+(small?' class="small"':'')+'>'+
     '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
-    '<span>'+(pick?'<button type="button" class="ghost" id="lbag">One per bag</button> <button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> ':'')+
+    '<span>'+(pick?'<button type="button" class="ghost" id="lsize">'+(small?'Full-width labels':'Small labels')+'</button> <button type="button" class="ghost" id="lbag">One per bag</button> <button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> ':'')+
     '<button type="button" id="lprint">Print</button></span></div>'+
     '<div class="sheet">'+body+'</div>'+
     '<div class="foot">Mycro Grow Log · usemycro.com/grow-log.html</div>'+
@@ -2463,6 +2549,10 @@ function labelDoc(title, n, hint, body, opts){
         'function bagLabel(){bb.textContent=perBag?"One each":"One per bag";}bagLabel();'+
         'bb.onclick=function(){perBag=!perBag;cards().forEach(function(c){var i=c.querySelector(".lcopy input");if(i)i.value=perBag?(c.getAttribute("data-blocks")||1):1;});bagLabel();sync();'+
           'try{if(window.opener&&window.opener.mycroLabelPerBag)window.opener.mycroLabelPerBag(perBag);}catch(e){}};}'+
+      /* Label size (I137): a class on the body, told back to the grow log so it is remembered. */
+      'if(pick){var sz=document.getElementById("lsize");sz.onclick=function(){var on=document.body.classList.toggle("small");'+
+        'sz.textContent=on?"Full-width labels":"Small labels";'+
+        'try{if(window.opener&&window.opener.mycroLabelSize)window.opener.mycroLabelSize(on?"small":"");}catch(e){}};}'+
       'sync();'+
       (auto?'window.onload=function(){setTimeout(function(){try{expand();window.print();}catch(e){}},250);};':'')+
     '})();<\/script>'+
