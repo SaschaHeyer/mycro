@@ -1387,8 +1387,10 @@ function splitFormHtml(b){
    the same stage, same species and spawn date. Once one half is lost, harvested or has moved
    ahead, they are genuinely different runs and merging them would make the log lie again. */
 function putBackTarget(b){
-  if(!b || !b.splitFrom || !isActive(b)) return null;
+  if(!b || !b.splitFrom) return null;
   var o=find(b.splitFrom);
+  // The origin must still be growing and the split-off must be in its stage, which also means
+  // the split-off is still growing: a lost or harvested half never shares a growing stage.
   if(!o || o===b || !isActive(o)) return null;
   if(o.stage!==b.stage || o.species!==b.species || o.inoculatedOn!==b.inoculatedOn) return null;
   return o;
