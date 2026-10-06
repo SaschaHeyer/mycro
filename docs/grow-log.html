@@ -122,12 +122,15 @@
     <p class="muted" style="margin:9px 0 0;font-size:.82rem">Anyone with the link can view &amp; overwrite this backup, so keep it to yourself. Your log stays <b>free</b>; this is just a private cloud copy.</p>
     <!-- Optional: email the private link so it's never lost. Also joins the Mycro list. -->
     <div id="backupEmailWrap" style="margin-top:12px;padding-top:11px;border-top:1px dashed var(--line,#e2e2e2)">
+      <p id="backupEmailDone" style="display:none;margin:0;font-size:.86rem;color:var(--ink)"></p>
+      <div id="backupEmailForm">
       <label for="backupEmail" style="display:block;font-size:.86rem;color:var(--ink);font-weight:600;margin-bottom:6px">📧 Email me this link so I don't lose it</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="backupEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@farm.com" style="flex:1;min-width:200px;padding:8px 10px;font:inherit;font-size:.9rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
         <button type="button" id="backupEmailBtn" class="btn secondary" style="padding:8px 14px;font-size:.9rem">Send link</button>
       </div>
       <p class="muted" id="backupEmailNote" style="margin:7px 0 0;font-size:.8rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+      </div>
     </div>
   </div>
 
@@ -2636,6 +2639,7 @@ $('cloudBackup').addEventListener('click',function(){
       var box=$('backupBox'), url=restoreUrl(j.id);
       $('backupMsg').textContent=backedUpMsg();
       $('backupUrl').value=url; box.style.display='block';
+      paintEmailRow(false);
       if(window.track) try{ track('growlog_cloud_backup',{}); }catch(_){}
     })
     .catch(function(){ alert('Backup failed — please try again in a moment. Your log is still saved on this device.'); })
@@ -2647,6 +2651,38 @@ $('backupCopy').addEventListener('click',function(){
   try{ if(navigator.clipboard){ navigator.clipboard.writeText(inp.value).then(done,function(){ document.execCommand('copy'); done(); }); } else { document.execCommand('copy'); done(); } }
   catch(e){ document.execCommand('copy'); done(); }
 });
+/* Has THIS link already been emailed from this browser (I138)? A real farm pressed "Send
+   link" at the end of almost every session, eleven times in two weeks, always the same link:
+   the box sits open with the address prefilled (I110) beside a link that never changes, so it
+   read as the way to SAVE, and the email itself still said "tap Back up again and this link
+   updates", true before auto-sync (I68), false since. Their own question ("which version does
+   a scanned label open?") is the same doubt. So once a link has been mailed the form steps
+   aside and says the one fact that ends the doubt: the link never changes and every change
+   reaches it by itself. Keyed on the link id, so a NEW link (Start fresh on another log, a
+   different ?log=) shows the form again. Never a gate: "Send it again" is one click. */
+var EMAILED_KEY='mycro_growlog_link_emailed';
+function linkEmailedAt(id){
+  try{ var o=JSON.parse(localStorage.getItem(EMAILED_KEY)||'null');
+       return (o && id && o.id===id && typeof o.at==='number') ? o.at : null; }catch(e){ return null; }
+}
+function rememberLinkEmailed(id, justNow){
+  try{ localStorage.setItem(EMAILED_KEY, JSON.stringify({id:id, at:Date.now()})); }catch(e){}
+  paintEmailRow(justNow);
+}
+function paintEmailRow(justNow){
+  var done=$('backupEmailDone'), form=$('backupEmailForm'); if(!done || !form) return;
+  var at=linkEmailedAt(cloudId());
+  if(!at){ done.style.display='none'; form.style.display=''; return; }
+  var when=new Date(at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  done.innerHTML=(justNow ? '<b>Sent ✓</b> Your private link is in your inbox. ' : '📧 This link is already in your inbox (sent '+esc(when)+'). ')
+    +'It never changes, and every change here reaches it by itself, so there is nothing to send again. '
+    +'<button type="button" id="backupEmailAgain" class="btn secondary" style="padding:3px 10px;font-size:.8rem;margin-left:4px">Send it again</button>';
+  done.style.display='block'; form.style.display='none';
+  var b=$('backupEmailAgain'); if(b) b.addEventListener('click',function(){
+    done.style.display='none'; form.style.display='';
+    var btn=$('backupEmailBtn'); if(btn){ btn.disabled=false; btn.textContent='Send link'; }
+  });
+}
 /* Optional: email the private restore link (never lose it) + join the Mycro list.
    High-intent capture — someone backing up a whole log is the buyer for auto-sync. */
 $('backupEmailBtn').addEventListener('click',function(){
@@ -2657,7 +2693,7 @@ $('backupEmailBtn').addEventListener('click',function(){
   fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:id,first:mycroFirstTouch&&mycroFirstTouch()})})
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(){
-      $('backupEmailWrap').innerHTML='<p style="margin:0;font-size:.9rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private restore link.</p>';
+      rememberLinkEmailed(id, true);
       if(window.mycroRememberEmail) mycroRememberEmail(em);
       if(window.track) try{ track('growlog_backup_email',{}); }catch(_){}
     })
@@ -2721,7 +2757,7 @@ function ownWorkCount(){
           return fetch(API+'/api/growlog/backup-email',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({email:em,id:j.id,src:'gate',first:mycroFirstTouch&&mycroFirstTouch()})});
         })
         .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function(){ if(window.track) try{ track('growlog_backup_email',{src:'gate'}); }catch(_){} });
+        .then(function(){ try{ rememberLinkEmailed(cloudId(), false); }catch(_){} if(window.track) try{ track('growlog_backup_email',{src:'gate'}); }catch(_){} });
     }
   });
 })();
@@ -2747,6 +2783,7 @@ function ownWorkCount(){
     $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
     $('backupMsg').textContent='This device has changes your link does not have yet.';
     $('backupHint').innerHTML='Kept them, and sending them to your link now, so nothing logged on this device is lost.';
+    paintEmailRow(false);
     autoSync(); done(); return;
   }
   fetch(API+'/api/growlog/backup/'+id)
@@ -2762,6 +2799,7 @@ function ownWorkCount(){
       $('backupMsg').textContent= linkedHere ? 'Up to date with your backup link \u2713' : 'Restored from your backup link \u2713';
       $('backupHint').innerHTML='This device is now linked to that backup. From now on, <b>every change syncs to this link automatically.</b>';
       $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
+      paintEmailRow(false);
       if(window.track) try{ track('growlog_cloud_restore',{same: linkedHere?'1':'0'}); }catch(_){}
       done();
     })
@@ -2799,7 +2837,12 @@ function focusScanned(bid){
     $('backupHint').innerHTML='Your log auto-syncs to this private link — open it on any device to pick up where you left off.';
     $('backupUrl').value=restoreUrl(id);
     $('backupBox').style.display='block';
-    setSync('All changes synced to your private link ✓');
+    /* Only claim "synced" when it is (I138). A change made with no signal leaves the
+       device marked dirty (I132); say so and push it now, rather than print a tick over
+       a change the link has not received. */
+    if(dirtyStamp()){ autoSync(); setSync('Some changes on this device have not reached your link yet. Syncing now…',true); }
+    else setSync('All changes synced to your private link ✓');
+    paintEmailRow(false);
   }catch(e){}
 })();
 
@@ -2847,6 +2890,7 @@ function showNudge(src){
       .then(function(){
         var row=$('nudgeEmailRow'); if(row) row.style.display='none';
         note.style.color=''; note.innerHTML='<b style="color:var(--ink)">Sent ✓</b> Your log is backed up and the private link is in your inbox.';
+        try{ rememberLinkEmailed(cloudId(), false); }catch(_){}
         if(window.mycroRememberEmail) mycroRememberEmail(em);
         if(window.track) try{ track('growlog_backup_email',{src:'nudge'}); }catch(_){}
       })
