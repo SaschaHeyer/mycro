@@ -14,6 +14,11 @@
 <meta property="og:image" content="https://usemycro.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#C2702B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grow Log">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
@@ -21,7 +26,8 @@
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"Is Mycro a mushroom growing app?","acceptedAnswer":{"@type":"Answer","text":"Yes, and it is a web app rather than a download. Mycro's grow log is mushroom growing software that opens in any phone or laptop browser: there is no iOS or Android app to install, no account to create and no free-trial limit on how many batches you track. Your log saves on the device you are using, and you can back it up to a private link that opens on any other device."}},
+{"@type":"Question","name":"Is Mycro a mushroom growing app?","acceptedAnswer":{"@type":"Answer","text":"Yes, and it is a web app rather than an app-store download. Mycro's grow log is mushroom growing software that opens in any phone or laptop browser, with no account to create and no free-trial limit on how many batches you track. On a phone you can add it to your home screen, where it opens full screen like an app and keeps working with no signal. Your log saves on the device you are using, and you can back it up to a private link that opens on any other device."}},
+{"@type":"Question","name":"Is there a mushroom grow log app for iPhone?","acceptedAnswer":{"@type":"Answer","text":"Yes. Open usemycro.com/grow-log.html in Safari, tap the Share button, then Add to Home Screen. The grow log then opens from its own icon, full screen, and works in a grow room with no signal, because your batches are saved on the phone itself. It is free, needs no App Store download and no account, and the same log opens on Android or a computer through your private backup link."}},
 {"@type":"Question","name":"What does mushroom grow log software actually do?","acceptedAnswer":{"@type":"Answer","text":"Good grow-log software does the arithmetic a notebook cannot. It should compute biological efficiency from your dry substrate weight and fresh yield, count how many days a batch has spent in each stage so a slow block stands out, work out your contamination rate, and total what a run cost you so you can see the real cost per pound. Mycro does all four automatically as you log batches."}},
 {"@type":"Question","name":"How do I keep a mushroom grow log?","acceptedAnswer":{"@type":"Answer","text":"For each batch record the species, dry substrate weight, number of blocks and the inoculation date, then update the stage as it moves through colonization, fruiting and harvest. At harvest, log the total fresh weight so you can calculate biological efficiency. This free grow log does all of that in the browser and saves on your device."}},
 {"@type":"Question","name":"How is biological efficiency calculated?","acceptedAnswer":{"@type":"Answer","text":"Biological efficiency (BE) is fresh mushroom yield divided by dry substrate weight, expressed as a percentage: BE = fresh yield ÷ dry substrate × 100. The grow log computes it automatically once you record a batch's harvest weight."}},
@@ -105,10 +111,14 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson" title="A Mycro backup (.json), or a spreadsheet grow log saved as CSV">⬆ Import backup or CSV</button>
       <input type="file" id="importFile" accept="application/json,.json,text/csv,.csv" style="display:none">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="installApp" title="Put the log on your home screen. It opens full screen and works with no signal.">📲 Add to home screen</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
   </div>
+
+  <!-- Shown only after "Add to home screen" is pressed on a browser that cannot install in one tap (I139). -->
+  <div id="installHelp" class="note no-print" style="display:none;margin:-8px 0 16px"></div>
 
   <!-- Cloud backup result: a private restore link (opt-in, no account). Hidden until used. -->
   <div id="backupBox" class="note no-print" style="display:none;margin:-8px 0 16px;border-left:3px solid var(--brand)">
@@ -404,11 +414,10 @@
        matching FAQPage JSON-LD answers in <head> — if you edit one, edit both. -->
   <section style="padding:30px 0 0">
     <h2>Is Mycro a mushroom growing app?</h2>
-    <p class="muted">Yes, and it is a web app rather than a download. Mycro's grow log is mushroom
-      growing software that opens in any phone or laptop browser: there is no iOS or Android app to
-      install, no account to create and no free-trial limit on how many batches you track. Your log
-      saves on the device you are using, and you can back it up to a private link that opens on any
-      other device.</p>
+    <p class="muted">Yes, and it is a web app rather than an app-store download. Mycro's grow log is mushroom growing software that opens in any phone or laptop browser, with no account to create and no free-trial limit on how many batches you track. On a phone you can add it to your home screen, where it opens full screen like an app and keeps working with no signal. Your log saves on the device you are using, and you can back it up to a private link that opens on any other device.</p>
+
+    <h3 style="margin-top:16px">Is there a mushroom grow log app for iPhone?</h3>
+    <p class="muted">Yes. Open usemycro.com/grow-log.html in Safari, tap the Share button, then Add to Home Screen. The grow log then opens from its own icon, full screen, and works in a grow room with no signal, because your batches are saved on the phone itself. It is free, needs no App Store download and no account, and the same log opens on Android or a computer through your private backup link.</p>
 
     <h3 style="margin-top:16px">What does mushroom grow log software actually do?</h3>
     <p class="muted">Good grow-log software does the arithmetic a notebook cannot. It should compute
@@ -526,6 +535,7 @@
 <script src="/causes.js?v=1"></script>
 <script src="/csvimport.js?v=1"></script>
 <script src="/account.js?v=14"></script>
+<script src="/pwa.js?v=1"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render

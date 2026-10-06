@@ -14,6 +14,11 @@
 <meta property="og:image" content="https://usemycro.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#C2702B">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grow Log">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
@@ -80,10 +85,14 @@
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson">⬆ Import backup</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="installApp" title="Put the log on your home screen. It opens full screen and works with no signal.">📲 Add to home screen</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="startFresh">🧹 Start fresh</button>
       <button class="btn ghost" style="padding:8px 10px;font-size:.9rem" id="resetSample">↺ Sample data</button>
     </div>
   </div>
+
+  <!-- Shown only after "Add to home screen" is pressed on a browser that cannot install in one tap (I139). -->
+  <div id="installHelp" class="note no-print" style="display:none;margin:-8px 0 16px"></div>
 
   <div id="syncStatus" class="muted no-print" style="display:none;font-size:.82rem;margin:-8px 0 14px">Synced ✓</div>
 
@@ -413,6 +422,7 @@
 <script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/account.js?v=14"></script>
+<script src="/pwa.js?v=1"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks

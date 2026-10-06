@@ -1,0 +1,20 @@
+{
+  "id": "/grow-log.html",
+  "name": "Mycro Grow Log",
+  "short_name": "Grow Log",
+  "description": "A free mushroom grow log: batches, harvests, biological efficiency, labels and culture lineage. Your log is saved on this device and opens without signal.",
+  "start_url": "/grow-log.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#C2702B",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Grow Log", "url": "/grow-log.html", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Culture Library", "url": "/culture-library.html", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
