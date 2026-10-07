@@ -373,19 +373,31 @@
        Leads with the honest, high-converting action — save & email your log to a private
        link — captured at peak intent, not buried in the toolbar. (I67) -->
   <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
+    <!-- Three versions, one per device state (docs/nudge.js, I140). Each must be TRUE of the
+         device it shows on: the old single version told a farm whose log had synced for weeks
+         that it lived only in this browser. -->
     <b style="color:var(--ink)" id="nudgeLead">Nice — that's logged.</b>
-    This log lives only in this browser — clear it or switch devices and it's gone. We'll back it up to a
-    private link and email it to you so you can reopen it on your phone or laptop anytime. Free, no account.
-    <div id="nudgeEmailRow" style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <span data-ns="unlinked">This log lives only in this browser — clear it or switch devices and it's gone. We'll back it up to a
+    private link and email it to you so you can reopen it on your phone or laptop anytime. Free, no account.</span>
+    <span data-ns="linked" style="display:none">This log already syncs to its private link by itself. Email the link to yourself
+    so it is never lost if this browser is cleared. Free, no account.</span>
+    <span data-ns="emailed" style="display:none">Your log is backed up and syncing ✓ The private link has been in your inbox
+    since <span data-ns-when>earlier</span>, it never changes, and every change here reaches it by itself. Nothing to do.</span>
+    <div id="nudgeEmailRow" data-ns="unlinked linked" style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input id="nudgeEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@yourfarm.com"
         aria-label="Email" style="flex:1;min-width:200px;padding:9px 11px;font:inherit;font-size:.92rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
       <button type="button" id="nudgeEmailBtn" class="btn">Save &amp; email my link</button>
     </div>
-    <p class="muted" id="nudgeEmailNote" style="margin:8px 0 0;font-size:.82rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    <p class="muted" id="nudgeEmailNote" data-ns="unlinked linked" style="margin:8px 0 0;font-size:.82rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    <p data-ns="emailed" id="nudgePitch" style="display:none;margin:11px 0 0;font-size:.9rem">
+      When the farm is earning, a <a href="/#founding" class="nudge-founding">Founding Grower account</a>
+      ($99 once, refundable any time) adds what a link cannot: earlier versions of your log kept for two weeks,
+      so a bad edit or an old phone's copy can be undone; sign-in on any device with no link to keep; and a
+      weekly email when something in your log needs you, like a block past its colonisation window.</p>
     <p class="muted" style="margin:11px 0 0;font-size:.85rem">
-      Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
-      or <a href="/#founding" id="nudgeFounding">become a Founding Grower ($99, refundable)</a> for
-      a real account &amp; long-term per-strain history when the full app ships.
+      <span data-ns="unlinked linked">Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
+      or <a href="/#founding" id="nudgeFounding" class="nudge-founding">become a Founding Grower ($99, refundable)</a> for
+      a real account you sign into from any device, with earlier versions of your log kept.</span>
       <button type="button" id="nudgeDismiss" aria-label="Dismiss"
         style="margin-left:8px;background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline">Dismiss</button>
     </p>
@@ -536,6 +548,7 @@
 <script src="/csvimport.js?v=1"></script>
 <script src="/account.js?v=14"></script>
 <script src="/pwa.js?v=1"></script>
+<script src="/nudge.js?v=1"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render
@@ -2670,13 +2683,10 @@ $('backupCopy').addEventListener('click',function(){
    aside and says the one fact that ends the doubt: the link never changes and every change
    reaches it by itself. Keyed on the link id, so a NEW link (Start fresh on another log, a
    different ?log=) shows the form again. Never a gate: "Send it again" is one click. */
-var EMAILED_KEY='mycro_growlog_link_emailed';
-function linkEmailedAt(id){
-  try{ var o=JSON.parse(localStorage.getItem(EMAILED_KEY)||'null');
-       return (o && id && o.id===id && typeof o.at==='number') ? o.at : null; }catch(e){ return null; }
-}
+/* The memory itself lives in nudge.js (I140), the one copy both tools read and write. */
+function linkEmailedAt(id){ return window.MycroNudge ? MycroNudge.emailedAt(id) : null; }
 function rememberLinkEmailed(id, justNow){
-  try{ localStorage.setItem(EMAILED_KEY, JSON.stringify({id:id, at:Date.now()})); }catch(e){}
+  if(window.MycroNudge) MycroNudge.rememberEmailed(id);
   paintEmailRow(justNow);
 }
 function paintEmailRow(justNow){
@@ -2860,9 +2870,13 @@ function focusScanned(bid){
        shown only after the grower commits/harvests a real batch — never on load ---- */
 var NUDGE_KEY='mycro_growlog_nudge_off';
 function nudgeOff(){ try{ return localStorage.getItem(NUDGE_KEY)==='1'; }catch(e){ return false; } }
+function nudgeState(){ return window.MycroNudge ? MycroNudge.state() : 'unlinked'; }
 function showNudge(src){
   if(nudgeOff()) return;
   var n=$('ahaNudge'); if(!n || n.style.display!=='none') return;   // show once
+  if(window.MycroNudge && !MycroNudge.due()) return;                  // the pitch is rationed (I140)
+  var st=nudgeState();
+  if(window.MycroNudge){ MycroNudge.paint(n, st); MycroNudge.shown(); }
   var lead=$('nudgeLead');
   if(lead) lead.textContent = (src==='export') ? "Exporting by hand?"
     : (src==='labels') ? "Labels on the blocks?"
@@ -2870,11 +2884,12 @@ function showNudge(src){
     : (src==='delivery') ? "Out the door and on paper."
     : (src==='import') ? "Your spreadsheet is in." : "Nice — that's logged.";
   n.style.display='block';
-  if(window.track) try{ track('growlog_nudge_show',{src:src}); }catch(_){}
+  if(window.track) try{ track('growlog_nudge_show',{src:src, st:st}); }catch(_){}
 }
 (function wireNudge(){
-  var f=$('nudgeFounding'), w=$('nudgeWaitlist'), d=$('nudgeDismiss'), eb=$('nudgeEmailBtn');
-  if(f) f.addEventListener('click',function(){ if(window.track) try{ track('growlog_cta_founding',{src:'nudge'}); }catch(_){} });
+  var w=$('nudgeWaitlist'), d=$('nudgeDismiss'), eb=$('nudgeEmailBtn');
+  [].forEach.call(document.querySelectorAll('#ahaNudge .nudge-founding'),function(f){
+    f.addEventListener('click',function(){ if(window.track) try{ track('growlog_cta_founding',{src:'nudge', st:nudgeState()}); }catch(_){} }); });
   if(w) w.addEventListener('click',function(){ if(window.track) try{ track('growlog_cta_waitlist',{src:'nudge'}); }catch(_){}
     var em=document.querySelector('#waitlist input[name=email]'); if(em) setTimeout(function(){ try{ em.focus(); }catch(_){} },350); });
   if(d) d.addEventListener('click',function(){ try{ localStorage.setItem(NUDGE_KEY,'1'); }catch(_){}

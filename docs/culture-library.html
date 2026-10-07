@@ -214,19 +214,30 @@
 
   <!-- Aha-moment bridge: same honest capture as the grow log. -->
   <div id="ahaNudge" class="note no-print" style="display:none;margin-top:16px;border-left:3px solid var(--brand)">
+    <!-- One version per device state, same rules as the Grow Log (docs/nudge.js, I140). -->
     <b style="color:var(--ink)" id="nudgeLead">That's on the record.</b>
-    A culture library is only worth keeping if it survives this browser. We'll back your library and
+    <span data-ns="unlinked">A culture library is only worth keeping if it survives this browser. We'll back your library and
     grow log up to a private link and email it to you, so you can open it on your phone at the bench.
-    Free, no account.
-    <div id="nudgeEmailRow" style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    Free, no account.</span>
+    <span data-ns="linked" style="display:none">Your library and grow log already sync to their private link by themselves.
+    Email the link to yourself so it is never lost if this browser is cleared. Free, no account.</span>
+    <span data-ns="emailed" style="display:none">Your library and grow log are backed up and syncing ✓ The private link has
+    been in your inbox since <span data-ns-when>earlier</span>, it never changes, and every change here reaches it by itself.
+    Nothing to do.</span>
+    <div id="nudgeEmailRow" data-ns="unlinked linked" style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input id="nudgeEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@yourfarm.com"
         aria-label="Email" style="flex:1;min-width:200px;padding:9px 11px;font:inherit;font-size:.92rem;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--bg,#fff);color:var(--ink)">
       <button type="button" id="nudgeEmailBtn" class="btn">Save &amp; email my link</button>
     </div>
-    <p class="muted" id="nudgeEmailNote" style="margin:8px 0 0;font-size:.82rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    <p class="muted" id="nudgeEmailNote" data-ns="unlinked linked" style="margin:8px 0 0;font-size:.82rem">We'll email your private restore link and occasional Mycro grow tips. No spam; unsubscribe by replying.</p>
+    <p data-ns="emailed" id="nudgePitch" style="display:none;margin:11px 0 0;font-size:.9rem">
+      When the farm is earning, a <a href="/#founding" class="nudge-founding">Founding Grower account</a>
+      ($99 once, refundable any time) adds what a link cannot: earlier versions of your log kept for two weeks,
+      so a bad edit or an old phone's copy can be undone; sign-in on any device with no link to keep; and a
+      weekly email when something in your log needs you, like a grain bag still waiting for its shake.</p>
     <p class="muted" style="margin:11px 0 0;font-size:.85rem">
-      Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
-      or <a href="/#founding" id="nudgeFounding">become a Founding Grower ($99, refundable)</a>.
+      <span data-ns="unlinked linked">Prefer to wait? <a href="#waitlist" id="nudgeWaitlist">Just join the free early-access list</a>,
+      or <a href="/#founding" id="nudgeFounding" class="nudge-founding">become a Founding Grower ($99, refundable)</a>.</span>
       <button type="button" id="nudgeDismiss" aria-label="Dismiss"
         style="margin-left:8px;background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline">Dismiss</button>
     </p>
@@ -423,6 +434,7 @@
 <script src="/causes.js?v=1"></script>
 <script src="/account.js?v=14"></script>
 <script src="/pwa.js?v=1"></script>
+<script src="/nudge.js?v=1"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -1872,21 +1884,27 @@ if(cloudId()) setSync('All changes synced to your private link ✓');
 /* ---- aha nudge: honest email capture at the moment the library gets real ---- */
 var NUDGE_KEY='mycro_growlog_nudge_off';
 function nudgeOff(){ try{ return localStorage.getItem(NUDGE_KEY)==='1'; }catch(e){ return false; } }
+function nudgeState(){ return window.MycroNudge ? MycroNudge.state() : 'unlinked'; }
 function showNudge(src){
   if(nudgeOff()) return;
   var n=$('ahaNudge'); if(!n || n.style.display==='block') return;
+  if(window.MycroNudge && !MycroNudge.due()) return;                  // the pitch is rationed (I140)
+  var st=nudgeState();
+  if(window.MycroNudge){ MycroNudge.paint(n, st); MycroNudge.shown(); }
   $('nudgeLead').textContent = src==='export' ? 'Exporting by hand?' :
     (src==='source' ? 'Source logged.' :
     (src==='perf' ? "That's a performance record on the plate." :
     (src==='shake' ? 'Shake logged.' : 'That culture is on the record.')));
   n.style.display='block';
-  if(window.track) try{ track('culture_nudge_show',{src:src}); }catch(_){}
+  if(window.track) try{ track('culture_nudge_show',{src:src, st:st}); }catch(_){}
 }
 $('nudgeDismiss').addEventListener('click', function(){
   $('ahaNudge').style.display='none';
   try{ localStorage.setItem(NUDGE_KEY,'1'); }catch(e){}
   if(window.track) try{ track('culture_nudge_dismiss',{}); }catch(_){}
 });
+[].forEach.call(document.querySelectorAll('#ahaNudge .nudge-founding'),function(f){
+  f.addEventListener('click',function(){ if(window.track) try{ track('culture_cta_founding',{src:'nudge', st:nudgeState()}); }catch(_){} }); });
 $('nudgeEmailBtn').addEventListener('click', function(){
   var em=($('nudgeEmail').value||'').trim(), note=$('nudgeEmailNote');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ note.textContent='Please enter a valid email.'; note.style.color='#b23b3b'; return; }
@@ -1905,6 +1923,7 @@ $('nudgeEmailBtn').addEventListener('click', function(){
     .then(function(){
       $('nudgeEmailRow').innerHTML='<p style="margin:0;font-size:.92rem;color:var(--ink)"><b>Sent ✓</b> Check your inbox for your private link — it opens your library and grow log on any device.</p>';
       note.textContent='From now on every change on this device syncs to that link automatically.';
+      if(window.MycroNudge) MycroNudge.rememberEmailed(cloudId());
       if(window.mycroRememberEmail) mycroRememberEmail(em);
       if(window.track) try{ track('growlog_backup_email',{src:'culture-nudge'}); }catch(_){}
     })
