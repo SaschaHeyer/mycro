@@ -165,7 +165,7 @@
     </div>
     <div style="overflow-x:auto">
       <table class="strain" id="strainTable">
-        <thead><tr><th>Strain</th><th>Batches</th><th>Avg BE</th><th>Best BE</th><th>Total yield</th><th>Loss rate</th></tr></thead>
+        <thead><tr><th>Strain</th><th>Batches</th><th>Avg BE</th><th>Best BE</th><th>Published BE</th><th>Total yield</th><th>Loss rate</th></tr></thead>
         <tbody id="strainBody"></tbody>
       </table>
     </div>
@@ -557,16 +557,22 @@ var KEY = 'mycro_growlog_v1';
 var LB = 453.59237;
 var $ = function (id){ return document.getElementById(id); };
 
+/* `be` is the PUBLISHED biological-efficiency range for the species, as the BE guide's own table
+   prints it (docs/guides/biological-efficiency.html; tests/be-published-range.spec.js reads that
+   table and fails if the two drift, I120's rule). It is DISPLAY ONLY (I74/I78): a published
+   figure is a guess wearing a benchmark's clothes, so it is labelled "published", never styled
+   as a flag, and never used to rank or crown anything. `other` carries none: a named "Other"
+   never borrows a figure (I130). */
 var SPECIES = {
-  pearl:    {label:'Blue / Pearl Oyster', colonize:14},
-  pink:     {label:'Pink / Yellow Oyster', colonize:14},
-  king:     {label:'King Oyster', colonize:21},
-  lions:    {label:"Lion's Mane", colonize:21},
-  shiitake: {label:'Shiitake', colonize:50},
-  chestnut: {label:'Chestnut', colonize:21},
-  pioppino: {label:'Pioppino', colonize:28},
-  nameko:   {label:'Nameko', colonize:28},
-  reishi:   {label:'Reishi', colonize:21},
+  pearl:    {label:'Blue / Pearl Oyster', colonize:14, be:[75,100], beText:'75–100%+'},
+  pink:     {label:'Pink / Yellow Oyster', colonize:14, be:[65,90],  beText:'65–90%'},
+  king:     {label:'King Oyster', colonize:21,          be:[50,75],  beText:'50–75%'},
+  lions:    {label:"Lion's Mane", colonize:21,          be:[50,75],  beText:'50–75%'},
+  shiitake: {label:'Shiitake', colonize:50,             be:[75,125], beText:'75–125%'},
+  chestnut: {label:'Chestnut', colonize:21,             be:[50,75],  beText:'50–75%'},
+  pioppino: {label:'Pioppino', colonize:28,             be:[50,75],  beText:'50–75%'},
+  nameko:   {label:'Nameko', colonize:28,               be:[50,75],  beText:'50–75%'},
+  reishi:   {label:'Reishi', colonize:21,               be:[30,50],  beText:'~30–50%'},
   other:    {label:'Other', colonize:21}
 };
 /* WHAT A BATCH IS CALLED, ON EVERY SURFACE (I130). "Other" is a bucket, not a species, and it
@@ -891,6 +897,30 @@ function renderCultureSelect(){
 
 /* ---- computations ---- */
 function beOf(b){ var totalDry=b.dryG*b.blocks; return (b.stage==='harvested' && b.yieldG>0 && totalDry>0) ? (b.yieldG/totalDry*100) : null; }
+/* THE PUBLISHED RANGE BESIDE THE GROWER'S OWN NUMBER (I143). The card said "Biological
+   efficiency 24%" and nothing else; a real farm's first two harvests read 24% and 15% for
+   pearl oyster, where the published range is 75-100%+, and nothing on the page said whether
+   that was good. Three rules, each pinned in tests/be-published-range.spec.js:
+   (a) the range is the BE guide's table, word for word, and only for a species that HAS one.
+       A named "Other" (I130) gets nothing: a name never borrows a figure.
+   (b) a published range counts EVERY flush. After ONE flush the number is still open (I65: a
+       grower who logged flush 1 saw an artificially low BE), so a single-flush batch below the
+       range is never called "below"; it is told the range and that the next flush is still to
+       come. Only a batch with two or more flushes logged can read as below.
+   (c) it is a sentence in the BE line, never a flag (`.flag` is the overdue colonisation
+       warning, which is a problem to act on; this is context to read). */
+function beRangeOf(b){ var sp=SPECIES[b.species]; return (sp && sp.be && sp.beText) ? {lo:sp.be[0], hi:sp.be[1], text:sp.beText, label:sp.label} : null; }
+function flushCount(b){ return (b.flushes && b.flushes.length) ? b.flushes.length : 1; }
+function beContext(b){
+  var be=beOf(b), r=beRangeOf(b);
+  if(be==null || !r) return '';
+  var n=flushCount(b);
+  var pub=r.text+' published for '+r.label;
+  if(be>=r.lo && be<=r.hi) return 'Within the '+pub+'.';
+  if(be>r.hi) return 'Above the '+pub+'.';
+  if(n<2) return 'Published range for '+r.label+': '+r.text+', counted over every flush. This is one flush, so the number is still open; log the next flush before reading it as low.';
+  return 'Below the '+pub+' over '+n+' flushes. <a href="guides/biological-efficiency.html#be-calc">What moves it</a>.';
+}
 function isActive(b){ return b.stage==='inoculated'||b.stage==='colonizing'||b.stage==='fruiting'; }
 function overdueNote(b){
   var sp=SPECIES[b.species];
@@ -1160,7 +1190,7 @@ function renderStrains(){
   bs.forEach(function(b){
     if(!SPECIES[b.species]) return;
     var k=speciesKey(b);
-    var g=by[k]||(by[k]={sp:speciesLabel(b),n:0,fin:0,harv:0,contam:0,finBags:0,lostBags:0,yield:0,bes:[]});
+    var g=by[k]||(by[k]={sp:speciesLabel(b),n:0,fin:0,harv:0,contam:0,finBags:0,lostBags:0,yield:0,bes:[],pub:(beRangeOf(b)||{}).text||null});
     g.n++;
     if(b.stage==='harvested'||b.stage==='contaminated'){ g.fin++; g.finBags+=bagsOf(b); }
     if(b.stage==='contaminated'){ g.contam++; g.lostBags+=bagsOf(b); }
@@ -1190,6 +1220,7 @@ function renderStrains(){
       '<td>'+g.n+(g.harv?' <span class="sub">('+g.harv+' harvested)</span>':'')+'</td>'+
       '<td>'+(g.avgBe!=null?Math.round(g.avgBe)+'%':'—')+'</td>'+
       '<td>'+(g.bestBe!=null?Math.round(g.bestBe)+'%':'—')+'</td>'+
+      '<td class="pub">'+(g.pub?esc(g.pub):'—')+'</td>'+
       '<td>'+(g.harv?fmtWt(g.yield):'—')+'</td>'+
       '<td class="'+lossCls+'">'+(g.loss!=null?Math.round(g.loss)+'%':'—')+'</td>'+
       '</tr>';
@@ -1556,7 +1587,8 @@ function batchHtml(b){
     ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x){return fmtWt(x);}).join(' + ')+'</div>'
     : '';
   var beLine = be!=null
-    ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry</div>'+flushLine
+    ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry'+
+      (beContext(b) ? '<div class="berange">'+beContext(b)+'</div>' : '')+'</div>'+flushLine
     : '';
   var odLine = od ? '<div class="flag">⚠ '+esc(od)+'</div>' : '';
   // Money line: what this run cost, and — once it's harvested and priced — what it made.
@@ -2966,6 +2998,9 @@ render();
 .stepper .dot.now{background:var(--brand);color:#fff;border-color:transparent}
 .beline{font-size:.92rem;background:var(--moss-soft);border-radius:10px;padding:8px 12px;margin:2px 0 4px}
 .beline b{color:var(--moss)}
+.berange{font-size:.82rem;color:var(--muted);margin-top:4px;font-weight:400}
+.berange a{color:var(--muted)}
+table.strain td.pub{color:var(--muted);white-space:nowrap}
 .flushline{font-size:.82rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .culline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .culline code{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-size:.82rem}
