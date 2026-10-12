@@ -231,6 +231,29 @@
       </table>
     </div>
     <p class="muted" id="lossNote" style="font-size:.84rem;margin:12px 2px 0"></p>
+    <!-- Where the spawn came from (I145). A cause says WHAT took a block; the source says
+         whose spawn it was, which is the half a grower can change by buying elsewhere. -->
+    <div id="srcWrap" style="display:none;margin-top:18px">
+      <h4 style="margin:0 0 4px;font-size:.92rem">Lost bags by where the spawn came from</h4>
+      <span class="muted" style="font-size:.82rem">Every bag you started, by its spawn source. Bags still growing can still be lost, so "lost so far" is a floor.</span>
+      <div style="overflow-x:auto;margin-top:8px">
+        <table class="strain" id="srcTable">
+          <thead><tr>
+            <th>Spawn source</th><th>Bags started</th><th>Lost</th><th>Harvested</th><th>Still growing</th><th>Lost so far</th>
+          </tr></thead>
+          <tbody id="srcBody"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="srcNote" style="font-size:.84rem;margin:12px 2px 0"></p>
+    </div>
+    <details id="srcSet" style="display:none;margin-top:14px;font-size:.88rem">
+      <summary style="cursor:pointer;font-weight:600">Record where the spawn came from, several runs at once</summary>
+      <p class="muted" style="font-size:.84rem;margin:8px 2px">Type the source (a supplier, a friend, your own lab), tick the runs it supplied, and save. Batches made from those runs, and bags split off them, take the same source.</p>
+      <input id="srcName" type="text" maxlength="40" list="supplierList" placeholder="e.g. the supplier you bought from" autocomplete="off" style="max-width:280px">
+      <div id="srcList" style="margin:10px 0;display:grid;gap:4px"></div>
+      <button class="mini solid" type="button" id="srcSave">Save source</button>
+      <span class="muted" id="srcMsg" style="font-size:.84rem;margin-left:8px"></span>
+    </details>
     <p class="muted strainBridge" style="font-size:.84rem;margin:10px 2px 0">
       Set or correct the cause any time with the <b>🦠 Cause</b> button on a lost run. Not sure what
       you are looking at? The <a href="/guides/contamination.html">contamination guide</a> names the
@@ -350,6 +373,10 @@
             <option value="Coco coir + vermiculite"></option>
           </datalist>
           <span class="hint">Groups your cost per pound, so you can compare recipes.</span></div>
+        <div class="field"><label>Spawn source <span class="hint">(optional)</span></label>
+          <input id="f-supplier" type="text" maxlength="40" list="supplierList" placeholder="e.g. the supplier you bought it from" autocomplete="off">
+          <datalist id="supplierList"></datalist>
+          <span class="hint">Who the spawn or culture came from. Your lost bags are counted per source, so a bad batch of spawn shows up. Leave it blank for spawn from a batch in this log: it takes that batch's source.</span></div>
         <div class="field"><label>Batch number <span class="hint">(optional)</span></label>
           <input id="f-code" type="text" maxlength="24" placeholder="e.g. SHI-24-07" autocomplete="off">
           <span class="hint">Your own lot code. Goes on the delivery label a buyer keeps.</span></div>
@@ -545,7 +572,7 @@
 <script src="/savefile.js?v=1"></script>
 <script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
-<script src="/csvimport.js?v=1"></script>
+<script src="/csvimport.js?v=2"></script>
 <script src="/account.js?v=14"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
@@ -707,6 +734,7 @@ function validBatch(b){
     (b.speciesName==null || typeof b.speciesName==='string') && // grower's name for an "Other" (I130)
     (b.labelAt==null || typeof b.labelAt==='string') &&     // day its block label was last printed (I133)
     (b.splitFrom==null || typeof b.splitFrom==='string') && // batch its bags were split off (I137)
+    (b.supplier==null || typeof b.supplier==='string') &&   // where the spawn came from (I145)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -1179,6 +1207,130 @@ function renderLoss(){
   panel.style.display='block';
 }
 
+/* ---- where the spawn came from (I145) ----
+   Found in a real farm's log: its batch names carried a supplier code (three of them), and its
+   lost bags split almost entirely along those codes, one source losing most of what it supplied
+   and another almost nothing. The cause table could not show it: two sources can both give you
+   trich. Five rules, each one pointing the answer the flattering way if dropped:
+     (a) BAGS, never runs (I136b). A run split into four is not four times the evidence.
+     (b) The denominator is every bag STARTED, with "still growing" shown beside it. Dividing by
+         finished bags makes a source whose bags are mostly still colonising read 50% off one
+         early loss; the honest number is a floor, and the header says so.
+     (c) A run with no source recorded is its own muted row and is never compared or crowned.
+     (d) No verdict until two named sources have three bags each, and none when the gap between
+         them is small: "A loses more than B" off two bags is a guess wearing an answer's clothes.
+     (e) The verdict carries its clue (I117): when every lost bag from the worst source was spawned
+         on ONE day, that day's work explains it as well as the spawn does, unless other sources'
+         bags spawned the same day are the control: if they came through, the spawn is the better
+         explanation; if they were lost too, the day's work is. The sentence says which.
+   A batch spawned from another batch in this log, or split off one, takes that batch's source
+   unless it names its own: a source is a fact of the lineage, not of the bag. */
+function cleanSupplier(v){ return String(v==null?'':v).replace(/\s+/g,' ').trim().slice(0,40); }
+function supplierParent(b){
+  var p=parentBatchOf(b); if(p) return p;
+  var sf = b && b.splitFrom ? find(b.splitFrom) : null;
+  return (sf && sf.id!==b.id) ? sf : null;
+}
+function supplierOf(b){
+  var cur=b, guard=0;
+  while(cur && guard++ < 50){
+    var s=cleanSupplier(cur.supplier); if(s) return s;
+    cur=supplierParent(cur);
+  }
+  return '';
+}
+// Runs the grower would tag by hand: their own, with no source of their own or inherited, and
+// not made from another run in this log (tag the parent and the children follow).
+function untaggedRoots(){
+  return state.batches.filter(function(b){
+    return !isSeededBatch(b) && !supplierOf(b) && !supplierParent(b);
+  }).sort(function(x,y){ return (x.inoculatedOn<y.inoculatedOn?-1:x.inoculatedOn>y.inoculatedOn?1:0) || String(x.name).localeCompare(String(y.name)); });
+}
+function knownSuppliers(){
+  var seen={}, out=[];
+  function add(n){ n=cleanSupplier(n); var k=n.toLowerCase(); if(n && !Object.prototype.hasOwnProperty.call(seen,k)){ seen[k]=1; out.push(n); } }
+  state.batches.forEach(function(b){ add(supplierOf(b)); });
+  (state.contacts||[]).forEach(function(c){ if(c && c.role==='supplier') add(c.name); });
+  return out.sort(function(a,b){ return a.localeCompare(b); });
+}
+function fmtDay(iso){
+  var d=new Date(iso+'T12:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+}
+function sourceRows(){
+  var by={}, none={name:'',started:0,lost:0,harv:0,grow:0,lostDays:{}};
+  state.batches.forEach(function(b){
+    var s=supplierOf(b), k='k:'+s.toLowerCase();
+    var g = s ? (by[k]||(by[k]={name:s,started:0,lost:0,harv:0,grow:0,lostDays:{}})) : none;
+    var n=bagsOf(b);
+    g.started+=n;
+    if(b.stage==='contaminated'){ g.lost+=n; g.lostDays[b.inoculatedOn]=1; }
+    else if(b.stage==='harvested') g.harv+=n;
+    else g.grow+=n;
+  });
+  var rows=Object.keys(by).map(function(k){ var g=by[k]; g.share=g.lost/g.started; return g; })
+    .sort(function(x,y){ return (y.share-x.share) || (y.lost-x.lost) || x.name.localeCompare(y.name); });
+  return {rows:rows, none:none};
+}
+// (d) + (e): the one sentence, or the honest reason there is none yet.
+function sourceVerdict(rows, none){
+  var MIN=3, GAP=0.2;
+  var ok=rows.filter(function(g){ return g.started>=MIN; });
+  var gapTail = none.lost ? ' '+none.lost+' lost bag'+(none.lost===1?' has':'s have')+' no source recorded and '+(none.lost===1?'is':'are')+' not counted toward any of them.' : '';
+  if(ok.length<2) return 'Two sources with at least '+MIN+' bags each are needed before this can say which spawn is costing you bags.'+gapTail;
+  var worst=ok[0], best=ok[ok.length-1];
+  if(worst.lost<2 || worst.share-best.share<GAP)
+    return 'Your sources are losing bags at similar rates so far, so where the spawn came from is not what separates your good runs from your bad ones.'+gapTail;
+  var pct=function(g){ return Math.round(g.share*100)+'%'; };
+  var days=Object.keys(worst.lostDays).sort();
+  var clue;
+  if(days.length===1){
+    // The same day's other spawn is the control: if it came through, the day's work did too.
+    var same={n:0,lost:0}, wk=worst.name.toLowerCase();
+    state.batches.forEach(function(b){
+      var s=supplierOf(b);
+      if(b.inoculatedOn!==days[0] || !s || s.toLowerCase()===wk) return;
+      same.n+=bagsOf(b); if(b.stage==='contaminated') same.lost+=bagsOf(b);
+    });
+    var lead=' All of them were spawned on the same day ('+fmtDay(days[0])+').';
+    clue = !same.n
+      ? lead+' That day\'s work explains it as well as the spawn does: a run from this source on another day tells the two apart.'
+      : (worst.share - same.lost/same.n >= GAP)
+      ? lead+' Bags from your other sources spawned that day lost '+same.lost+' of '+same.n+', so the spawn explains it better than that day\'s work.'
+      : lead+' Bags from your other sources spawned that day lost '+same.lost+' of '+same.n+' too, which points at that day\'s work more than at the spawn.';
+  } else {
+    clue = ' They were spawned on '+days.length+' different days, which points at the spawn more than at any one day\'s work.';
+  }
+  return '<b>'+esc(worst.name)+'</b> has lost '+worst.lost+' of the '+worst.started+' bags it supplied so far ('+pct(worst)+'), against '+
+    best.lost+' of '+best.started+' ('+pct(best)+') from <b>'+esc(best.name)+'</b>.'+clue+gapTail;
+}
+function renderSources(){
+  var wrap=$('srcWrap'), set=$('srcSet'), dl=$('supplierList');
+  if(dl) dl.innerHTML = knownSuppliers().map(function(n){ return '<option value="'+esc(n)+'"></option>'; }).join('');
+  if(!wrap) return;
+  var lostAny = state.batches.some(function(b){ return b.stage==='contaminated'; });
+  var r=sourceRows();
+  if(lostAny && r.rows.length>=2){
+    var all=r.rows.slice(); if(r.none.started) all.push(r.none);
+    $('srcBody').innerHTML = all.map(function(g){
+      return '<tr'+(g.name?'':' class="muted"')+'><td>'+(g.name?esc(g.name):'No source recorded')+'</td>'+
+        '<td>'+g.started+'</td><td>'+g.lost+'</td><td>'+g.harv+'</td><td>'+g.grow+'</td>'+
+        '<td>'+(g.name?Math.round(g.lost/g.started*100)+'%':'—')+'</td></tr>';
+    }).join('');
+    $('srcNote').innerHTML = sourceVerdict(r.rows, r.none);
+    wrap.style.display='block';
+  } else wrap.style.display='none';
+  var roots = lostAny ? untaggedRoots() : [];
+  if(set){
+    set.style.display = roots.length ? 'block' : 'none';
+    $('srcList').innerHTML = roots.map(function(b){
+      return '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" value="'+esc(b.id)+'"> '+
+        '<span><b>'+esc(b.name||'Untitled batch')+'</b> <span class="muted">· '+esc(speciesLabel(b))+' · spawned '+esc(fmtDay(b.inoculatedOn))+
+        ' · '+bagsOf(b)+' bag'+(bagsOf(b)===1?'':'s')+(b.stage==='contaminated'?' · lost':'')+'</span></span></label>';
+    }).join('');
+  }
+}
+
 /* ---- per-strain performance ---- */
 function renderStrains(){
   var panel=$('strainPanel'); if(!panel) return;
@@ -1376,6 +1528,7 @@ function editFormHtml(b){
     '<label class="yl">Blocks / bags<input id="editBlocks" type="number" step="1" min="1" value="'+b.blocks+'"></label>'+
     '<label class="yl">Dry substrate each ('+unit+')<input id="editDry" type="number" step="any" min="0" value="'+(+dry.toFixed(3))+'"></label>'+
     '<label class="yl">Spawned on<input id="editDate" type="date" value="'+esc(b.inoculatedOn)+'"></label>'+
+    '<label class="yl" style="min-width:170px">Spawn source<input id="editSupplier" type="text" maxlength="40" list="supplierList" value="'+esc(b.supplier||'')+'" placeholder="'+esc(!b.supplier && supplierOf(b) ? supplierOf(b)+' (from its parent)' : 'optional')+'" autocomplete="off"></label>'+
     '<label class="yl" style="min-width:200px">Notes<input id="editNotes" type="text" maxlength="120" value="'+esc(b.notes||'')+'" autocomplete="off"></label>'+
     (isActive(b) && b.blocks>1
       ? '<div class="edithint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">Lost a bag, or some are ahead of the rest? Use <b>✂ Split off bags</b> instead, so the lost ones count in your contamination rate.</div>'
@@ -1399,6 +1552,7 @@ function saveEdit(e,id){
   b.blocks=blocks;
   b.dryG=gFromInput(dry);
   b.notes=($('editNotes').value||'').trim().slice(0,120);
+  b.supplier=cleanSupplier($('editSupplier') ? $('editSupplier').value : b.supplier)||null;
   editingBatchId=null; save(); render();
   if(window.track) try{ track('growlog_batch_edit',{stage:b.stage}); }catch(_){}
   return false;
@@ -1501,6 +1655,7 @@ function saveSplit(e,id){
     species:b.species, speciesName:b.speciesName||null, dryG:b.dryG, blocks:k,
     inoculatedOn:b.inoculatedOn, stage:b.stage, stageSince:b.stageSince, yieldG:null,
     parentId:b.parentId||null, method:b.method||null, code:null,
+    supplier:b.supplier||null,   // a record carries its own facts (I83); splitFrom would also find it
     costs:c[1], priceG:(typeof b.priceG==='number'?b.priceG:null),
     notes:b.notes||'', labelAt:null,
     // Where these bags came from, so they can go back (I137). Without it the only "undo" was
@@ -1581,7 +1736,8 @@ function batchHtml(b){
   var od=overdueNote(b);
   var chipCls = {inoculated:'chip-inoc',colonizing:'chip-col',fruiting:'chip-fruit',harvested:'chip-harv',contaminated:'chip-contam'}[b.stage];
   var meta = fmtWt(b.dryG)+' dry/block · '+b.blocks+' block'+(b.blocks===1?'':'s')+' · inoculated '+esc(b.inoculatedOn)+
-             ' ('+daysSince(b.inoculatedOn)+'d ago)';
+             ' ('+daysSince(b.inoculatedOn)+'d ago)'+
+             (supplierOf(b) ? ' · spawn from '+esc(supplierOf(b)) : '');
   var fl=(b.flushes||[]);
   var flushLine = fl.length>1
     ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x){return fmtWt(x);}).join(' + ')+'</div>'
@@ -1665,6 +1821,7 @@ function paint(){
   renderStrains();
   renderCosts();
   renderLoss();
+  renderSources();
   renderSampleNote();
   renderCultureSelect();
   renderDelivery();
@@ -1697,13 +1854,14 @@ function addBatch(e){
     inoculatedOn:d, stage:'inoculated', stageSince:d, yieldG:null,
     parentId:parentId,
     method:($('f-method').value||'').trim()||null,
+    supplier:cleanSupplier($('f-supplier') ? $('f-supplier').value : '')||null,
     code:($('f-code').value||'').trim()||null,
     speciesName: $('f-species').value==='other' ? (($('f-speciesName').value||'').trim().slice(0,40)||null) : null,
     notes:($('f-notes').value||'').trim()
   });
   save(); render();
   $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; $('f-speciesName').value=''; $('f-date').value=today();
-  if(window.track) try{ track('growlog_add',{species:$('f-species').value}); }catch(_){}
+  if(window.track) try{ track('growlog_add',{species:$('f-species').value, src:$('f-supplier')&&$('f-supplier').value.trim()?1:0}); }catch(_){}
   showNudge('add');
   return false;
 }
@@ -2011,9 +2169,20 @@ function download(name,text,type){
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:type}));
   a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
+$('srcSave').addEventListener('click',function(){
+  var name=cleanSupplier($('srcName').value), msg=$('srcMsg');
+  var ids=[].map.call(document.querySelectorAll('#srcList input:checked'),function(x){ return x.value; });
+  if(!name){ msg.textContent='Type where the spawn came from first.'; $('srcName').focus(); return; }
+  if(!ids.length){ msg.textContent='Tick the runs this spawn went into.'; return; }
+  ids.forEach(function(id){ var b=find(id); if(b) b.supplier=name; });
+  $('srcName').value='';
+  save(); render();
+  msg.textContent='Saved on '+ids.length+' run'+(ids.length===1?'':'s')+'.';
+  if(window.track) try{ track('growlog_supplier_set',{n:ids.length}); }catch(_){}
+});
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
-  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
+  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','spawn_source','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
@@ -2026,7 +2195,7 @@ $('exportCsv').addEventListener('click',function(){
     var dlv=deliveredG(b.id);
     rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
-      cul?cul.code:(pbt?batchCode(pbt):''), (b.method||'').replace(/"/g,'""'),
+      cul?cul.code:(pbt?batchCode(pbt):''), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
       dlv>0 ? toU(dlv).toFixed(2) : '',
