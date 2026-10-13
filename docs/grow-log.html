@@ -246,6 +246,7 @@
       </div>
       <p class="muted" id="srcNote" style="font-size:.84rem;margin:12px 2px 0"></p>
     </div>
+    <div id="srcHint" style="display:none;margin-top:14px;font-size:.88rem"></div>
     <details id="srcSet" style="display:none;margin-top:14px;font-size:.88rem">
       <summary style="cursor:pointer;font-weight:600">Record where the spawn came from, several runs at once</summary>
       <p class="muted" style="font-size:.84rem;margin:8px 2px">Type the source (a supplier, a friend, your own lab), tick the runs it supplied, and save. Batches made from those runs, and bags split off them, take the same source.</p>
@@ -845,10 +846,6 @@ function parentBatchOf(b){
   return (p && p.id!==b.id) ? p : null;
 }
 function batchCode(b){ return (b.code && String(b.code).trim()) || b.name; }
-function isSeededBatch(b){
-  var S=window.MycroSamples;
-  return !!(S && S.isSample && S.isSample('batches', b.id));
-}
 // True if `candidate` sits somewhere below `ancestorId` (or is it).
 function descendsFrom(candidate, ancestorId){
   var cur=candidate, guard=0;
@@ -1246,6 +1243,60 @@ function untaggedRoots(){
     return !isSeededBatch(b) && !supplierOf(b) && !supplierParent(b);
   }).sort(function(x,y){ return (x.inoculatedOn<y.inoculatedOn?-1:x.inoculatedOn>y.inoculatedOn?1:0) || String(x.name).localeCompare(String(y.name)); });
 }
+/* A code the grower already writes into run names for a source, learned only from runs they
+   tagged themselves (I146). Sanctuary Moon names runs SPECIES-SOURCE-NN and typed the source on
+   three new runs, all carrying LF, while six older LF runs sat untagged. Three rules, because a
+   wrong guess here tags real runs with the wrong spawn:
+   (a) the code must be in EVERY run tagged with that source, and be letters (a run number
+       like 02 is shared by accident);
+   (b) those runs must span two species, or the shared token may be the species ("BO").
+       This is also what makes one tagged run teach nothing: one run is one species;
+   (c) a code that also names a run tagged with another source belongs to neither.
+   It only ticks boxes. The grower reads the list and presses Save; nothing is written here. */
+function nameTokens(b){
+  var seen={}, out=[];
+  String(b&&b.name||'').toUpperCase().split(/[^A-Z0-9]+/).forEach(function(t){
+    if(/^[A-Z]{2,6}$/.test(t) && !Object.prototype.hasOwnProperty.call(seen,t)){ seen[t]=1; out.push(t); }
+  });
+  return out;
+}
+function codeSuggestions(){
+  var by={};
+  state.batches.forEach(function(b){
+    if(isSeededBatch(b)) return;
+    var s=cleanSupplier(b.supplier); if(!s) return;
+    var k='k:'+s.toLowerCase();
+    (by[k]||(by[k]={name:s,runs:[]})).runs.push(b);
+  });
+  var keys=Object.keys(by), roots=untaggedRoots(), out=[];
+  keys.forEach(function(k){
+    var g=by[k];
+    var sp={}; g.runs.forEach(function(b){ sp[speciesKey(b)]=1; });
+    if(Object.keys(sp).length<2) return;
+    nameTokens(g.runs[0]).forEach(function(t){
+      if(!g.runs.every(function(b){ return nameTokens(b).indexOf(t)>=0; })) return;
+      var clash=keys.some(function(k2){
+        return k2!==k && by[k2].runs.some(function(b){ return nameTokens(b).indexOf(t)>=0; });
+      });
+      if(clash) return;
+      var runs=roots.filter(function(b){ return nameTokens(b).indexOf(t)>=0; });
+      if(runs.length) out.push({code:t, name:g.name, runs:runs});
+    });
+  });
+  return out;
+}
+function renderSrcHint(lostAny){
+  var el=$('srcHint'); if(!el) return;
+  var sug = lostAny ? codeSuggestions() : [];
+  el._sug = sug;
+  el.style.display = sug.length ? 'block' : 'none';
+  el.innerHTML = sug.map(function(x,i){
+    var n=x.runs.length;
+    return '<p style="margin:0 2px 6px">The runs you tagged <b>'+esc(x.name)+'</b> all have <b>'+esc(x.code)+'</b> in their name. '+
+      n+' untagged run'+(n===1?' does':'s do')+' too: '+x.runs.map(function(b){ return esc(b.name); }).join(', ')+'. '+
+      '<button class="mini" type="button" data-sug="'+i+'">Tick '+(n===1?'it':'them')+' for '+esc(x.name)+'</button></p>';
+  }).join('');
+}
 function knownSuppliers(){
   var seen={}, out=[];
   function add(n){ n=cleanSupplier(n); var k=n.toLowerCase(); if(n && !Object.prototype.hasOwnProperty.call(seen,k)){ seen[k]=1; out.push(n); } }
@@ -1320,6 +1371,7 @@ function renderSources(){
     $('srcNote').innerHTML = sourceVerdict(r.rows, r.none);
     wrap.style.display='block';
   } else wrap.style.display='none';
+  renderSrcHint(lostAny);
   var roots = lostAny ? untaggedRoots() : [];
   if(set){
     set.style.display = roots.length ? 'block' : 'none';
@@ -2169,6 +2221,17 @@ function download(name,text,type){
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:type}));
   a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
+$('srcHint').addEventListener('click',function(e){
+  var btn=e.target.closest ? e.target.closest('[data-sug]') : null; if(!btn) return;
+  var x=($('srcHint')._sug||[])[+btn.getAttribute('data-sug')]; if(!x) return;
+  var want={}; x.runs.forEach(function(b){ want[b.id]=1; });
+  $('srcSet').open=true;
+  $('srcName').value=x.name;
+  [].forEach.call(document.querySelectorAll('#srcList input[type=checkbox]'),function(c){ c.checked=Object.prototype.hasOwnProperty.call(want,c.value); });
+  $('srcMsg').textContent='Ticked '+x.runs.length+'. Check the list, then Save source.';
+  $('srcSave').focus();
+  if(window.track) try{ track('growlog_supplier_suggest',{n:x.runs.length}); }catch(_){}
+});
 $('srcSave').addEventListener('click',function(){
   var name=cleanSupplier($('srcName').value), msg=$('srcMsg');
   var ids=[].map.call(document.querySelectorAll('#srcList input:checked'),function(x){ return x.value; });
