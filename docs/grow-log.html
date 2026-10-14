@@ -377,7 +377,7 @@
         <div class="field"><label>Spawn source <span class="hint">(optional)</span></label>
           <input id="f-supplier" type="text" maxlength="40" list="supplierList" placeholder="e.g. the supplier you bought it from" autocomplete="off">
           <datalist id="supplierList"></datalist>
-          <span class="hint">Who the spawn or culture came from. Your lost bags are counted per source, so a bad batch of spawn shows up. Leave it blank for spawn from a batch in this log: it takes that batch's source.</span></div>
+          <span class="hint">Who the spawn or culture came from. Your lost bags are counted per source, so a bad batch of spawn shows up. Leave it blank for spawn from a batch in this log, or from a culture whose source names a supplier: it takes that source.</span></div>
         <div class="field"><label>Batch number <span class="hint">(optional)</span></label>
           <input id="f-code" type="text" maxlength="24" placeholder="e.g. SHI-24-07" autocomplete="off">
           <span class="hint">Your own lot code. Goes on the delivery label a buyer keeps.</span></div>
@@ -1234,7 +1234,36 @@ function supplierOf(b){
     var s=cleanSupplier(cur.supplier); if(s) return s;
     cur=supplierParent(cur);
   }
-  return '';
+  return lineSupplier(b);
+}
+/* A run spawned from a Culture Library culture takes the supplier written on that culture's
+   SOURCE (I147). Sanctuary Moon recorded a bought liquid culture there with its supplier the
+   night after they started tagging runs here, and a run spawned from it would otherwise count
+   as untagged unless the same name were typed a second time. Rules:
+   (a) a name typed on the run or on a run above it still wins: it is the more specific fact;
+   (b) a wild sample names no supplier, so it gives none (never the place it was picked);
+   (c) our seeded example sources give none, or the demo farm becomes a row in their table;
+   (d) an archived source still counts: filed away is not forgotten (I80). */
+function sourceById(id){
+  var ss=Array.isArray(state.sources)?state.sources:[];
+  for(var i=0;i<ss.length;i++) if(ss[i] && ss[i].id===id) return ss[i];
+  return null;
+}
+function cultureSource(c){
+  var cur=c, guard=0;
+  while(cur && guard++ < 200){
+    if(cur.parentKind==='source' || (!cultureOf(cur.parentId) && sourceById(cur.parentId))) return sourceById(cur.parentId);
+    var up=cultureOf(cur.parentId);
+    if(!up || up===cur) return null;
+    cur=up;
+  }
+  return null;
+}
+function lineSupplier(b){
+  var c=lineCulture(b); if(!c) return '';
+  var src=cultureSource(c); if(!src || src.kind==='wild') return '';               // (b)
+  if(window.MycroSamples && MycroSamples.isSample('sources', src.id)) return '';     // (c)
+  return cleanSupplier(src.supplier);
 }
 // Runs the grower would tag by hand: their own, with no source of their own or inherited, and
 // not made from another run in this log (tag the parent and the children follow).
@@ -1301,6 +1330,9 @@ function knownSuppliers(){
   var seen={}, out=[];
   function add(n){ n=cleanSupplier(n); var k=n.toLowerCase(); if(n && !Object.prototype.hasOwnProperty.call(seen,k)){ seen[k]=1; out.push(n); } }
   state.batches.forEach(function(b){ add(supplierOf(b)); });
+  (Array.isArray(state.sources)?state.sources:[]).forEach(function(x){
+    if(x && x.kind!=='wild' && !(window.MycroSamples && MycroSamples.isSample('sources', x.id))) add(x.supplier);
+  });
   (state.contacts||[]).forEach(function(c){ if(c && c.role==='supplier') add(c.name); });
   return out.sort(function(a,b){ return a.localeCompare(b); });
 }
@@ -1580,7 +1612,7 @@ function editFormHtml(b){
     '<label class="yl">Blocks / bags<input id="editBlocks" type="number" step="1" min="1" value="'+b.blocks+'"></label>'+
     '<label class="yl">Dry substrate each ('+unit+')<input id="editDry" type="number" step="any" min="0" value="'+(+dry.toFixed(3))+'"></label>'+
     '<label class="yl">Spawned on<input id="editDate" type="date" value="'+esc(b.inoculatedOn)+'"></label>'+
-    '<label class="yl" style="min-width:170px">Spawn source<input id="editSupplier" type="text" maxlength="40" list="supplierList" value="'+esc(b.supplier||'')+'" placeholder="'+esc(!b.supplier && supplierOf(b) ? supplierOf(b)+' (from its parent)' : 'optional')+'" autocomplete="off"></label>'+
+    '<label class="yl" style="min-width:170px">Spawn source<input id="editSupplier" type="text" maxlength="40" list="supplierList" value="'+esc(b.supplier||'')+'" placeholder="'+esc(!b.supplier && supplierOf(b) ? supplierOf(b)+(supplierParent(b) ? ' (from its parent)' : ' (from its culture\'s source)') : 'optional')+'" autocomplete="off"></label>'+
     '<label class="yl" style="min-width:200px">Notes<input id="editNotes" type="text" maxlength="120" value="'+esc(b.notes||'')+'" autocomplete="off"></label>'+
     (isActive(b) && b.blocks>1
       ? '<div class="edithint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">Lost a bag, or some are ahead of the rest? Use <b>✂ Split off bags</b> instead, so the lost ones count in your contamination rate.</div>'
