@@ -35,6 +35,12 @@ p{margin:0 0 1rem}
 .nav-links{display:flex;align-items:center;gap:22px}
 .nav-links a{color:var(--ink);font-weight:600;font-size:.97rem}
 @media(max-width:560px){.nav-links a.hide-sm{display:none}}
+/* Tool switcher (I149): the two tools share one document, and on a phone (or the home-screen
+   app, which has no browser bar) the nav links to the other tool were hidden. Always visible. */
+.toolswitch{display:flex;gap:6px;padding:0 20px 8px;margin-top:-6px}
+.toolswitch a{flex:0 0 auto;font-weight:700;font-size:.9rem;padding:6px 14px;border-radius:999px;
+  border:1.5px solid var(--line);color:var(--ink);background:#fff;text-decoration:none}
+.toolswitch a[aria-current="page"]{background:var(--brand,#C0562C);border-color:var(--brand,#C0562C);color:#fff}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;

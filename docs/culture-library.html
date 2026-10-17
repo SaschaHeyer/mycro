@@ -51,7 +51,9 @@
     <a href="grow-log.html" class="hide-sm">Grow Log</a>
     <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
   </div>
-</div></nav>
+</div>
+<div class="wrap toolswitch" aria-label="Switch tool"><a href="grow-log.html">🍄 Grow Log</a><a href="culture-library.html" aria-current="page">🧬 Culture Library</a></div>
+</nav>
 
 <header class="wrap" style="padding:40px 20px 6px;max-width:820px">
   <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:14px">🧬 Free tool · no sign-up · saved on your device</span>
@@ -81,6 +83,7 @@
     <a class="btn secondary" style="padding:8px 14px;font-size:.9rem" href="grow-log.html">← Grow Log</a>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem;display:none" id="archiveDone">🗄 Archive finished</button>
+      <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="printLabels">🏷 Print labels</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportCsv">⬇ Export CSV</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="exportJson">⬇ JSON</button>
       <button class="btn secondary" style="padding:8px 14px;font-size:.9rem" id="importJson">⬆ Import backup</button>
@@ -430,6 +433,7 @@
 </div></footer>
 
 <script src="/savefile.js?v=1"></script>
+<script src="/qr.js"></script>
 <script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/account.js?v=14"></script>
@@ -484,6 +488,7 @@ var recordingOn = null;   // culture id while its colonisation-performance form 
 var attachingId = null;   // culture id while its "attach to a source" picker is open (I79)
 var speciesOn  = null;    // orphan-root id while its "set species" picker is open (I84)
 var contamOn   = null;    // culture id while its "what contaminated it" form is open (I117)
+var editingId  = null;    // culture or source id while its edit form is open (I149)
 
 /* ---- date helpers ---- */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -1181,6 +1186,7 @@ function cultureNodeHtml(c, depth){
   }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   h += '<div class="nactions">';
+  h += '<button class="mini" data-act="edit" data-id="'+c.id+'">✎ Edit</button>';
   if(c.status!=='contaminated')
     h += '<button class="mini" data-act="perf" data-id="'+c.id+'">'+
       (cd!=null ? '✎ Edit colonisation'
@@ -1198,6 +1204,7 @@ function cultureNodeHtml(c, depth){
   if(isFinished(c)) h += '<button class="mini" data-act="arch" data-id="'+c.id+'">🗄 Archive</button>';
   h += '<button class="mini ghosty" data-act="del" data-id="'+c.id+'">Delete</button>';
   h += '</div>';
+  if(editingId===c.id) h += editCultureFormHtml(c);
   if(recordingOn===c.id) h += perfFormHtml(c);
   if(contamOn===c.id) h += contamFormHtml(c);
   if(addingUnder && addingUnder.parentId===c.id) h += addFormHtml(c.code, addingUnder.type);
@@ -1283,6 +1290,96 @@ function perfFormHtml(c){
       '<button class="mini ghosty" data-act="cancelPerf">Cancel</button></div></div>';
   return h;
 }
+/* Edit (I149). Asked for by a real farm in its first week of making its own cultures: a typo
+   in a code, the wrong date, a jar count that changed, had no way back but delete and retype,
+   and deleting a culture breaks the traceback below it (I80). One form per record, opened on
+   the record itself (the same shape as every other form here). Three rules:
+   (a) a code is unique across sources AND cultures, because a traceback finds things by it;
+   (b) a renamed code does NOT rewrite the codes below it: those are written on jars already;
+   (c) a date that would make the record's own history impossible (made after it was shaken
+       or colonised) is refused with a reason, never silently dropped. Species is not here:
+       it cascades, and 🧬 / 📎 already own that. */
+function codeTaken(code, selfId){
+  var k = String(code||'').trim().toLowerCase();
+  if(!k) return false;
+  return state.sources.some(function(x){ return x.id!==selfId && String(x.code||'').toLowerCase()===k; }) ||
+         state.cultures.some(function(x){ return x.id!==selfId && String(x.code||'').toLowerCase()===k; });
+}
+function editNote(){ return '<div class="abrow wide"><p class="muted" id="e-msg" style="margin:0;font-size:.8rem;display:none;color:#a33"></p></div>'; }
+function editCultureFormHtml(c){
+  var h = '<div class="addbox"><div class="abrow"><label>Code</label>'+
+      '<input id="e-code" type="text" maxlength="30" value="'+esc(c.code)+'"></div>'+
+    '<div class="abrow"><label>Date made</label><input id="e-date" type="date" value="'+esc(c.createdAt)+'"></div>';
+  if(isGrain(c))
+    h += '<div class="abrow"><label>How many made <span class="opt">optional</span></label>'+
+      '<div class="unitrow"><input id="e-jars" type="number" min="1" max="999" step="1" inputmode="numeric" value="'+(jarsOf(c)||'')+'">'+
+      '<select id="e-container" aria-label="Jars or bags">'+
+        '<option value="jar"'+(containerOf(c)==='jar'?' selected':'')+'>jars</option>'+
+        '<option value="bag"'+(containerOf(c)==='bag'?' selected':'')+'>bags</option>'+
+      '</select></div></div>';
+  h += '<div class="abrow'+(isGrain(c)?'':' wide')+'"><label>Notes</label>'+
+      '<input id="e-notes" type="text" maxlength="120" value="'+esc(c.notes||'')+'"></div>';
+  if(liveChildrenOf(c.id).length)
+    h += '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Changing the code here does not change the codes of the cultures below it. Those are already written on the jars.</p></div>';
+  h += editNote()+
+    '<div class="abrow wide"><button class="mini solid" data-act="saveEdit" data-id="'+c.id+'">Save</button>'+
+      '<button class="mini ghosty" data-act="cancelEdit">Cancel</button></div></div>';
+  return h;
+}
+function editSourceFormHtml(s){
+  var h = '<div class="addbox"><div class="abrow"><label>Tracking ID</label>'+
+      '<input id="e-code" type="text" maxlength="30" value="'+esc(s.code)+'"></div>'+
+    '<div class="abrow"><label>Date logged</label><input id="e-date" type="date" value="'+esc(s.acquiredAt)+'"></div>'+
+    '<div class="abrow wide"><label>Species name</label><input id="e-sci" type="text" maxlength="80" value="'+esc(s.sci||'')+'"></div>';
+  if(s.kind==='purchased')
+    h += '<div class="abrow"><label>Supplier</label><input id="e-supplier" type="text" maxlength="80" value="'+esc(s.supplier||'')+'"></div>'+
+      '<div class="abrow"><label>Their batch number</label><input id="e-vbatch" type="text" maxlength="60" value="'+esc(s.vendorBatch||'')+'"></div>'+
+      '<div class="abrow wide"><label>Contact</label><input id="e-contact" type="text" maxlength="120" value="'+esc(s.contact||'')+'"></div>';
+  else
+    h += '<div class="abrow wide"><label>Location</label><input id="e-loc" type="text" maxlength="160" value="'+esc(s.location||'')+'"></div>';
+  h += '<div class="abrow wide"><label>Notes</label><input id="e-notes" type="text" maxlength="200" value="'+esc(s.notes||'')+'"></div>'+
+    '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Changing the tracking ID does not change the codes of the cultures made from it. Those are already written on the jars.</p></div>'+
+    editNote()+
+    '<div class="abrow wide"><button class="mini solid" data-act="saveEdit" data-id="'+s.id+'">Save</button>'+
+      '<button class="mini ghosty" data-act="cancelEdit">Cancel</button></div></div>';
+  return h;
+}
+function editRefusal(msg){ var m=$('e-msg'); if(m){ m.textContent=msg; m.style.display='block'; } return false; }
+/* Returns true when saved. Writes nothing until every check passes. */
+function saveEdit(id){
+  var c = findCulture(id), s = c ? null : findSource(id);
+  if(!c && !s) return false;
+  var code = ($('e-code').value||'').trim();
+  if(!code) return editRefusal('A code cannot be empty.');
+  // Checked only when the code actually changes: the add form has never refused a repeat,
+  // so an old duplicate must not lock a grower out of fixing a date or a note.
+  var oldCode = String((c||s).code||'');
+  if(code.toLowerCase()!==oldCode.toLowerCase() && codeTaken(code, id)) return editRefusal('That code is already used by another source or culture.');
+  var d = $('e-date').value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d||'')) return editRefusal('Pick a date.');
+  if(c){
+    if(c.shakenAt && daysBetween(d, c.shakenAt)==null) return editRefusal('It was shaken on '+c.shakenAt+', so it cannot have been made after that.');
+    if(c.colonisedAt && daysBetween(d, c.colonisedAt)==null) return editRefusal('It was fully colonised on '+c.colonisedAt+', so it cannot have been made after that.');
+    c.code = code; c.createdAt = d; c.notes = ($('e-notes').value||'').trim();
+    if(isGrain(c) && $('e-jars')){
+      var j = Math.round(parseFloat($('e-jars').value));
+      if(isFinite(j) && j>0) c.jars = Math.min(j, 999); else delete c.jars;
+      c.container = $('e-container').value==='bag' ? 'bag' : 'jar';
+    }
+  } else {
+    s.code = code; s.acquiredAt = d;
+    s.sci = ($('e-sci').value||'').trim() || (SPECIES[s.species]||SPECIES.other).sci;
+    if(s.kind==='purchased'){
+      s.supplier = ($('e-supplier').value||'').trim();
+      s.vendorBatch = ($('e-vbatch').value||'').trim();
+      s.contact = ($('e-contact').value||'').trim();
+    } else s.location = ($('e-loc').value||'').trim();
+    s.notes = ($('e-notes').value||'').trim();
+  }
+  editingId = null; save(); paint();
+  if(window.track) try{ track('culture_edit',{kind:c?'culture':'source'}); }catch(_){}
+  return true;
+}
 function sourceCardHtml(s){
   var kids = liveCultures().filter(function(c){ return c.parentKind==='source' && c.parentId===s.id; });
   var d = liveDescendants(s.id);
@@ -1308,8 +1405,10 @@ function sourceCardHtml(s){
   ['petri','lc','grain'].forEach(function(t){
     h += '<button class="mini" data-act="new" data-parent="'+s.id+'" data-type="'+t+'" data-src="1">+ '+CTYPE[t].label+'</button>';
   });
+  h += '<button class="mini" data-act="editsrc" data-id="'+s.id+'">✎ Edit</button>';
   h += '<button class="mini" data-act="archsrc" data-id="'+s.id+'">🗄 Archive this source</button>';
   h += '<button class="mini ghosty" data-act="delsrc" data-id="'+s.id+'">Delete source</button></div>';
+  if(editingId===s.id) h += editSourceFormHtml(s);
   if(addingUnder && addingUnder.parentId===s.id) h += addFormHtml(s.code, addingUnder.type);
   kids.forEach(function(k){ h += cultureNodeHtml(k, 0); });
   h += '</div>';
@@ -1622,6 +1721,11 @@ $('tree').addEventListener('click', function(e){
     if(window.track) try{ track('culture_archive',{kind:'source', n:n2+1}); }catch(_){}
     return;
   }
+  if(act==='edit' || act==='editsrc'){ e.preventDefault(); var eid=el.getAttribute('data-id');
+    editingId=(editingId===eid?null:eid); addingUnder=null; recordingOn=null; contamOn=null; paint();
+    var ef=$('e-code'); if(ef) ef.focus(); return; }
+  if(act==='cancelEdit'){ e.preventDefault(); editingId=null; paint(); return; }
+  if(act==='saveEdit'){ e.preventDefault(); saveEdit(el.getAttribute('data-id')); return; }
   if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
   var id = el.getAttribute('data-id');
   // The flag asks what it was before it changes anything (I117) — opening the form writes nothing.
@@ -1726,6 +1830,115 @@ $('seedLink').addEventListener('click', function(e){
    deleted, and why the address book survives. Batches go too: the batches and the culture
    chain are one document, and a half-clear leaves `parentId`s pointing at cultures that no
    longer exist (I78). */
+/* ---- Culture labels (I149). Asked for by a farm that had just started making its own LCs:
+        "a way to print labels for the culture jars". Same card shape and size as the grow
+        log's small block label (3.5 x 2 in, two across), because a jar, a plate and a grain
+        bag are all small. Rules:
+        (a) the CODE is the largest thing on the card: it is what the traceback finds things
+            by, and what a grower copies onto the next jar;
+        (b) only cultures still in use are offered (healthy, not archived), all ticked;
+        (c) a seeded example is marked on the card itself (I127), never refused;
+        (d) the QR opens THIS culture in the library; it carries the backup link id when
+            there is one, so a phone that does not hold the library yet is told how to load it,
+            instead of being shown a page that silently does not contain the jar. ---- */
+function labelCultures(){
+  return liveCultures().filter(function(c){ return c.status==='healthy'; });
+}
+function cultureQrUrl(c){
+  var u = 'https://usemycro.com/culture-library.html?c='+encodeURIComponent(c.id);
+  var id = cloudId();
+  return id ? u+'&log='+encodeURIComponent(id) : u;
+}
+function cultureLabelHtml(c){
+  var sp = SPECIES[speciesOf(c)];
+  var src = sourceOf(c);
+  var parent = c.parentKind==='culture' ? findCulture(c.parentId) : null;
+  var ex = window.MycroSamples && MycroSamples.isSample('cultures', c.id);
+  var jars = jarsOf(c);
+  var rows = '<tr><th>Made</th><td>'+esc(c.createdAt)+' <span class="dim">(day '+daysSince(c.createdAt)+')</span></td></tr>';
+  if(parent) rows += '<tr><th>From</th><td>'+esc(parent.code)+'</td></tr>';
+  else if(src) rows += '<tr><th>Source</th><td>'+esc(src.code)+'</td></tr>';
+  if(src && src.kind==='purchased' && src.supplier) rows += '<tr><th>Supplier</th><td>'+esc(src.supplier)+'</td></tr>';
+  if(jars) rows += '<tr><th>Count</th><td>'+esc(unitWord(jars, containerOf(c)))+'</td></tr>';
+  var qr = window.QR ? QR.svg(cultureQrUrl(c),150) : '';
+  return '<div class="lbl'+(ex?' lex':'')+'" data-id="'+esc(c.id)+'">'+
+    '<div class="lmain">'+
+      '<label class="lpick"><input type="checkbox" checked> Print this label</label>'+
+      (ex ? '<div class="lexmark">Example · not one of your cultures</div>' : '')+
+      '<div class="lname">'+esc(c.code)+'</div>'+
+      '<div class="lsp">'+esc(CTYPE[c.type].label)+(sp ? ' · '+esc(sp.label) : '')+'</div>'+
+      '<table class="lfacts"><tbody>'+rows+'</tbody></table>'+
+      (c.notes ? '<div class="lnotes">'+esc(c.notes)+'</div>' : '')+
+    '</div>'+
+    '<div class="lqr">'+qr+'<div class="lcap">Scan → this culture</div></div>'+
+  '</div>';
+}
+function buildCultureLabelSheet(){
+  var list = labelCultures();
+  if(!list.length) return null;
+  var ex = list.filter(function(c){ return window.MycroSamples && MycroSamples.isSample('cultures', c.id); }).length;
+  var hint = ex===list.length ? 'these are the example cultures we seeded, not your own.'
+    : (ex ? ex+' of these '+(ex===1?'is an example we seeded':'are examples we seeded')+'. The rest are yours.'
+          : 'untick any you do not need, then cut along the dashed lines.');
+  var n = list.length;
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mycro culture labels</title>'+
+    '<meta name="robots" content="noindex"><style>'+
+    '*{box-sizing:border-box}body{margin:0;padding:14px;background:#f6f5f2;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#1a1a17}'+
+    '.bar{max-width:7.1in;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.9rem}'+
+    '.bar button{font:inherit;font-weight:700;padding:8px 16px;border-radius:999px;border:0;background:#C0562C;color:#fff;cursor:pointer}'+
+    '.sheet{max-width:7.1in;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,3.5in);gap:0 .1in}'+
+    '.lbl{display:flex;gap:.08in;width:3.5in;min-height:2in;background:#fff;border:1px dashed #b8b2a6;padding:.1in .12in;margin:0 0 .1in;overflow:hidden;break-inside:avoid}'+
+    '.lmain{flex:1;min-width:0}'+
+    '.lname{font-size:14pt;font-weight:800;letter-spacing:-.01em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '.lsp{font-size:7.5pt;font-weight:700;color:#6B6457;margin-bottom:3pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '.lfacts{border-collapse:collapse;font-size:7pt;width:100%}.lfacts th{text-align:left;color:#6B6457;padding:0 4pt 0 0;width:.6in;white-space:nowrap}.lfacts td{padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:1.5in}'+
+    '.dim{color:#8b8578}.lnotes{font-size:6.5pt;color:#6B6457;font-style:italic;margin-top:2pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '.lex{background:#fbf7f4}.lexmark{font-size:5.5pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#C0562C;margin-bottom:1pt;white-space:nowrap}'+
+    '.lqr{text-align:center;flex:0 0 auto}.lqr svg{display:block;width:96px;height:96px}.lcap{font-size:5.5pt;color:#6B6457;margin-top:2pt}'+
+    '.lpick{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:#6B6457;margin-bottom:3px;cursor:pointer}'+
+    '.lbl.off{opacity:.4}'+
+    '@media print{@page{margin:.4in}body{background:#fff;padding:0}.bar,.lpick{display:none}.lbl.off{display:none}.sheet{gap:0;max-width:7in}.lbl{height:2in;min-height:0;margin:0}}'+
+    '</style></head><body>'+
+    '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span><button type="button" id="lprint">Print</button></div>'+
+    '<div class="sheet">'+list.map(cultureLabelHtml).join('')+'</div>'+
+    '<script>(function(){var total='+n+';'+
+      'function cards(){return Array.prototype.slice.call(document.querySelectorAll(".lbl[data-id]"));}'+
+      'function sync(){var k=0;cards().forEach(function(c){var on=c.querySelector(".lpick input").checked;if(on)k++;c.classList.toggle("off",!on);});'+
+        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked";}'+
+      'document.addEventListener("change",sync);'+
+      'document.getElementById("lprint").onclick=function(){window.print();};'+
+      'sync();'+
+    '})();<\/script></body></html>';
+}
+$('printLabels').addEventListener('click', function(){
+  var html = buildCultureLabelSheet();
+  if(!html){ alert('There are no cultures in use to label. Add a petri dish, liquid culture or grain spawn first.'); return; }
+  var w = window.open('', 'mycroCultureLabels');
+  if(!w){ alert('Your browser blocked the label window. Allow pop-ups for usemycro.com and try again.'); return; }
+  if(window.track) try{ track('culture_labels_print',{n:labelCultures().length, cloud:cloudId()?1:0}); }catch(_){}
+  w.document.open(); w.document.write(html); w.document.close();
+});
+/* A scanned culture label opens here with ?c=<id> (I149). Ring the node; if this device does
+   not hold it, say so and, when the label carried a backup link, offer the way to load it. */
+function focusScannedCulture(cid, logId){
+  var c = findCulture(cid);
+  var el = c && !isArchived(c) && document.getElementById('node-'+cid);
+  if(window.track) try{ track('culture_label_scan',{found: el?'1':'0'}); }catch(_){}
+  if(!el){
+    var tree = $('tree'); if(!tree) return;
+    var n = document.createElement('div'); n.className='scanmiss'; n.id='scanMiss';
+    if(c && isArchived(c)) n.textContent = 'The label you scanned is for '+c.code+', which is archived. It is under Archived below.';
+    else if(logId && /^[A-Za-z0-9_-]{8,64}$/.test(logId))
+      n.innerHTML = 'The culture on that label is not in the library on this device. '+
+        '<a href="grow-log.html?log='+encodeURIComponent(logId)+'">Load your backed-up log here</a>, then scan it again.';
+    else n.textContent = 'The culture on that label is not in the library on this device. Scan it with the device you made it on.';
+    tree.parentNode.insertBefore(n, tree); n.scrollIntoView({block:'start'}); return;
+  }
+  el.classList.add('scanned');
+  var tag = document.createElement('div'); tag.className='scanline'; tag.textContent='↓ The culture on the label you scanned';
+  el.insertBefore(tag, el.firstChild);
+  el.scrollIntoView({block:'start'});
+}
 function fullExport(){
   return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, labelSize:state.labelSize, seller:state.seller,
            contacts:state.contacts, batches:state.batches, deliveries:state.deliveries,
@@ -1936,6 +2149,13 @@ $('nudgeEmailBtn').addEventListener('click', function(){
 $('f-date').value = today();
 syncCodeSuggestion();
 paint();
+// A scanned culture label lands here with ?c= (I149); the tree must be drawn first.
+(function(){
+  try{
+    var q = new URLSearchParams(location.search), cid = q.get('c');
+    if(cid) focusScannedCulture(cid, q.get('log'));
+  }catch(_){}
+})();
 
 /* ---- account wiring (same shared document as the Grow Log) ---- */
 /* One answer for both tools, from samples.js (I127). The local isSampleOnly() this
@@ -2003,6 +2223,9 @@ function ownWorkCount(){
 .smeta{color:var(--muted);font-size:.86rem;margin:7px 0 0}
 .smeta2{color:var(--muted);font-size:.82rem;margin:7px 0 0;font-weight:600}
 .node{border-left:2px solid var(--line);padding:10px 0 2px 12px;margin-top:10px}
+.node.scanned{border-left-color:var(--brand,#C0562C);background:rgba(192,86,44,.06);border-radius:0 8px 8px 0}
+.scanline{font-size:.8rem;font-weight:700;color:var(--brand-ink,#9a4a1f);margin-bottom:4px}
+.scanmiss{background:#fbf3ee;border:1px solid #ecd2c3;border-radius:10px;padding:10px 12px;font-size:.92rem;margin:0 0 12px}
 .node.blocknode{border-left-style:dashed}
 .nhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .nico{font-size:1rem}

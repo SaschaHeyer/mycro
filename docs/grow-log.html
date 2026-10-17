@@ -51,7 +51,9 @@
     <a href="calculator.html" class="hide-sm">Grow Calculator</a>
     <a href="#waitlist" class="btn" style="padding:8px 16px;font-size:.92rem">Get early access</a>
   </div>
-</div></nav>
+</div>
+<div class="wrap toolswitch" aria-label="Switch tool"><a href="grow-log.html" aria-current="page">🍄 Grow Log</a><a href="culture-library.html">🧬 Culture Library</a></div>
+</nav>
 
 <header class="wrap" style="padding:40px 20px 6px;max-width:820px">
   <span class="eyebrow" style="display:inline-block;background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:.82rem;padding:6px 13px;border-radius:999px;margin-bottom:14px">🍄 Free tool · no sign-up · saved on your device</span>
@@ -1873,7 +1875,7 @@ function batchHtml(b){
     ? ' <b class="culbad">— that '+(flag.kind==='batch'?'spawn is marked':'culture is flagged')+' contaminated'+flagWhat+'</b>'
     : ' <b class="culbad">— descended from '+esc(flag.code)+', flagged contaminated'+flagWhat+'</b>');
   var culLine = cul
-    ? '<div class="culline">🧬 Spawned from <a href="culture-library.html"><code>'+esc(cul.code)+'</code></a>'+flagTxt+'</div>'
+    ? '<div class="culline">🧬 Spawned from <a href="culture-library.html?c='+encodeURIComponent(cul.id)+'"><code>'+esc(cul.code)+'</code></a>'+flagTxt+'</div>'
     : pb
     ? '<div class="culline">🧬 Spawned from <a href="#batch-'+esc(pb.id)+'"><code>'+esc(batchCode(pb))+'</code></a> in this log'+flagTxt+'</div>'
     : '';
