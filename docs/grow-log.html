@@ -366,6 +366,9 @@
         <div class="field" id="f-culture-wrap" style="display:none"><label>Spawn from <span class="hint">(optional)</span></label>
           <select id="f-culture"></select>
           <span class="hint">The jar or bag this batch came from, logged here or in the Culture Library, so a contamination can be traced back.</span></div>
+        <div class="field"><label>Generation <span class="hint">(optional)</span></label>
+          <input id="f-gen" type="number" step="1" min="0" max="99" inputmode="numeric" placeholder="e.g. 1" autocomplete="off">
+          <span class="hint" id="f-gen-hint">Transfers away from your first culture off the source (that one is Gen 0). Gen 0 liquid culture into a grain bag makes Gen 1.</span></div>
         <div class="field"><label>Method / recipe <span class="hint">(optional)</span></label>
           <input id="f-method" type="text" maxlength="48" list="methodList" placeholder="e.g. Master's Mix (50/50)" autocomplete="off">
           <datalist id="methodList">
@@ -395,6 +398,7 @@
   </div>
 
   <!-- Batch list -->
+  <div id="genHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="batchList"></div>
   <p id="empty" class="note" style="display:none">No batches yet. Add your first one above — or
     <a href="#" id="seedLink">load sample batches</a> to see how it works.</p>
@@ -575,7 +579,8 @@
 <script src="/savefile.js?v=1"></script>
 <script src="/samples.js?v=3"></script>
 <script src="/causes.js?v=1"></script>
-<script src="/csvimport.js?v=2"></script>
+<script src="/generation.js?v=1"></script>
+<script src="/csvimport.js?v=3"></script>
 <script src="/account.js?v=14"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
@@ -738,6 +743,7 @@ function validBatch(b){
     (b.labelAt==null || typeof b.labelAt==='string') &&     // day its block label was last printed (I133)
     (b.splitFrom==null || typeof b.splitFrom==='string') && // batch its bags were split off (I137)
     (b.supplier==null || typeof b.supplier==='string') &&   // where the spawn came from (I145)
+    (b.gen==null || typeof b.gen==='number') &&             // culture generation, typed (I150)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -875,6 +881,58 @@ function lineCulture(b){
   }
   return null;
 }
+/* Generation (I150). A real farm keeps "Gen 1" in the notes of a dozen runs and told us what it
+   counts: transfers away from their first culture off a bought-in one (Gen 0); Gen 0 liquid into
+   a grain bag is Gen 1. Rules:
+   (a) what the grower typed wins, always;
+   (b) a run spawned STRAIGHT from a library culture is that culture's generation plus one, the
+       exact case the farm described, so it is shown without being typed (displayed, never
+       stamped: the I145 rule, so a later correction in the library carries through);
+   (c) a run spawned from another BATCH gets nothing derived: their own records keep blocks off
+       a Gen 1 bag at Gen 1, so whether that step is a transfer is theirs to say;
+   (d) a split carries the typed number with it (a record carries its own facts, I83). */
+function genCultureOf(b){ return (b && b.parentId) ? cultureOf(b.parentId) : null; }
+function genDerived(b){
+  var c=genCultureOf(b);
+  if(!c || !window.MycroGen) return null;
+  var g=MycroGen.ofCulture(c, state);
+  return g==null ? null : Math.min(99, g+1);
+}
+function genOf(b){
+  var t=window.MycroGen ? MycroGen.clean(b.gen) : null;
+  return t!=null ? t : genDerived(b);
+}
+// Runs whose notes already say a generation and whose field is still empty (I150).
+function genFromNotesRuns(){
+  if(!window.MycroGen) return [];
+  return state.batches.filter(function(b){
+    return !isSeededBatch(b) && MycroGen.clean(b.gen)==null && MycroGen.fromNotes(b.notes)!=null;
+  });
+}
+function renderGenHint(){
+  var el=$('genHint'); if(!el) return;
+  var runs=genFromNotesRuns();
+  if(!runs.length){ el.style.display='none'; el.innerHTML=''; return; }
+  var names=runs.slice(0,6).map(function(b){ return '<code>'+esc(batchCode(b))+'</code>'; }).join(', ')+(runs.length>6?' and '+(runs.length-6)+' more':'');
+  el.innerHTML='🧬 '+runs.length+' run'+(runs.length===1?' has':'s have')+' a generation written in '+(runs.length===1?'its':'their')+' notes ('+names+'). '+
+    'Batches now have a Generation field that goes on the label and the CSV. '+
+    '<button class="mini solid" type="button" data-act="genFromNotes">Copy it into the Generation field</button> '+
+    '<span class="muted">Your notes stay as they are.</span>';
+  el.style.display='block';
+}
+function genFromNotes(){
+  var runs=genFromNotesRuns();
+  runs.forEach(function(b){ b.gen=MycroGen.fromNotes(b.notes); });
+  if(!runs.length) return;
+  save(); render();
+  if(window.track) try{ track('growlog_gen_from_notes',{n:runs.length}); }catch(_){}
+}
+function renderGenFormHint(){
+  var inp=$('f-gen'), sel=$('f-culture'); if(!inp) return;
+  var c=sel && sel.value ? cultureOf(sel.value) : null;
+  var g=c && window.MycroGen ? MycroGen.ofCulture(c, state) : null;
+  inp.placeholder = g!=null ? (Math.min(99,g+1))+' (from '+c.code+', Gen '+g+')' : 'e.g. 1';
+}
 /* The nearest contaminated record above this batch: a spawn batch in this log, or a culture in
    the library. {kind, code, cause, self} where self means it is the direct parent. */
 function flaggedLine(b){
@@ -911,6 +969,7 @@ function validParentFor(b, v){
   if(!p || (b && descendsFrom(p, b.id))) return false;
   return !isSeededBatch(p) || !!(b && b.parentId===v);
 }
+document.addEventListener('change',function(e){ if(e.target && e.target.id==='f-culture') renderGenFormHint(); });
 function renderCultureSelect(){
   var wrap=$('f-culture-wrap'), sel=$('f-culture');
   if(!wrap||!sel) return;
@@ -1615,6 +1674,7 @@ function editFormHtml(b){
     '<label class="yl">Dry substrate each ('+unit+')<input id="editDry" type="number" step="any" min="0" value="'+(+dry.toFixed(3))+'"></label>'+
     '<label class="yl">Spawned on<input id="editDate" type="date" value="'+esc(b.inoculatedOn)+'"></label>'+
     '<label class="yl" style="min-width:170px">Spawn source<input id="editSupplier" type="text" maxlength="40" list="supplierList" value="'+esc(b.supplier||'')+'" placeholder="'+esc(!b.supplier && supplierOf(b) ? supplierOf(b)+(supplierParent(b) ? ' (from its parent)' : ' (from its culture\'s source)') : 'optional')+'" autocomplete="off"></label>'+
+    '<label class="yl">Generation<input id="editGen" type="number" step="1" min="0" max="99" inputmode="numeric" value="'+(MycroGen.clean(b.gen)==null?'':MycroGen.clean(b.gen))+'" placeholder="'+(genDerived(b)!=null ? genDerived(b)+' (from its culture)' : 'optional')+'" autocomplete="off"></label>'+
     '<label class="yl" style="min-width:200px">Notes<input id="editNotes" type="text" maxlength="120" value="'+esc(b.notes||'')+'" autocomplete="off"></label>'+
     (isActive(b) && b.blocks>1
       ? '<div class="edithint" style="flex-basis:100%;font-size:.85rem;color:var(--muted)">Lost a bag, or some are ahead of the rest? Use <b>✂ Split off bags</b> instead, so the lost ones count in your contamination rate.</div>'
@@ -1639,6 +1699,8 @@ function saveEdit(e,id){
   b.dryG=gFromInput(dry);
   b.notes=($('editNotes').value||'').trim().slice(0,120);
   b.supplier=cleanSupplier($('editSupplier') ? $('editSupplier').value : b.supplier)||null;
+  // Cleared means cleared (null); a culture-derived number then shows again on its own.
+  if($('editGen')) b.gen=MycroGen.clean($('editGen').value);
   editingBatchId=null; save(); render();
   if(window.track) try{ track('growlog_batch_edit',{stage:b.stage}); }catch(_){}
   return false;
@@ -1742,6 +1804,7 @@ function saveSplit(e,id){
     inoculatedOn:b.inoculatedOn, stage:b.stage, stageSince:b.stageSince, yieldG:null,
     parentId:b.parentId||null, method:b.method||null, code:null,
     supplier:b.supplier||null,   // a record carries its own facts (I83); splitFrom would also find it
+    gen:(window.MycroGen ? MycroGen.clean(b.gen) : null),   // same bags, same generation (I150)
     costs:c[1], priceG:(typeof b.priceG==='number'?b.priceG:null),
     notes:b.notes||'', labelAt:null,
     // Where these bags came from, so they can go back (I137). Without it the only "undo" was
@@ -1823,7 +1886,8 @@ function batchHtml(b){
   var chipCls = {inoculated:'chip-inoc',colonizing:'chip-col',fruiting:'chip-fruit',harvested:'chip-harv',contaminated:'chip-contam'}[b.stage];
   var meta = fmtWt(b.dryG)+' dry/block · '+b.blocks+' block'+(b.blocks===1?'':'s')+' · inoculated '+esc(b.inoculatedOn)+
              ' ('+daysSince(b.inoculatedOn)+'d ago)'+
-             (supplierOf(b) ? ' · spawn from '+esc(supplierOf(b)) : '');
+             (supplierOf(b) ? ' · spawn from '+esc(supplierOf(b)) : '')+
+             (genOf(b)!=null ? ' · '+esc(MycroGen.label(genOf(b))) : '');
   var fl=(b.flushes||[]);
   var flushLine = fl.length>1
     ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x){return fmtWt(x);}).join(' + ')+'</div>'
@@ -1910,6 +1974,8 @@ function paint(){
   renderSources();
   renderSampleNote();
   renderCultureSelect();
+  renderGenFormHint();
+  renderGenHint();
   renderDelivery();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
@@ -1942,11 +2008,12 @@ function addBatch(e){
     method:($('f-method').value||'').trim()||null,
     supplier:cleanSupplier($('f-supplier') ? $('f-supplier').value : '')||null,
     code:($('f-code').value||'').trim()||null,
+    gen:($('f-gen') && window.MycroGen ? MycroGen.clean($('f-gen').value) : null),
     speciesName: $('f-species').value==='other' ? (($('f-speciesName').value||'').trim().slice(0,40)||null) : null,
     notes:($('f-notes').value||'').trim()
   });
   save(); render();
-  $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; $('f-speciesName').value=''; $('f-date').value=today();
+  $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; if($('f-gen')) $('f-gen').value=''; $('f-speciesName').value=''; $('f-date').value=today();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value, src:$('f-supplier')&&$('f-supplier').value.trim()?1:0}); }catch(_){}
   showNudge('add');
   return false;
@@ -1997,6 +2064,7 @@ document.addEventListener('click',function(e){
   var el=e.target.closest && e.target.closest('[data-act]');
   if(!el) return;
   var act=el.getAttribute('data-act'); var id=el.getAttribute('data-id'); var b=id?find(id):null;
+  if(act==='genFromNotes'){ genFromNotes(); return; }
   if(act==='advance' && b){ b.stage=el.getAttribute('data-to'); b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='harvest' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
@@ -2279,7 +2347,7 @@ $('srcSave').addEventListener('click',function(){
 });
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
-  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','method','spawn_source','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
+  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','generation','method','spawn_source','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
@@ -2292,7 +2360,7 @@ $('exportCsv').addEventListener('click',function(){
     var dlv=deliveredG(b.id);
     rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
-      cul?cul.code:(pbt?batchCode(pbt):''), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
+      cul?cul.code:(pbt?batchCode(pbt):''), genOf(b)==null?'':genOf(b), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
       dlv>0 ? toU(dlv).toFixed(2) : '',
@@ -2712,7 +2780,7 @@ function labelHtml(b,qr,scanNote,on,copies){
       '<table class="lfacts"><tbody>'+
         '<tr><th>Spawned</th><td>'+esc(b.inoculatedOn)+' <span class="dim">(day '+daysSince(b.inoculatedOn)+')</span></td></tr>'+
         '<tr><th>Colonised by</th><td>'+esc(expectedIso(b))+' <span class="dim">(~'+sp.colonize+'d '+(speciesName(b)?'general window':'typical')+')</span></td></tr>'+
-        '<tr><th>Batch</th><td>'+b.blocks+' block'+(b.blocks===1?'':'s')+' · '+dry.toFixed(1)+' '+unit+' dry each</td></tr>'+
+        '<tr><th>Batch</th><td>'+b.blocks+' block'+(b.blocks===1?'':'s')+' · '+dry.toFixed(1)+' '+unit+' dry each'+(genOf(b)!=null ? ' · '+esc(MycroGen.label(genOf(b))) : '')+'</td></tr>'+
         '<tr><th>Stage</th><td>'+esc(STAGE_LABEL[b.stage])+'</td></tr>'+
       '</tbody></table>'+
       (b.notes ? '<div class="lnotes">'+esc(b.notes)+'</div>' : '')+

@@ -75,6 +75,7 @@
     method:  ['method', 'substrate', 'recipe'],
     spawn:   ['spawn_type_ratio', 'spawn', 'spawn_ratio'],
     source:  ['spawn_source', 'spawn_supplier', 'supplier', 'vendor'],
+    gen:     ['generation', 'gen'],
     contam:  ['contaminated_yn', 'contaminated', 'contam'],
     cause:   ['contam_cause', 'cause', 'contam_cause_stage'],
     lostAt:  ['lost_at_stage'],
@@ -250,6 +251,8 @@
         method: cell(r, 'method') ? cell(r, 'method').slice(0, 60) : null,
         supplier: cell(r, 'source') ? cell(r, 'source').replace(/\s+/g, ' ').trim().slice(0, 40) : null,
         code: code ? code.slice(0, 40) : null,
+        // A whole number 0-99 or nothing (I150); "Gen 1" in the cell reads as 1.
+        gen: (function (g) { var m = /^\s*(?:gen(?:eration)?\s*)?(\d{1,2})\s*$/i.exec(g || ''); return m ? parseInt(m[1], 10) : null; })(cell(r, 'gen')),
         speciesName: sp.key === 'other' ? sp.name : null,
         notes: ''
       };
