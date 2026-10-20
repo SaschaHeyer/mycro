@@ -1350,27 +1350,59 @@ function nameTokens(b){
   });
   return out;
 }
+/* A Culture Library source names its supplier AND carries a code, so it is the same evidence as
+   a tagged run (I152). Sanctuary Moon added LM-NS-00 and KIN-NS-00 from North Spore to the library
+   while thirteen runs named ...-NS-... sat untagged in this log: the code was known to us, typed by
+   them, on the other page. The same three rules apply to sources as to runs, and each set is
+   judged on its own as well as together, so a farm whose source codes follow a different scheme
+   still gets exactly the suggestion it got before. Wild samples name no supplier; our seeded
+   example sources are never evidence; an archived source still is (I80). */
+function ownSupplierSources(){
+  return (Array.isArray(state.sources)?state.sources:[]).filter(function(x){
+    return x && x.kind!=='wild' && cleanSupplier(x.supplier) && typeof x.code==='string' &&
+      !(window.MycroSamples && MycroSamples.isSample('sources', x.id));
+  });
+}
+function sourceSpeciesKey(x){
+  var n=x.species==='other' ? String(x.sci||'').replace(/\s+/g,' ').trim().toLowerCase() : '';
+  return n ? 'other:'+n : x.species;
+}
 function codeSuggestions(){
   var by={};
+  function grp(s){ var k='k:'+s.toLowerCase(); return by[k]||(by[k]={name:s,runs:[],srcs:[]}); }
   state.batches.forEach(function(b){
     if(isSeededBatch(b)) return;
     var s=cleanSupplier(b.supplier); if(!s) return;
-    var k='k:'+s.toLowerCase();
-    (by[k]||(by[k]={name:s,runs:[]})).runs.push(b);
+    grp(s).runs.push(b);
   });
+  ownSupplierSources().forEach(function(x){ grp(cleanSupplier(x.supplier)).srcs.push(x); });
+  var members=function(g){
+    return g.runs.map(function(b){ return {toks:nameTokens(b), sp:speciesKey(b)}; })
+      .concat(g.srcs.map(function(x){ return {toks:nameTokens({name:x.code}), sp:sourceSpeciesKey(x)}; }));
+  };
   var keys=Object.keys(by), roots=untaggedRoots(), out=[];
   keys.forEach(function(k){
-    var g=by[k];
-    var sp={}; g.runs.forEach(function(b){ sp[speciesKey(b)]=1; });
-    if(Object.keys(sp).length<2) return;
-    nameTokens(g.runs[0]).forEach(function(t){
-      if(!g.runs.every(function(b){ return nameTokens(b).indexOf(t)>=0; })) return;
-      var clash=keys.some(function(k2){
-        return k2!==k && by[k2].runs.some(function(b){ return nameTokens(b).indexOf(t)>=0; });
+    var g=by[k], runM=members({runs:g.runs,srcs:[]}), srcM=members({runs:[],srcs:g.srcs});
+    var codes={}, order=[];
+    // (a)+(b) on the runs alone, the sources alone, and both together
+    [runM, srcM, runM.concat(srcM)].forEach(function(set){
+      var sp={}; set.forEach(function(m){ sp[m.sp]=1; });
+      if(Object.keys(sp).length<2) return;
+      set[0].toks.forEach(function(t){
+        if(set.every(function(m){ return m.toks.indexOf(t)>=0; }) && !Object.prototype.hasOwnProperty.call(codes,t)){ codes[t]=1; order.push(t); }
+      });
+    });
+    order.forEach(function(t){
+      var clash=keys.some(function(k2){                                    // (c)
+        return k2!==k && members(by[k2]).some(function(m){ return m.toks.indexOf(t)>=0; });
       });
       if(clash) return;
       var runs=roots.filter(function(b){ return nameTokens(b).indexOf(t)>=0; });
-      if(runs.length) out.push({code:t, name:g.name, runs:runs});
+      if(!runs.length) return;
+      var inRuns=g.runs.length>0 && runM.every(function(m){ return m.toks.indexOf(t)>=0; });
+      var inSrcs=g.srcs.length>0 && srcM.every(function(m){ return m.toks.indexOf(t)>=0; });
+      out.push({code:t, name:g.name, runs:runs, from: inRuns&&inSrcs ? 'both' : inSrcs ? 'sources' : 'runs',
+        srcCodes: g.srcs.map(function(x){ return x.code; })});
     });
   });
   return out;
@@ -1382,7 +1414,12 @@ function renderSrcHint(lostAny){
   el.style.display = sug.length ? 'block' : 'none';
   el.innerHTML = sug.map(function(x,i){
     var n=x.runs.length;
-    return '<p style="margin:0 2px 6px">The runs you tagged <b>'+esc(x.name)+'</b> all have <b>'+esc(x.code)+'</b> in their name. '+
+    var who = x.from==='sources'
+      ? 'Your Culture Library sources from <b>'+esc(x.name)+'</b> ('+x.srcCodes.map(esc).join(', ')+') all have <b>'+esc(x.code)+'</b> in their code. '
+      : x.from==='both'
+      ? 'The runs you tagged <b>'+esc(x.name)+'</b> and your Culture Library sources from it all have <b>'+esc(x.code)+'</b> in their name. '
+      : 'The runs you tagged <b>'+esc(x.name)+'</b> all have <b>'+esc(x.code)+'</b> in their name. ';
+    return '<p style="margin:0 2px 6px">'+who+
       n+' untagged run'+(n===1?' does':'s do')+' too: '+x.runs.map(function(b){ return esc(b.name); }).join(', ')+'. '+
       '<button class="mini" type="button" data-sug="'+i+'">Tick '+(n===1?'it':'them')+' for '+esc(x.name)+'</button></p>';
   }).join('');
@@ -2332,7 +2369,7 @@ $('srcHint').addEventListener('click',function(e){
   [].forEach.call(document.querySelectorAll('#srcList input[type=checkbox]'),function(c){ c.checked=Object.prototype.hasOwnProperty.call(want,c.value); });
   $('srcMsg').textContent='Ticked '+x.runs.length+'. Check the list, then Save source.';
   $('srcSave').focus();
-  if(window.track) try{ track('growlog_supplier_suggest',{n:x.runs.length}); }catch(_){}
+  if(window.track) try{ track('growlog_supplier_suggest',{n:x.runs.length, from:x.from}); }catch(_){}
 });
 $('srcSave').addEventListener('click',function(){
   var name=cleanSupplier($('srcName').value), msg=$('srcMsg');
