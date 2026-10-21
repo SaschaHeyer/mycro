@@ -577,7 +577,7 @@
 
 <script src="/qr.js"></script>
 <script src="/savefile.js?v=1"></script>
-<script src="/samples.js?v=3"></script>
+<script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
 <script src="/csvimport.js?v=3"></script>
@@ -871,6 +871,41 @@ function pickableParentBatches(b, keepId){
     return p.stage!=='contaminated';                   // (c)
   });
 }
+/* ---- spawned straight from a source (I153) ----
+   Sanctuary Moon bought king oyster spawn from North Spore, logged it in the Culture Library as
+   source KT-NS-00, and made a run off it in this log. The picker offered cultures and batches but
+   never a source, so the run said "Lineage from source KT-NS-00" in its notes, the supplier was
+   typed a second time, and the source card in the library could not count it. Bought grain going
+   straight into blocks is ordinary, so a source is now a third thing a run may name. Rules:
+   (a) a culture still wins, then a batch, then a source: an id already meaning something keeps
+       its meaning;
+   (b) our seeded example sources are never offered (the sweep removes them and the run would
+       lose its link to our fiction), and an archived source only stays in its own picker;
+   (c) nothing is derived for generation: the farm's own words are that a bought-in culture is
+       "Null", so what the run is called is theirs to type (I150);
+   (d) the supplier on the source reaches the run the same way a culture's does (I147). */
+function sourcesList(){ return Array.isArray(state.sources) ? state.sources : []; }
+function isSeededSource(s){ return !!(s && window.MycroSamples && MycroSamples.isSample('sources', s.id)); }
+function sourceParentOf(b){
+  if(!b || !b.parentId || cultureOf(b.parentId) || parentBatchOf(b)) return null;
+  return sourceById(b.parentId);
+}
+function pickableSources(keepId){
+  return sourcesList().filter(function(s){
+    if(!s || typeof s.id!=='string') return false;
+    if(s.id===keepId) return true;
+    return !isSeededSource(s) && s.archived!==true;                       // (b)
+  });
+}
+// The source at the top of this batch's line: straight off it, or through spawn batches.
+function lineSource(b){
+  var cur=b, guard=0;
+  while(cur && guard++ < 200){
+    var s=sourceParentOf(cur); if(s) return s;
+    cur=parentBatchOf(cur);
+  }
+  return null;
+}
 // The culture at the top of this batch's line, through any spawn batches in between.
 function lineCulture(b){
   var cur=b, guard=0;
@@ -959,6 +994,10 @@ function parentOptionsHtml(b, keepId, labelled){
   if(bs.length) h += '<optgroup label="Spawn in this log">'+bs.map(function(p){
     return '<option value="'+esc(p.id)+'"'+(keepId===p.id?' selected':'')+'>'+
       esc(batchCode(p))+' · '+esc(speciesLabel(p))+'</option>'; }).join('')+'</optgroup>';
+  var ss=pickableSources(keepId);
+  if(ss.length) h += '<optgroup label="Straight from a source (bought or collected)">'+ss.map(function(s){
+    return '<option value="'+esc(s.id)+'"'+(keepId===s.id?' selected':'')+'>'+
+      esc(s.code||'Source')+(s.supplier?' · '+esc(String(s.supplier).slice(0,40)):'')+'</option>'; }).join('')+'</optgroup>';
   return h;
 }
 // Is `v` something this batch may name as its spawn? (null b = a batch not yet created)
@@ -966,7 +1005,11 @@ function validParentFor(b, v){
   if(!v) return false;
   if(cultureOf(v)) return true;
   var p=find(v);
-  if(!p || (b && descendsFrom(p, b.id))) return false;
+  if(!p){
+    var s=sourceById(v);                                                  // (I153)
+    return !!s && (!isSeededSource(s) || !!(b && b.parentId===v));
+  }
+  if(b && descendsFrom(p, b.id)) return false;
   return !isSeededBatch(p) || !!(b && b.parentId===v);
 }
 document.addEventListener('change',function(e){ if(e.target && e.target.id==='f-culture') renderGenFormHint(); });
@@ -1321,8 +1364,9 @@ function cultureSource(c){
   return null;
 }
 function lineSupplier(b){
-  var c=lineCulture(b); if(!c) return '';
-  var src=cultureSource(c); if(!src || src.kind==='wild') return '';               // (b)
+  var c=lineCulture(b);
+  var src=c ? cultureSource(c) : lineSource(b);                                    // (I153)
+  if(!src || src.kind==='wild') return '';                                         // (b)
   if(window.MycroSamples && MycroSamples.isSample('sources', src.id)) return '';     // (c)
   return cleanSupplier(src.supplier);
 }
@@ -1641,7 +1685,7 @@ function saveLink(e,id){
   var v=($('linkSel').value||'').trim();
   b.parentId = validParentFor(b, v) ? v : null;
   editingLinkId=null; save(); render();
-  if(window.track) try{ track('growlog_link_culture',{linked:b.parentId?1:0, kind:parentBatchOf(b)?'batch':(b.parentId?'culture':'')}); }catch(_){}
+  if(window.track) try{ track('growlog_link_culture',{linked:b.parentId?1:0, kind:parentBatchOf(b)?'batch':(sourceParentOf(b)?'source':(b.parentId?'culture':''))}); }catch(_){}
   return false;
 }
 
@@ -1968,6 +2012,7 @@ function batchHtml(b){
   }
   var cul = b.parentId ? cultureOf(b.parentId) : null;
   var pb = cul ? null : parentBatchOf(b);   // spawn logged in this log (I133)
+  var ps = (cul || pb) ? null : sourceParentOf(b);   // straight off a library source (I153)
   var flag = flaggedLine(b);
   // What the flagged record was flagged FOR, when the grower said (I117). It describes the
   // parent, never this run: a block off a bacterial LC can still be lost to trich.
@@ -1979,6 +2024,9 @@ function batchHtml(b){
     ? '<div class="culline">🧬 Spawned from <a href="culture-library.html?c='+encodeURIComponent(cul.id)+'"><code>'+esc(cul.code)+'</code></a>'+flagTxt+'</div>'
     : pb
     ? '<div class="culline">🧬 Spawned from <a href="#batch-'+esc(pb.id)+'"><code>'+esc(batchCode(pb))+'</code></a> in this log'+flagTxt+'</div>'
+    : ps
+    ? '<div class="culline">🧬 Spawned straight from source <a href="culture-library.html"><code>'+esc(ps.code||'Source')+'</code></a>'+
+        (ps.kind!=='wild' && ps.supplier ? ' ('+esc(String(ps.supplier).slice(0,60))+')' : '')+'</div>'
     : '';
   var kids = childBatches(b);
   if(kids.length){
@@ -2393,11 +2441,12 @@ $('exportCsv').addEventListener('click',function(){
     var flu = (b.flushes||[]).map(function(x){return toU(x).toFixed(2);}).join('; ');
     var be=beOf(b);
     var cul = b.parentId ? cultureOf(b.parentId) : null, pbt = cul ? null : parentBatchOf(b);
+    var pst = (cul || pbt) ? null : sourceParentOf(b);
     var c=b.costs||{}, cpg=costPerG(b);
     var dlv=deliveredG(b.id);
     rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
       daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
-      cul?cul.code:(pbt?batchCode(pbt):''), genOf(b)==null?'':genOf(b), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
+      cul?cul.code:(pbt?batchCode(pbt):(pst?(pst.code||''):'')), genOf(b)==null?'':genOf(b), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
       dlv>0 ? toU(dlv).toFixed(2) : '',

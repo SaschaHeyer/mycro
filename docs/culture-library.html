@@ -434,7 +434,7 @@
 
 <script src="/savefile.js?v=1"></script>
 <script src="/qr.js"></script>
-<script src="/samples.js?v=3"></script>
+<script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
 <script src="/account.js?v=14"></script>
@@ -715,6 +715,19 @@ function lineCultureOfBatch(b){
   }
   return null;
 }
+/* A grow-log run can name a SOURCE as its spawn (I153: bought grain straight into blocks).
+   The source at the top of a batch's line when no culture sits above it. */
+function lineSourceOfBatch(b){
+  var cur=b, guard=0;
+  while(cur && guard++ < 200){
+    var id=cur.parentId; if(!id || findCulture(id)) return null;
+    var p=null;
+    for(var i=0;i<state.batches.length;i++) if(state.batches[i].id===id && state.batches[i]!==cur){ p=state.batches[i]; break; }
+    if(!p) return findSource(id);
+    cur=p;
+  }
+  return null;
+}
 function ancestry(c){
   var chain=[], guard=0, cur=c;
   while(cur && guard++ < 50){
@@ -904,7 +917,10 @@ function renderSummary(){
   var live = pool.filter(function(c){ return c.status==='healthy'; }).length;
   var finished = pool.filter(isFinished).length;
   var lost = pool.filter(function(c){ return c.status==='contaminated'; }).length;
-  var traced = state.batches.filter(function(b){ var p=lineCultureOfBatch(b); return p && !isArchived(p); })
+  var traced = state.batches.filter(function(b){
+      var p=lineCultureOfBatch(b); if(p) return !isArchived(p);
+      var s=lineSourceOfBatch(b); return !!s && !isArchived(s);           // straight off a source (I153)
+    })
     .reduce(function(a,b){ return a + (typeof b.blocks==='number'?b.blocks:0); },0);
   $('k-sources').textContent = liveSources().length || '–';
   $('k-live').textContent = live;
@@ -1165,6 +1181,17 @@ function statusChip(st){ var s=CSTATUS[st]||CSTATUS.healthy; return '<span class
 /* Generation, derived from the chain (I150): a culture off a source is Gen 0, every transfer
    after it one more, an orphan none. The rule lives in generation.js, shared with the grow log. */
 function genOf(c){ return window.MycroGen ? MycroGen.ofCulture(c, state) : null; }
+// Grow Log runs hanging directly off a culture or a source, one row each.
+function batchNodesHtml(bts){
+  return bts.map(function(b){
+    return '<div class="node blocknode" style="margin-left:18px">'+
+      '<div class="nhead"><span class="nico">🧱</span><code class="ncode">'+esc(b.name)+'</code>'+
+      '<span class="chip '+(b.stage==='contaminated'?'chip-bad':(b.stage==='harvested'?'chip-ok':'chip-used'))+'">'+
+      esc(BATCH_STAGE[b.stage]||b.stage)+'</span>'+
+      '<span class="nmeta">'+(typeof b.blocks==='number'?b.blocks+' block'+(b.blocks===1?'':'s'):'')+
+      ' · <a href="grow-log.html">open in grow log</a></span></div></div>';
+  }).join('');
+}
 function cultureNodeHtml(c, depth){
   var kids = liveChildrenOf(c.id), bts = batchesOf(c.id);
   var jars = jarsOf(c);
@@ -1214,14 +1241,7 @@ function cultureNodeHtml(c, depth){
   if(recordingOn===c.id) h += perfFormHtml(c);
   if(contamOn===c.id) h += contamFormHtml(c);
   if(addingUnder && addingUnder.parentId===c.id) h += addFormHtml(c.code, addingUnder.type);
-  bts.forEach(function(b){
-    h += '<div class="node blocknode" style="margin-left:18px">'+
-      '<div class="nhead"><span class="nico">🧱</span><code class="ncode">'+esc(b.name)+'</code>'+
-      '<span class="chip '+(b.stage==='contaminated'?'chip-bad':(b.stage==='harvested'?'chip-ok':'chip-used'))+'">'+
-      esc(BATCH_STAGE[b.stage]||b.stage)+'</span>'+
-      '<span class="nmeta">'+(typeof b.blocks==='number'?b.blocks+' block'+(b.blocks===1?'':'s'):'')+
-      ' · <a href="grow-log.html">open in grow log</a></span></div></div>';
-  });
+  h += batchNodesHtml(bts);
   h += '</div>';
   kids.forEach(function(k){ h += cultureNodeHtml(k, depth+1); });
   return h;
@@ -1417,6 +1437,7 @@ function sourceCardHtml(s){
   if(editingId===s.id) h += editSourceFormHtml(s);
   if(addingUnder && addingUnder.parentId===s.id) h += addFormHtml(s.code, addingUnder.type);
   kids.forEach(function(k){ h += cultureNodeHtml(k, 0); });
+  h += batchNodesHtml(batchesOf(s.id));                                    // straight off it (I153)
   h += '</div>';
   return h;
 }
@@ -1770,11 +1791,18 @@ $('tree').addEventListener('click', function(e){
     if(ds.cultures.length && !confirm('This source has '+ds.cultures.length+' culture(s) descended from it.\n\n'+
       'They are NOT deleted — they move to "Unattached" at the bottom of the tree, and you can '+
       'attach them to another source at any time.\n\nDelete the source?')) return;
-    if(!ds.cultures.length && !confirm('Delete this source?')) return;
+    if(!ds.cultures.length && ds.batches.length && !confirm('This source has '+ds.batches.length+' grow log batch(es) spawned from it. '+
+      'They are NOT deleted, and they keep its supplier, but they will no longer show which source they came from.\n\nDelete the source?')) return;
+    if(!ds.cultures.length && !ds.batches.length && !confirm('Delete this source?')) return;
     // This is the exact moment the species would be lost: it lives on the source, and every
     // culture below reads it from here. Write it onto them before the source goes (I83).
     var dsrc = findSource(id);
     if(dsrc) ds.cultures.forEach(function(x){ stampSpecies(x, dsrc.species); });
+    // The same moment for the supplier: grow log runs read it off this source (I147, I153), so a
+    // run with none of its own keeps it as typed text. Never over a supplier the run already has.
+    var dsup = dsrc && dsrc.kind!=='wild' && typeof dsrc.supplier==='string' &&
+      !(window.MycroSamples && MycroSamples.isSample('sources', dsrc.id)) ? dsrc.supplier.trim().slice(0,60) : '';
+    if(dsup) ds.batches.forEach(function(b){ if(!(typeof b.supplier==='string' && b.supplier.trim())) b.supplier = dsup; });
     state.sources = state.sources.filter(function(x){ return x.id!==id; });
     save(); paint();
     if(window.track) try{ track('culture_delete',{kind:'source', below:ds.cultures.length}); }catch(_){}

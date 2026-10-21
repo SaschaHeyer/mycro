@@ -271,6 +271,8 @@
     var liveParent = {};
     list(state, 'cultures').forEach(function (c) { if (c && typeof c.id === 'string') liveParent[c.id] = 1; });
     list(state, 'batches').forEach(function (b) { if (b && typeof b.id === 'string') liveParent[b.id] = 1; });
+    // And a run can be spawned straight from a source (I153): a surviving source is a live parent.
+    list(state, 'sources').forEach(function (s) { if (s && typeof s.id === 'string') liveParent[s.id] = 1; });
     list(state, 'batches').forEach(function (b) {
       if (b && b.parentId && (b.parentId === b.id || !has(liveParent, b.parentId))) b.parentId = null;
     });
