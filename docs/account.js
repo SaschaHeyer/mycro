@@ -293,7 +293,12 @@
     var btn = el('acctGo'), prev = btn.textContent;
     btn.disabled = true; btn.textContent = 'Sending…';
     ls(EMAIL_HINT, em);        // so opening the link on this device needs no retyping
-    post('/api/auth/request', { email: em })
+    // Where this person first arrived, like every other capture route sends. This one did not,
+    // so the gate, which produced several of our leads, recorded none of their channels (I157).
+    // Resolved here, at click time: track.js is deferred and may not exist when this file runs.
+    var first = null;
+    try { first = (window.mycroFirstTouch && window.mycroFirstTouch()) || null; } catch (e) {}
+    post('/api/auth/request', { email: em, first: first })
       .then(function (j) {
         // The server now says whether the mail actually left. Telling someone to check an
         // inbox for an email that was never sent leaves them waiting on nothing, and on this
