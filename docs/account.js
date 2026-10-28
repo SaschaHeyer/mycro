@@ -53,7 +53,7 @@
       body: JSON.stringify(body || {})
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok) throw new Error(j.error || ('http ' + r.status));
+        if (!r.ok) { var err = new Error(j.error || ('http ' + r.status)); err.body = j; throw err; }
         return j;
       });
     });
@@ -477,7 +477,11 @@
   }
 
   function exchangeIdToken(idToken, via) {
-    return post('/api/auth/firebase', { idToken: idToken }).then(function (j) {
+    // A refusal here is captured as a lead like the email door's (I158), so it carries the
+    // same first touch, resolved now for the same reason (track.js is deferred).
+    var first = null;
+    try { first = (window.mycroFirstTouch && window.mycroFirstTouch()) || null; } catch (e) {}
+    return post('/api/auth/firebase', { idToken: idToken, via: via, first: first }).then(function (j) {
       if (!j || !j.token || !EMAIL_RE.test(j.email || '')) throw new Error('bad session');
       ls(TOKEN_KEY, j.token); ls(EMAIL_KEY, j.email); ls(EMAIL_HINT, null); ls(SEEN_KEY, '1');
       state.email = j.email; state.founder = !!j.founder; state.plan = j.plan;
@@ -510,8 +514,9 @@
       if (btn) btn.disabled = false;
       if (/not a founding grower|gated/i.test(e.message)) {
         // A refusal, not a failure. Say the same thing the email door says.
+        var b = e.body || {};
         setStatus('That Google account is not a Founding Grower yet.', true);
-        gatedNotice('google', false);
+        gatedNotice('google', !!b.sent, b.email);
       } else {
         setStatus('Google sign-in did not complete. You can use the email link instead.', true);
       }
@@ -535,7 +540,19 @@
         if (!cred || !cred.user) return false;
         return cred.user.getIdToken().then(function (t) { return exchangeIdToken(t, 'google-redirect'); });
       })
-      .catch(function () { setStatus('Google sign-in did not complete — try again.', true); return false; });
+      .catch(function (e) {
+        // Redirect is the routine path on phones, so a refusal lands here as often as in
+        // googleSignIn. Until I158 it was told "did not complete, try again", which is false
+        // and sends a refused grower round the same loop.
+        if (/not a founding grower|gated/i.test((e && e.message) || '')) {
+          var b = e.body || {};
+          setStatus('That Google account is not a Founding Grower yet.', true);
+          gatedNotice('google-redirect', !!b.sent, b.email);
+        } else {
+          setStatus('Google sign-in did not complete. Try again.', true);
+        }
+        return false;
+      });
   }
 
   function isFirebaseLink() {
