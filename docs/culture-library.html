@@ -728,6 +728,27 @@ function lineSourceOfBatch(b){
   }
   return null;
 }
+/* Cultures that lost to the same NAMED contaminant as c, of the same type, made within 7 days of
+   it, sharing no item upstream (I159). Archived ones count: filed away is not the same as fine.
+   Seeded examples never count, or our fictional oyster LC becomes evidence about their bench. */
+function benchPeers(c, rc){
+  if(!MycroCauses.isNamed(rc) || !c.createdAt) return [];
+  if(window.MycroSamples && MycroSamples.isSample('cultures', c.id)) return [];
+  var mine = {}; mine[c.id] = 1;
+  ancestry(c).forEach(function(a){ mine[a.item.id] = 1; });
+  return state.cultures.filter(function(x){
+    if(x.id===c.id || x.status!=='contaminated' || x.type!==c.type || !x.createdAt) return false;
+    if(MycroCauses.of(x)!==rc) return false;
+    if(window.MycroSamples && MycroSamples.isSample('cultures', x.id)) return false;
+    if(Math.abs(parseIso(x.createdAt)-parseIso(c.createdAt)) > 7*86400000) return false;
+    if(Object.prototype.hasOwnProperty.call(mine, x.id)) return false;
+    return !ancestry(x).some(function(a){ return Object.prototype.hasOwnProperty.call(mine, a.item.id); });
+  });
+}
+function dayGap(a, b){
+  var d = Math.round(Math.abs(parseIso(a)-parseIso(b))/86400000);
+  return d===0 ? 'the same day' : d+' day'+(d===1?'':'s')+' apart';
+}
 function ancestry(c){
   var chain=[], guard=0, cur=c;
   while(cur && guard++ < 50){
@@ -1067,6 +1088,19 @@ function renderRisk(){
           same.map(function(x){ return '<code>'+esc(x.code)+'</code>'; }).join(', ')+
           ' was flagged for the same thing. Two cultures off one parent with one contaminant points at the parent'+
           (up.length ? ' (<code>'+esc(up[0].item.code)+'</code>)' : '')+' or further up, more than at either transfer.</div>';
+      /* The other direction (I159): the same named contaminant on the same kind of culture, made
+         within a week, from lines that share NOTHING upstream. The source cannot be the common
+         factor there, so the inference points at the bench. Found on a real farm: two LCs lost to
+         trich two days apart, one off each of two suppliers, each traceback read on its own. */
+      var peers = benchPeers(c, rc);
+      if(peers.length)
+        h += '<div class="riskline"><span class="rl">Same contaminant, unrelated line:</span> '+
+          peers.map(function(x){ return '<code>'+esc(x.code)+'</code> <span class="muted">(made '+
+            dayGap(x.createdAt, c.createdAt)+')</span>'; }).join(', ')+
+          ' was lost to it too and shares no source or parent with this one. When one contaminant reaches '+
+          ({petri:'plates', lc:'liquid cultures', grain:'grain spawn'})[c.type]+' from unrelated lines in the same week, the source is the least '+
+          'likely thing they had in common. Look at what they did share: the media batch, the sterilisation run, '+
+          'the transfer setup.</div>';
     }
     h += '</div>';
   });
