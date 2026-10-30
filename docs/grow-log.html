@@ -233,6 +233,8 @@
       </table>
     </div>
     <p class="muted" id="lossNote" style="font-size:.84rem;margin:12px 2px 0"></p>
+    <!-- Where a cause clusters (I160): one contaminant across unrelated runs spawned on one day. -->
+    <div id="lossClue" style="font-size:.84rem;margin:8px 2px 0;display:none"></div>
     <!-- Where the spawn came from (I145). A cause says WHAT took a block; the source says
          whose spawn it was, which is the half a grower can change by buying elsewhere. -->
     <div id="srcWrap" style="display:none;margin-top:18px">
@@ -1305,7 +1307,90 @@ function renderLoss(){
     note = 'Nothing here names a cause you can act on yet.';
   }
   $('lossNote').innerHTML = note;
+  var clues=causeClues(), cbox=$('lossClue');
+  if(cbox){ cbox.innerHTML=clues.map(function(t){ return '<p style="margin:6px 0 0">'+t+'</p>'; }).join(''); cbox.style.display=clues.length?'block':'none'; }
   panel.style.display='block';
+}
+
+/* ---- where a cause clusters (I160) ----
+   Found in a real farm's log: five runs of five different species, all spawned on 14 Sep and all
+   on oats, lost to black mould over the next four weeks. The cause table said "Black mould, 6
+   runs" and the source table blamed the supplier, because all five were from one. Neither could
+   say the thing that mattered: unrelated lines losing to ONE contaminant after ONE day of work
+   points at that day (how the substrate was sterilised, the air while inoculating), not at any
+   one culture. The Culture Library makes the same move for cultures (I159, benchPeers).
+   Rules, each one making a clue out of nothing if dropped:
+     (a) a named cause only. "Something else" and "Not sure" share nothing a grower could act on.
+     (b) a run split into parts counts ONCE (its split root). Three halves of one bag lot lost
+         together are one event, already explained by that lot (I136b's rule for rates).
+     (c) at least 3 lots on one inoculation day, and at least half of that cause's lots. Two is a
+         coincidence; three in a scatter of twenty is a calendar, not a cluster.
+     (d) one species is NOT unrelated lines: then the culture explains it as well as the day does,
+         and the sentence says so instead of pointing at the bench.
+     (e) the control is the same day's OTHER lots, by substrate: what came through, what was lost
+         to something else, what is still growing. The grower judges; we never crown a cause.
+     (f) our seeded examples never count, as a cluster or as a control.
+   Display only: never a flag, never a sort key. */
+function splitRootId(b){
+  var cur=b, guard=0;
+  while(cur && cur.splitFrom && guard++ < 50){
+    var p=find(cur.splitFrom); if(!p || p.id===cur.id) break; cur=p;
+  }
+  return cur ? cur.id : b.id;
+}
+function isSeededBatch(b){ return !!(b && window.MycroSamples && MycroSamples.isSample('batches', b.id)); }
+function causeClues(){
+  var own=state.batches.filter(function(b){ return b && !isSeededBatch(b) && b.inoculatedOn; });   // (f)
+  var by={};
+  own.forEach(function(b){
+    if(b.stage!=='contaminated') return;
+    var c=causeOf(b); if(!causeIsNamed(c)) return;                                                 // (a)
+    var g=by[c]||(by[c]={lots:{}, days:{}});
+    var r=splitRootId(b);                                                                          // (b)
+    g.lots[r]=1;
+    var d=g.days[b.inoculatedOn]||(g.days[b.inoculatedOn]={roots:{}, runs:[]});
+    d.roots[r]=1; d.runs.push(b);
+  });
+  var out=[];
+  CAUSE_ORDER.forEach(function(c){
+    var g=by[c]; if(!g) return;
+    var total=Object.keys(g.lots).length;
+    var best=null;
+    Object.keys(g.days).sort().forEach(function(day){
+      var n=Object.keys(g.days[day].roots).length;
+      if(!best || n>best.n) best={day:day, n:n, runs:g.days[day].runs, roots:g.days[day].roots};
+    });
+    if(!best || best.n<3 || best.n*2<total) return;                                               // (c)
+    var species={}, methods={};
+    best.runs.forEach(function(b){ species[speciesKey(b)]=1; methods[methodKey(b)]=methodOf(b); });
+    var nSp=Object.keys(species).length, mk=Object.keys(methods);
+    var head='<b>'+esc(CAUSE[c])+'</b>: '+best.n+' of the '+total+' run'+(total===1?'':'s')+
+      ' you lost to it were spawned on one day ('+fmtDay(best.day)+')';
+    var onMethod = (mk.length===1 && mk[0]!=='unspecified method') ? ', all on '+esc(methods[mk[0]]) : '';
+    var why = nSp>=2
+      ? ', across '+nSp+' different species'+onMethod+'. Unrelated lines losing to one contaminant after one day of work points at that day (how the substrate was sterilised, the air while you inoculated) more than at any one culture.'
+      : ', all '+esc(speciesLabel(best.runs[0]))+onMethod+'. One species may mean one culture, which explains it as well as that day\'s work does.';   // (d)
+    var ctl={};                                                                                    // (e)
+    own.forEach(function(b){
+      if(b.inoculatedOn!==best.day || best.roots[splitRootId(b)]) return;
+      var k=methodKey(b), m=ctl[k]||(ctl[k]={name:methods[k]||methodOf(b), ok:0, lost:0, grow:0});   // one spelling per recipe
+      if(b.stage==='contaminated') m.lost++;
+      else if(b.stage==='harvested' || b.stage==='fruiting') m.ok++;
+      else m.grow++;
+    });
+    var parts=Object.keys(ctl).sort().map(function(k){
+      var m=ctl[k], bits=[];
+      if(m.ok) bits.push(m.ok+' came through');
+      if(m.lost) bits.push(m.lost+' lost to something else');
+      if(m.grow) bits.push(m.grow+' still growing');
+      return esc(m.name)+': '+bits.join(', ');
+    });
+    var tail = parts.length
+      ? ' Your other runs spawned that day, by substrate: '+parts.join('; ')+'.'
+      : ' Nothing else was spawned that day, so there is no run to compare it with.';
+    out.push(head+why+tail);
+  });
+  return out;
 }
 
 /* ---- where the spawn came from (I145) ----
