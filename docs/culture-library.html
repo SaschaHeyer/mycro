@@ -554,6 +554,7 @@ function validCulture(c){
     (c.shakenAt==null || typeof c.shakenAt==='string') &&    // grain shake milestone (I80)
     (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
     (c.vigor==null || !!VIGOR[c.vigor]) &&                   // growth thickness (I73)
+    (c.labelAt==null || typeof c.labelAt==='string') &&      // day its jar label was last printed (I161)
     // What contaminated it (I117). Any string passes: an unrecognised cause reads as 'not sure'
     // rather than failing validation, because a failed cultures array is dropped on load and
     // an unknown word must never cost a grower their whole library.
@@ -1908,7 +1909,15 @@ $('seedLink').addEventListener('click', function(e){
         (c) a seeded example is marked on the card itself (I127), never refused;
         (d) the QR opens THIS culture in the library; it carries the backup link id when
             there is one, so a phone that does not hold the library yet is told how to load it,
-            instead of being shown a page that silently does not contain the jar. ---- */
+            instead of being shown a page that silently does not contain the jar.
+        (e) I161, asked for by the same farm: "we have to untick every label we don't need from
+            the library and it will only print one label even if we make 2 or more bags". So the
+            sheet works like the grow log's (I133, I136): a culture remembers the day its label
+            was printed (`labelAt`), and when the sheet holds both printed and never-printed
+            cultures only the never-printed ones start ticked; each card has a Copies box,
+            which starts at the bag or jar count when the grower has chosen one label per bag
+            (the same `labelPerBag` choice the grow log keeps, one setting for one farm). Only
+            the ticked cards are stamped, and never a refusal: every card stays on the sheet. ---- */
 function labelCultures(){
   return liveCultures().filter(function(c){ return c.status==='healthy'; });
 }
@@ -1917,7 +1926,31 @@ function cultureQrUrl(c){
   var id = cloudId();
   return id ? u+'&log='+encodeURIComponent(id) : u;
 }
-function cultureLabelHtml(c){
+function cultureLabelPreselect(list){
+  var fresh = list.filter(function(c){ return !c.labelAt; });
+  var mixed = fresh.length>0 && fresh.length<list.length;
+  var on = {}; list.forEach(function(c){ on[c.id] = mixed ? !c.labelAt : true; });
+  return {on:on, mixed:mixed, fresh:fresh.length};
+}
+function cultureLabelCopies(c){
+  return state.labelPerBag ? Math.max(1, Math.min(99, jarsOf(c)||1)) : 1;
+}
+/* Called by the label window on Print (its button or the browser's own). Stamps the ticked
+   cultures only, so an unticked one is offered again next time. */
+window.mycroCultureLabelsPrinted = function(ids){
+  if(!Array.isArray(ids)) return 0;
+  var t = today(), n = 0;
+  ids.forEach(function(id){ var c = findCulture(String(id)); if(c && c.labelAt!==t){ c.labelAt = t; n++; } });
+  if(n) save();
+  if(window.track) try{ track('culture_labels_printed',{n:ids.length}); }catch(_){}
+  return n;
+};
+window.mycroCultureLabelPerBag = function(on){
+  var v = !!on; if(!!state.labelPerBag===v) return;
+  if(v) state.labelPerBag = true; else delete state.labelPerBag;
+  save();
+};
+function cultureLabelHtml(c, on, copies){
   var sp = SPECIES[speciesOf(c)];
   var src = sourceOf(c);
   var parent = c.parentKind==='culture' ? findCulture(c.parentId) : null;
@@ -1929,9 +1962,12 @@ function cultureLabelHtml(c){
   if(src && src.kind==='purchased' && src.supplier) rows += '<tr><th>Supplier</th><td>'+esc(src.supplier)+'</td></tr>';
   if(jars) rows += '<tr><th>Count</th><td>'+esc(unitWord(jars, containerOf(c)))+'</td></tr>';
   var qr = window.QR ? QR.svg(cultureQrUrl(c),150) : '';
-  return '<div class="lbl'+(ex?' lex':'')+'" data-id="'+esc(c.id)+'">'+
+  copies = Math.max(1, Math.min(99, copies||1));
+  return '<div class="lbl'+(ex?' lex':'')+(on===false?' off':'')+'" data-id="'+esc(c.id)+'" data-new="'+(c.labelAt?'0':'1')+'" data-bags="'+(jarsOf(c)||1)+'">'+
     '<div class="lmain">'+
-      '<label class="lpick"><input type="checkbox" checked> Print this label</label>'+
+      '<label class="lpick"><input type="checkbox"'+(on===false?'':' checked')+'> Print this label'+
+        (c.labelAt ? ' <span class="dim">(last printed '+esc(c.labelAt)+')</span>' : ' <span class="dim">(never printed)</span>')+'</label>'+
+      '<label class="lcopy">Copies <input type="number" min="1" max="99" step="1" value="'+copies+'"></label>'+
       (ex ? '<div class="lexmark">Example · not one of your cultures</div>' : '')+
       '<div class="lname">'+esc(c.code)+'</div>'+
       '<div class="lsp">'+esc(CTYPE[c.type].label)+(sp ? ' · '+esc(sp.label) : '')+(genOf(c)!=null ? ' · '+esc(MycroGen.label(genOf(c))) : '')+'</div>'+
@@ -1948,6 +1984,9 @@ function buildCultureLabelSheet(){
   var hint = ex===list.length ? 'these are the example cultures we seeded, not your own.'
     : (ex ? ex+' of these '+(ex===1?'is an example we seeded':'are examples we seeded')+'. The rest are yours.'
           : 'untick any you do not need, then cut along the dashed lines.');
+  var pre = cultureLabelPreselect(list);
+  if(pre.mixed) hint = pre.fresh+' of these '+(pre.fresh===1?'has':'have')+' never been printed, so only '+
+    (pre.fresh===1?'that one is':'those are')+' ticked. '+hint.charAt(0).toUpperCase()+hint.slice(1);
   var n = list.length;
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mycro culture labels</title>'+
     '<meta name="robots" content="noindex"><style>'+
@@ -1964,17 +2003,43 @@ function buildCultureLabelSheet(){
     '.lex{background:#fbf7f4}.lexmark{font-size:5.5pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#C0562C;margin-bottom:1pt;white-space:nowrap}'+
     '.lqr{text-align:center;flex:0 0 auto}.lqr svg{display:block;width:96px;height:96px}.lcap{font-size:5.5pt;color:#6B6457;margin-top:2pt}'+
     '.lpick{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:#6B6457;margin-bottom:3px;cursor:pointer}'+
+    '.lcopy{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:#6B6457;margin:0 0 3px}'+
+    '.lcopy input{width:52px;font:inherit;padding:1px 6px;border:1px solid #d9d5cc;border-radius:6px}'+
+    '.bar .ghost{background:transparent;color:#C0562C;border:1.5px solid #C0562C}'+
     '.lbl.off{opacity:.4}'+
-    '@media print{@page{margin:.4in}body{background:#fff;padding:0}.bar,.lpick{display:none}.lbl.off{display:none}.sheet{gap:0;max-width:7in}.lbl{height:2in;min-height:0;margin:0}}'+
+    '@media print{@page{margin:.4in}body{background:#fff;padding:0}.bar,.lpick,.lcopy{display:none}.lbl.off{display:none}.sheet{gap:0;max-width:7in}.lbl{height:2in;min-height:0;margin:0}}'+
     '</style></head><body>'+
-    '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span><button type="button" id="lprint">Print</button></div>'+
-    '<div class="sheet">'+list.map(cultureLabelHtml).join('')+'</div>'+
+    '<div class="bar"><span><b id="lcount">'+n+' label'+(n===1?'':'s')+'</b> · '+hint+'</span>'+
+      '<span><button type="button" class="ghost" id="lbag">One per bag</button> <button type="button" class="ghost" id="lnew">New only</button> <button type="button" class="ghost" id="lall">All</button> '+
+      '<button type="button" id="lprint">Print</button></span></div>'+
+    '<div class="sheet">'+list.map(function(c){ return cultureLabelHtml(c, pre.on[c.id], cultureLabelCopies(c)); }).join('')+'</div>'+
     '<script>(function(){var total='+n+';'+
       'function cards(){return Array.prototype.slice.call(document.querySelectorAll(".lbl[data-id]"));}'+
-      'function sync(){var k=0;cards().forEach(function(c){var on=c.querySelector(".lpick input").checked;if(on)k++;c.classList.toggle("off",!on);});'+
-        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked";}'+
+      'function box(c){return c.querySelector(".lpick input");}'+
+      'function cp(c){var i=c.querySelector(".lcopy input");var v=i?Math.round(+i.value):1;return v>=1&&v<=99?v:1;}'+
+      'function sync(){var on=cards().filter(function(c){return box(c).checked;}),k=on.length,m=0;on.forEach(function(c){m+=cp(c);});'+
+        'cards().forEach(function(c){c.classList.toggle("off",!box(c).checked);});'+
+        'document.getElementById("lcount").textContent=k+" of "+total+" label"+(total===1?"":"s")+" ticked"+(m>k?" \u00b7 "+m+" to print":"");}'+
+      /* Extra copies are clones laid in at print time and removed after; they carry no
+         data-id, so stamping and counting still see one culture per card (as in the grow log). */
+      'function unexpand(){Array.prototype.slice.call(document.querySelectorAll(".lclone")).forEach(function(x){x.parentNode.removeChild(x);});}'+
+      'function expand(){unexpand();cards().forEach(function(c){if(!box(c).checked)return;var n=cp(c);'+
+        'for(var i=1;i<n;i++){var x=c.cloneNode(true);x.removeAttribute("data-id");x.classList.add("lclone");c.parentNode.insertBefore(x,c.nextSibling);}});}'+
+      'var last=null;'+
+      'function stamp(){var ids=cards().filter(function(c){return box(c).checked;}).map(function(c){return c.getAttribute("data-id");});'+
+        'if(ids.join(",")===last)return;last=ids.join(",");'+
+        'try{if(window.opener&&window.opener.mycroCultureLabelsPrinted)window.opener.mycroCultureLabelsPrinted(ids);}catch(e){}}'+
       'document.addEventListener("change",sync);'+
-      'document.getElementById("lprint").onclick=function(){window.print();};'+
+      'document.addEventListener("input",sync);'+
+      'document.getElementById("lnew").onclick=function(){cards().forEach(function(c){box(c).checked=c.getAttribute("data-new")==="1";});sync();};'+
+      'document.getElementById("lall").onclick=function(){cards().forEach(function(c){box(c).checked=true;});sync();};'+
+      'var perBag='+(state.labelPerBag?'true':'false')+',bb=document.getElementById("lbag");'+
+      'function bagLabel(){bb.textContent=perBag?"One each":"One per bag";}bagLabel();'+
+      'bb.onclick=function(){perBag=!perBag;cards().forEach(function(c){var i=c.querySelector(".lcopy input");if(i)i.value=perBag?(c.getAttribute("data-bags")||1):1;});bagLabel();sync();'+
+        'try{if(window.opener&&window.opener.mycroCultureLabelPerBag)window.opener.mycroCultureLabelPerBag(perBag);}catch(e){}};'+
+      'document.getElementById("lprint").onclick=function(){stamp();expand();window.print();};'+
+      'window.addEventListener("beforeprint",function(){stamp();expand();});'+
+      'window.addEventListener("afterprint",unexpand);'+
       'sync();'+
     '})();<\/script></body></html>';
 }
