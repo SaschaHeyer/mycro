@@ -781,10 +781,10 @@ function isGrain(c){ return c.type==='grain'; }
 /* Your own days-to-shake for a species. Same rule as everywhere else on this page: two
    measured jars minimum, and never a published window — when to shake depends on your grain,
    your jar size and your room, so the only honest baseline is what you have done before. */
-function ownShakePace(species){
-  if(!species) return null;
+function ownShakePace(key){
+  if(!key) return null;
   var d = liveCultures().filter(function(c){
-    return isGrain(c) && shakenDays(c)!=null && speciesOf(c)===species;
+    return isGrain(c) && shakenDays(c)!=null && paceKey(c)===key;
   }).map(shakenDays);
   if(d.length < 2) return null;
   return d.reduce(function(a,b){ return a+b; },0)/d.length;
@@ -829,12 +829,41 @@ function speciesUnder(isSource, parentId){
 }
 function stampSpecies(c, sp){ if(sp && SPECIES[sp] && !SPECIES[c.species]) c.species = sp; }
 
+/* ---- what two records can be compared within (I162) ----
+   "Other" is a bucket, not a species (the Grow Log learnt this at I130). Sanctuary Moon files
+   wood ear AND Italian oyster under Other, so keyed on `species` alone a wood ear liquid
+   culture set the pace an Italian oyster LC was called "running long" against, and the strain
+   table could crown one over the other. The name typed on the source (`sci`) tells them apart;
+   an Other with no name is comparable to nothing, which is the honest answer. */
+function nameKey(n){ return String(n||'').replace(/\s+/g,' ').trim().toLowerCase(); }
+function sourcePaceKey(s){
+  if(!s || !SPECIES[s.species]) return null;
+  if(s.species!=='other') return s.species;
+  var n = nameKey(s.sci); return n ? 'other:'+n : null;
+}
+function paceKey(c){
+  var sp = speciesOf(c);
+  if(!sp) return null;
+  if(sp!=='other') return sp;
+  var s = sourceOf(c); return (s && s.species==='other') ? sourcePaceKey(s) : null;
+}
+/* The words for it: the name they typed for an Other, never the bucket's own label. */
+function sourceSpeciesLabel(s){
+  if(!s || !SPECIES[s.species]) return '';
+  return (s.species==='other' && String(s.sci||'').trim()) ? String(s.sci).trim() : SPECIES[s.species].label;
+}
+function speciesLabelOf(c){
+  var sp = speciesOf(c); if(!sp) return '';
+  if(sp==='other'){ var s = sourceOf(c); if(s && s.species==='other') return sourceSpeciesLabel(s); }
+  return SPECIES[sp].label;
+}
+
 /* Your own pace for this species + culture type. Two recorded ones minimum: one culture is
    trivially its own average and would end up flagging itself. */
-function ownPace(species, type){
-  if(!species) return null;
+function ownPace(key, type){
+  if(!key) return null;
   var d = liveCultures().filter(function(c){
-    return c.type===type && colonisedDays(c)!=null && speciesOf(c)===species;
+    return c.type===type && colonisedDays(c)!=null && paceKey(c)===key;
   }).map(colonisedDays);
   if(d.length < 2) return null;
   return d.reduce(function(a,b){ return a+b; },0)/d.length;
@@ -843,10 +872,10 @@ function workingCultures(){
   return liveCultures().filter(function(c){
     return c.status==='healthy' && !c.colonisedAt;
   }).map(function(c){
-    var sp = speciesOf(c), pace = ownPace(sp, c.type), days = daysSince(c.createdAt);
+    var sp = speciesOf(c), key = paceKey(c), pace = ownPace(key, c.type), days = daysSince(c.createdAt);
     return {c:c, sp:sp, days:days, pace:pace, long: pace!=null && days > Math.round(pace*1.5),
             shook: shakenDays(c), needsShake: isGrain(c) && !c.shakenAt,
-            shakePace: isGrain(c) ? ownShakePace(sp) : null};
+            shakePace: isGrain(c) ? ownShakePace(key) : null};
   }).sort(function(a,b){ return b.days - a.days; });
 }
 
@@ -966,7 +995,7 @@ function renderWork(){
       : 'not shaken yet')+'</div>';
     return '<tr>'+
       '<td class="sname">'+esc(r.c.code)+
-        '<div class="sub">'+esc(r.sp ? SPECIES[r.sp].label : 'unknown species')+
+        '<div class="sub">'+esc(r.sp ? speciesLabelOf(r.c) : 'unknown species')+
         (r.c.notes ? ' · '+esc(r.c.notes) : '')+'</div></td>'+
       '<td><span class="sub">'+CTYPE[r.c.type].icon+' '+esc(CTYPE[r.c.type].label)+'</span></td>'+
       '<td'+(r.long?' class="wklong"':'')+'>day '+r.days+
@@ -1113,18 +1142,33 @@ function renderRisk(){
    joining them to the biological efficiency of the blocks that came off those genetics is the
    part no spreadsheet does. Days are only comparable WITHIN a species, so the trophy is only
    ever awarded between two measured sources of the same species. */
+/* Days are only comparable within ONE culture type as well (I162). A liquid culture, a plate and
+   a grain bag finish on different clocks, and Sanctuary Moon's WDE-LF-00 read "5d" as the mean
+   of two LCs at 6 and a grain bag at 4: a number that describes no culture they made. Once they
+   ran sources side by side (LM-NS-01A grain only, LM-NS-01B an LC plus grain) that blend would
+   have decided the trophy. So each source carries its days PER TYPE, and every comparison below
+   (the trophy, "vs your species average") is made within species AND type. `avgDays` is kept
+   for a source measured in one type only; a mixed source has no honest single figure. */
+var TYPE_ORDER = ['petri','lc','grain'];
+var TYPE_SHORT = {petri:'Petri', lc:'LC', grain:'Grain'};
 function strainRows(){
   return liveSources().map(function(s){
     var d = liveDescendants(s.id);
     var measured = d.cultures.filter(function(c){ return colonisedDays(c)!=null; });
-    var days = measured.map(colonisedDays);
+    var byType = {};
+    measured.forEach(function(c){
+      var t = byType[c.type] || (byType[c.type] = {n:0, sum:0});
+      t.n++; t.sum += colonisedDays(c);
+    });
+    var types = TYPE_ORDER.filter(function(t){ return byType[t]; });
+    types.forEach(function(t){ byType[t].avg = byType[t].sum/byType[t].n; });
     var vig = measured.filter(function(c){ return c.vigor; }).map(function(c){ return VIGOR[c.vigor].score; });
     var finished = d.cultures.filter(isFinished);
     var lost = d.cultures.filter(function(c){ return c.status==='contaminated'; });
     var bes = d.batches.map(beOf).filter(function(v){ return v!=null; });
     return {
-      src:s, n:measured.length,
-      avgDays: days.length ? days.reduce(function(a,b){return a+b;},0)/days.length : null,
+      src:s, key:sourcePaceKey(s), n:measured.length, byType:byType, types:types,
+      avgDays: types.length===1 ? byType[types[0]].avg : null,
       vigor:   vig.length  ? vig.reduce(function(a,b){return a+b;},0)/vig.length   : null,
       lossPct: finished.length ? lost.length/finished.length*100 : null,
       blocks:  countBlocks(d.batches),
@@ -1146,52 +1190,59 @@ function renderStrains(){
   var rows = strainRows(), panel = $('strainPanel');
   if(!rows.some(function(r){ return r.n>0; })){ panel.style.display='none'; return; }
 
-  // Trophy: fastest measured source within a species, only where there is something to compare to.
-  var bySpecies = {};
-  rows.forEach(function(r){ if(r.n){ (bySpecies[r.src.species]=bySpecies[r.src.species]||[]).push(r); } });
-  var best = {};
-  Object.keys(bySpecies).forEach(function(sp){
-    var g = bySpecies[sp];
-    if(g.length < 2) return;
-    var win = g.slice().sort(function(a,b){
-      if(a.avgDays!==b.avgDays) return a.avgDays-b.avgDays;
+  /* Comparison groups: one species (an Other by its typed name) AND one culture type. A source
+     with no comparable species (an unnamed Other) joins none, so it is never ranked. */
+  var groups = {};
+  rows.forEach(function(r){
+    r.rel = {}; r.best = [];
+    if(!r.key) return;
+    r.types.forEach(function(t){ (groups[r.key+'|'+t] = groups[r.key+'|'+t] || []).push(r); });
+  });
+  Object.keys(groups).forEach(function(g){
+    var list = groups[g], t = g.slice(g.lastIndexOf('|')+1);
+    if(list.length < 2) return;
+    // Trophy: fastest source of this species in this type; growth thickness breaks a tie.
+    var win = list.slice().sort(function(a,b){
+      if(a.byType[t].avg!==b.byType[t].avg) return a.byType[t].avg-b.byType[t].avg;
       return (b.vigor||0)-(a.vigor||0);
     })[0];
-    best[win.src.id] = 1;
+    win.best.push(t);
+    /* Raw days can't be compared across species. As a percentage of YOUR OWN average for that
+       species and type, they can. The baseline is your data only, never a published figure,
+       so it needs two measured sources of that species in that type to exist. */
+    var base = list.reduce(function(a,r){ return a+r.byType[t].avg; },0)/list.length;
+    if(base>0) list.forEach(function(r){ r.rel[t] = (r.byType[t].avg-base)/base*100; });
   });
 
-  /* Raw days can't be compared across species. Expressed as a percentage of YOUR OWN average
-     for that species, they can — a shiitake source 20% faster than your shiitake norm really is
-     outperforming an oyster source 5% faster than your oyster norm. The baseline is your data
-     only, never a published figure, so it needs two measured sources of that species to exist. */
-  var normOf = {};
-  Object.keys(bySpecies).forEach(function(sp){
-    var g = bySpecies[sp].filter(function(r){ return r.avgDays!=null; });
-    if(g.length < 2) return;
-    normOf[sp] = g.reduce(function(a,r){ return a+r.avgDays; },0)/g.length;
-  });
-  rows.forEach(function(r){
-    var base = normOf[r.src.species];
-    r.rel = (base && r.avgDays!=null && base>0) ? (r.avgDays-base)/base*100 : null;
-  });
-
+  function fastest(r){ return r.types.length ? Math.min.apply(null, r.types.map(function(t){ return r.byType[t].avg; })) : null; }
   rows.sort(function(a,b){
-    var sa=SPECIES[a.src.species].label, sb=SPECIES[b.src.species].label;
+    var sa=sourceSpeciesLabel(a.src), sb=sourceSpeciesLabel(b.src);
     if(sa!==sb) return sa<sb?-1:1;
-    if(a.avgDays==null) return b.avgDays==null?0:1;
-    if(b.avgDays==null) return -1;
-    return a.avgDays-b.avgDays;
+    var fa=fastest(a), fb=fastest(b);
+    if(fa==null) return fb==null?0:1;
+    if(fb==null) return -1;
+    return fa-fb;
   });
 
   $('strainBody').innerHTML = rows.map(function(r){
-    var vw = vigorWord(r.vigor);
+    var vw = vigorWord(r.vigor), mixed = r.types.length>1;
+    var days = r.types.map(function(t){
+      return Math.round(r.byType[t].avg)+'d <span class="sub">'+(mixed ? TYPE_SHORT[t] : CTYPE[t].label.toLowerCase())+'</span>';
+    }).join('<br>');
+    var relTypes = r.types.filter(function(t){ return r.rel[t]!=null; });
+    var rel = relTypes.length ? relTypes.map(function(t){
+      return (mixed ? TYPE_SHORT[t]+': ' : '')+relWord(r.rel[t]);
+    }).join('<br>') : relWord(null);
+    var relCls = (!mixed && relTypes.length) ? (r.rel[relTypes[0]]<-2?' class="lg"':(r.rel[relTypes[0]]>2?' class="lb"':'')) : '';
     return '<tr>'+
-      '<td class="sname">'+(best[r.src.id]?'<span class="crown">🏆</span> ':'')+esc(r.src.code)+
-        '<div class="sub">'+esc(SPECIES[r.src.species].label)+
+      '<td class="sname">'+(r.best.length?'<span class="crown" title="fastest of this species in '+
+        esc(r.best.map(function(t){ return CTYPE[t].label.toLowerCase(); }).join(', '))+'">🏆'+
+        (mixed ? ' '+esc(r.best.map(function(t){ return TYPE_SHORT[t]; }).join(', ')) : '')+'</span> ':'')+esc(r.src.code)+
+        '<div class="sub">'+esc(sourceSpeciesLabel(r.src))+
         (r.src.supplier ? ' · '+esc(r.src.supplier) : (r.src.kind==='wild' ? ' · wild' : ''))+'</div></td>'+
       '<td>'+(r.n ? r.n+' culture'+(r.n>1?'s':'') : '<span class="sub">—</span>')+'</td>'+
-      '<td'+(r.avgDays!=null?' class="lg"':'')+'>'+(r.avgDays!=null ? Math.round(r.avgDays)+'d' : '<span class="sub">not recorded</span>')+'</td>'+
-      '<td'+(r.rel==null?'':(r.rel<-2?' class="lg"':(r.rel>2?' class="lb"':'')))+'>'+relWord(r.rel)+'</td>'+
+      '<td'+(r.types.length?' class="lg"':'')+'>'+(r.types.length ? days : '<span class="sub">not recorded</span>')+'</td>'+
+      '<td'+relCls+'>'+rel+'</td>'+
       '<td>'+(vw ? esc(vw) : '<span class="sub">—</span>')+'</td>'+
       '<td'+(r.lossPct!=null ? (r.lossPct<=10?' class="lg"':' class="lb"') : '')+'>'+
         (r.lossPct!=null ? Math.round(r.lossPct)+'%' : '<span class="sub">—</span>')+'</td>'+
@@ -1200,14 +1251,15 @@ function renderStrains(){
     '</tr>';
   }).join('');
 
-  var multi = Object.keys(bySpecies).some(function(sp){ return bySpecies[sp].length>1; });
+  var multi = Object.keys(groups).some(function(g){ return groups[g].length>1; });
   $('strainNote').innerHTML = 'Colonisation speed and growth thickness are strain-strength signals, so they sit '+
     'next to what those genetics actually yielded downstream. <b>Days are only comparable between sources of the '+
-    'same species</b> — shiitake naturally runs slower than oyster — so a 🏆 is only awarded where two measured '+
-    'sources of one species can be compared'+(multi?'':'; log a second source of the same species to get one')+'. '+
-    '<b>To compare across species, read the “vs your species average” column instead</b> — each source measured '+
-    'against your own norm for its species, which is the only baseline here that isn’t guessed. It appears once '+
-    'you have two measured sources of a species to average. '+
+    'same species, and within one kind of culture</b>: shiitake naturally runs slower than oyster, and a grain bag '+
+    'does not finish on a plate’s clock. So days are shown per kind, and a 🏆 is only awarded where two sources of '+
+    'one species were measured in the same kind'+(multi?'':'; measure a second source of the same species to get one')+'. '+
+    'Under “Other”, the name you typed on the source is the species. '+
+    '<b>To compare across species, read the “vs your species average” column instead</b>: each source measured '+
+    'against your own norm for that species and kind, which is the only baseline here that isn’t guessed. '+
     'Avg BE is the biological efficiency of the harvested blocks descended from that source.';
   panel.style.display='block';
 }
@@ -1951,7 +2003,7 @@ window.mycroCultureLabelPerBag = function(on){
   save();
 };
 function cultureLabelHtml(c, on, copies){
-  var sp = SPECIES[speciesOf(c)];
+  var sp = speciesLabelOf(c);
   var src = sourceOf(c);
   var parent = c.parentKind==='culture' ? findCulture(c.parentId) : null;
   var ex = window.MycroSamples && MycroSamples.isSample('cultures', c.id);
@@ -1970,7 +2022,7 @@ function cultureLabelHtml(c, on, copies){
       '<label class="lcopy">Copies <input type="number" min="1" max="99" step="1" value="'+copies+'"></label>'+
       (ex ? '<div class="lexmark">Example · not one of your cultures</div>' : '')+
       '<div class="lname">'+esc(c.code)+'</div>'+
-      '<div class="lsp">'+esc(CTYPE[c.type].label)+(sp ? ' · '+esc(sp.label) : '')+(genOf(c)!=null ? ' · '+esc(MycroGen.label(genOf(c))) : '')+'</div>'+
+      '<div class="lsp">'+esc(CTYPE[c.type].label)+(sp ? ' · '+esc(sp) : '')+(genOf(c)!=null ? ' · '+esc(MycroGen.label(genOf(c))) : '')+'</div>'+
       '<table class="lfacts"><tbody>'+rows+'</tbody></table>'+
       (c.notes ? '<div class="lnotes">'+esc(c.notes)+'</div>' : '')+
     '</div>'+
@@ -2196,7 +2248,7 @@ $('exportCsv').addEventListener('click', function(){
       // Species comes off the culture itself when the source is gone — an unattached row
       // still says what it is, rather than exporting a blank (I83).
       src?src.code:'', src?src.kind:'',
-      speciesOf(c)?SPECIES[speciesOf(c)].label:'', src?src.supplier:'',
+      speciesLabelOf(c), src?src.supplier:'',
       src?src.vendorBatch:'', src?src.contact:'', src?src.location:'', c.notes||'', bts]);
   });
   var csv = rows.map(function(r){ return r.map(function(v){
