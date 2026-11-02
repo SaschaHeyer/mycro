@@ -136,6 +136,24 @@
 
   <div id="acctBar" class="acctBar no-print"></div>
 
+  <!-- Grain written in notes, before the Grain field existed (I163). -->
+  <div id="grainHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
+
+  <!-- Which grain runs fastest for each species (I163): the grower's own side-by-side test. -->
+  <div class="results" id="grainPanel" style="display:none;margin-bottom:18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">Grain compared — which grain runs best for each species</h3>
+      <span class="muted" style="font-size:.82rem">Your own grain spawn, by the grain it was made on</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="grainTable">
+        <thead><tr><th>Species</th><th>Grain</th><th>Made</th><th>Days to colonise</th><th>Lost</th></tr></thead>
+        <tbody id="grainBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="grainNote" style="font-size:.84rem;margin:12px 2px 0"></p>
+  </div>
+
   <!-- Strain strength: performance ABOVE the block — days to full colonisation + growth
        thickness per source, joined to what those genetics went on to yield. -->
   <div class="results" id="strainPanel" style="display:none;margin-bottom:18px">
@@ -555,6 +573,7 @@ function validCulture(c){
     (c.archived==null || typeof c.archived==='boolean') &&   // filed away (I80)
     (c.vigor==null || !!VIGOR[c.vigor]) &&                   // growth thickness (I73)
     (c.labelAt==null || typeof c.labelAt==='string') &&      // day its jar label was last printed (I161)
+    (c.grain==null || typeof c.grain==='string') &&          // the grain it was made on (I163)
     // What contaminated it (I117). Any string passes: an unrecognised cause reads as 'not sure'
     // rather than failing validation, because a failed cultures array is dropped on load and
     // an unknown word must never cost a grower their whole library.
@@ -944,6 +963,71 @@ function lastContainer(){
   }
   return 'jar';
 }
+/* ---- the grain a grain spawn bag was made on (I163) ----
+   Sanctuary Moon made LM-NS-01A/B, BOLC-NS-00B and WDE-LF-B00 in pairs, one bag on oats and
+   one on millet, and wrote the grain into Notes, because there was nowhere else for it (the
+   Notes placeholder on a grain bag even said "grain type"). A fact in free text can be read
+   but not compared. So a grain bag gets an optional Grain field, and the library compares
+   grains within one species, on days to colonise and bags lost.
+   The stored value is what the grower typed; comparison goes through grainKey(), so "Oats",
+   "oat" and "1oat" are one grain and "Rye" is another. An unknown grain is still a grain:
+   it compares by its own lowercased name. */
+var GRAINS = [
+  {key:'oats',    label:'Oats',       words:['oats','oat','whole oats']},
+  {key:'millet',  label:'Millet',     words:['millet','white millet','proso millet']},
+  {key:'rye',     label:'Rye',        words:['rye','rye berries','rye grain']},
+  {key:'wheat',   label:'Wheat',      words:['wheat','wheat berries']},
+  {key:'sorghum', label:'Sorghum',    words:['sorghum','milo']},
+  {key:'popcorn', label:'Popcorn',    words:['popcorn']},
+  {key:'corn',    label:'Corn',       words:['corn','maize']},
+  {key:'rice',    label:'Brown rice', words:['brown rice','rice']},
+  {key:'barley',  label:'Barley',     words:['barley']},
+  {key:'wbs',     label:'Bird seed',  words:['wbs','bird seed','wild bird seed','birdseed']}
+];
+function cleanGrainText(t){ return String(t==null?'':t).toLowerCase().replace(/\s+/g,' ').trim(); }
+function knownGrain(t){
+  var w = cleanGrainText(t).replace(/^\d+\s*/,'');
+  for(var i=0;i<GRAINS.length;i++) if(GRAINS[i].words.indexOf(w)>=0) return GRAINS[i];
+  return null;
+}
+function grainKey(t){
+  var g = knownGrain(t); if(g) return g.key;
+  var w = cleanGrainText(t);
+  return w || null;
+}
+function grainLabel(t){
+  var g = knownGrain(t); if(g) return g.label;
+  var w = String(t==null?'':t).trim();
+  return w ? w.charAt(0).toUpperCase()+w.slice(1) : '';
+}
+function grainOf(c){ return isGrain(c) && typeof c.grain==='string' && c.grain.trim() ? c.grain.trim() : null; }
+/* A grain named in a bag's notes: the whole note is a grain ("millet", "1oat"), or it names
+   exactly ONE known grain as a word ("oats, 2 hr PC"). Two grains named ("oat/millet mix") says
+   nothing, because we cannot tell which one the bag is. */
+function grainFromNotes(notes){
+  var whole = knownGrain(notes); if(whole) return whole.label;
+  var t = ' '+cleanGrainText(notes).replace(/[^a-z ]+/g,' ')+' ', hits = [];
+  GRAINS.forEach(function(g){
+    if(g.words.some(function(w){ return t.indexOf(' '+w+' ')>=0; }) && hits.indexOf(g)<0) hits.push(g);
+  });
+  return hits.length===1 ? hits[0].label : null;
+}
+function isSeededCulture(c){ return !!(window.MycroSamples && MycroSamples.isSample('cultures', c.id)); }
+function grainFromNotesCultures(){
+  return state.cultures.filter(function(c){
+    return isGrain(c) && !grainOf(c) && !isSeededCulture(c) && grainFromNotes(c.notes)!=null;
+  });
+}
+/* Datalist: the grains this grower has already used first, then the common ones. */
+function grainOptions(){
+  var seen = {}, out = [];
+  state.cultures.forEach(function(c){
+    var g = grainOf(c); if(!g) return;
+    var k = grainKey(g); if(seen[k]) return; seen[k]=1; out.push(grainLabel(g));
+  });
+  GRAINS.forEach(function(g){ if(!seen[g.key]){ seen[g.key]=1; out.push(g.label); } });
+  return out.map(function(l){ return '<option value="'+esc(l)+'">'; }).join('');
+}
 function countBlocks(list){ return list.reduce(function(a,b){ return a+(typeof b.blocks==='number'?b.blocks:0); },0); }
 function beOf(b){
   var totalDry = (typeof b.dryG==='number'?b.dryG:0) * (typeof b.blocks==='number'?b.blocks:0);
@@ -1186,6 +1270,97 @@ function relWord(rel){
   if(Math.abs(rel) < 2) return '<span class="sub">on your average</span>';
   return Math.round(Math.abs(rel))+'% '+(rel<0 ? 'faster' : 'slower');
 }
+/* Grain written in a bag's notes, still missing from the Grain field (I163). One click copies
+   it; the notes are left exactly as they are. Our own seeded examples are never offered. */
+function renderGrainHint(){
+  var el=$('grainHint'); if(!el) return;
+  var list=grainFromNotesCultures();
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  var names=list.slice(0,6).map(function(c){ return '<code>'+esc(c.code)+'</code> ('+esc(grainFromNotes(c.notes).toLowerCase())+')'; }).join(', ')+
+    (list.length>6?' and '+(list.length-6)+' more':'');
+  el.innerHTML='🌾 '+list.length+' grain spawn '+(list.length===1?'culture has its':'cultures have their')+' grain written in the notes: '+names+'. '+
+    'Grain spawn now has a Grain field, so the library can compare how each grain runs. '+
+    '<button class="mini solid" type="button" data-act="grainFromNotes">Copy it into the Grain field</button> '+
+    '<span class="muted">Your notes stay as they are.</span>';
+  el.style.display='block';
+}
+function grainFromNotesApply(){
+  var list=grainFromNotesCultures();
+  if(!list.length) return;
+  list.forEach(function(c){ c.grain=grainFromNotes(c.notes); });
+  save(); paint();
+  if(window.track) try{ track('culture_grain_from_notes',{n:list.length}); }catch(_){}
+}
+/* Grain compared (I163). Within ONE species (an Other by its typed name, I162) and among grain
+   spawn only, so a grain is never judged against another species' clock. Archived bags count:
+   filing a finished bag away does not make its result disappear. Seeded examples never count.
+   Containers: a culture with no count is one container, and bags and jars are never summed
+   into one figure (I83). A sentence comparing two grains needs TWO measured bags on each side
+   (I74's rule: a lone measurement is trivially its own average); until then the table shows
+   the figures and says nothing about which grain is faster. Display only, never a flag. */
+function grainRows(){
+  var groups={}, order=[];
+  state.cultures.forEach(function(c){
+    var g=grainOf(c); if(!g || isSeededCulture(c)) return;
+    var sp=paceKey(c); if(!sp) return;
+    var id=sp+'|'+grainKey(g);
+    var r=groups[id];
+    if(!r){ r=groups[id]={sp:sp, spLabel:speciesLabelOf(c), grain:grainLabel(g), units:{jar:0,bag:0}, days:[], lost:{jar:0,bag:0}, settled:0, lostN:0}; order.push(id); }
+    var n=jarsOf(c)||1, k=containerOf(c);
+    r.units[k]+=n;
+    var cd=colonisedDays(c);
+    if(c.status==='contaminated'){ r.lost[k]+=n; r.lostN+=n; r.settled+=n; }
+    else if(cd!=null){ r.days.push(cd); r.settled+=n; }
+    else if(c.status==='used'){ r.settled+=n; }
+  });
+  var bySp={};
+  order.forEach(function(id){ var r=groups[id]; (bySp[r.sp]=bySp[r.sp]||[]).push(r); });
+  return Object.keys(bySp).filter(function(sp){ return bySp[sp].length>=2; }).map(function(sp){
+    var rows=bySp[sp];
+    rows.forEach(function(r){ r.avg = r.days.length ? r.days.reduce(function(a,b){return a+b;},0)/r.days.length : null; });
+    rows.sort(function(a,b){
+      if(a.avg==null) return b.avg==null ? (a.grain<b.grain?-1:1) : 1;
+      if(b.avg==null) return -1;
+      return a.avg-b.avg;
+    });
+    return {sp:sp, label:rows[0].spLabel, rows:rows};
+  }).sort(function(a,b){ return a.label<b.label?-1:1; });
+}
+function unitsText(t){
+  var out=[]; if(t.bag) out.push(unitWord(t.bag,'bag')); if(t.jar) out.push(unitWord(t.jar,'jar'));
+  return out.join(' and ');
+}
+function grainVerdict(sp){
+  var ok=sp.rows.filter(function(r){ return r.days.length>=2; });
+  if(ok.length<2) return null;
+  var a=ok[0], b=ok[ok.length-1], gap=b.avg-a.avg;
+  function one(r){ return '<b>'+esc(r.grain.toLowerCase())+'</b> in '+(Math.round(r.avg*10)/10)+' days ('+r.days.length+' measured)'; }
+  if(gap<1) return esc(sp.label)+': '+ok.map(one).join(' and ')+'. No real difference in speed yet.';
+  return esc(sp.label)+': '+one(a)+' against '+one(b)+'. '+esc(a.grain)+' has been about '+Math.round(gap)+' day'+(Math.round(gap)===1?'':'s')+' faster for you.';
+}
+function renderGrains(){
+  var panel=$('grainPanel'); if(!panel) return;
+  var list=grainRows();
+  if(!list.length){ panel.style.display='none'; return; }
+  $('grainBody').innerHTML=list.map(function(sp){
+    return sp.rows.map(function(r,i){
+      var lost = r.settled ? (r.lostN ? unitsText(r.lost)+' of '+r.settled : 'none of '+r.settled) : '<span class="sub">none finished yet</span>';
+      return '<tr>'+
+        '<td class="sname">'+(i===0?esc(sp.label):'')+'</td>'+
+        '<td>'+esc(r.grain)+'</td>'+
+        '<td>'+esc(unitsText(r.units))+'</td>'+
+        '<td'+(r.avg!=null?' class="lg"':'')+'>'+(r.avg!=null ? Math.round(r.avg)+'d <span class="sub">'+r.days.length+' measured</span>' : '<span class="sub">not colonised yet</span>')+'</td>'+
+        '<td'+(r.lostN?' class="lb"':'')+'>'+lost+'</td>'+
+      '</tr>';
+    }).join('');
+  }).join('');
+  var verdicts=list.map(grainVerdict).filter(Boolean);
+  $('grainNote').innerHTML=(verdicts.length ? verdicts.join('<br>')+'<br>' : '')+
+    'Grains are compared within one species, from your own grain spawn only. '+
+    (verdicts.length<list.length ? 'A grain is called faster once each side has two bags with a colonisation date. ' : '')+
+    'Lost counts the bags whose outcome you have recorded (colonised, used or contaminated).';
+  panel.style.display='';
+}
 function renderStrains(){
   var rows = strainRows(), panel = $('strainPanel');
   if(!rows.some(function(r){ return r.n>0; })){ panel.style.display='none'; return; }
@@ -1286,6 +1461,7 @@ function cultureNodeHtml(c, depth){
   h += '<div class="nhead"><span class="nico">'+CTYPE[c.type].icon+'</span>'+
        '<code class="ncode">'+esc(c.code)+'</code> '+statusChip(c.status)+
        (jars ? '<span class="chip chip-jars">'+esc(unitWord(jars, containerOf(c)))+'</span>' : '')+
+       (grainOf(c) ? '<span class="chip chip-jars" title="The grain it was made on">on '+esc(grainLabel(grainOf(c)).toLowerCase())+'</span>' : '')+
        (genOf(c)!=null ? '<span class="chip chip-gen" title="Transfers away from the first culture made from the source, which is Gen 0">'+esc(MycroGen.label(genOf(c)))+'</span>' : '')+
        '<span class="nmeta">'+CTYPE[c.type].label+' · made '+esc(c.createdAt)+' ('+daysSince(c.createdAt)+'d ago)</span></div>';
   var cd = colonisedDays(c), sd = shakenDays(c);
@@ -1347,9 +1523,12 @@ function addFormHtml(parentCode, type){
       '<select id="a-container" aria-label="Jars or bags">'+
         '<option value="jar"'+(lastContainer()==='jar'?' selected':'')+'>jars</option>'+
         '<option value="bag"'+(lastContainer()==='bag'?' selected':'')+'>bags</option>'+
-      '</select></div></div>';
-  h += '<div class="abrow'+(type==='grain'?'':' wide')+'"><label>Notes</label>'+
-      '<input id="a-notes" type="text" maxlength="120" placeholder="'+(type==='grain'?'grain type, method…':'media, method…')+'"></div>'+
+      '</select></div></div>'+
+      '<div class="abrow"><label>Grain <span class="opt">optional</span></label>'+
+      '<input id="a-grain" type="text" maxlength="30" list="grainList" placeholder="e.g. oats, millet">'+
+      '<datalist id="grainList">'+grainOptions()+'</datalist></div>';
+  h += '<div class="abrow wide"><label>Notes</label>'+
+      '<input id="a-notes" type="text" maxlength="120" placeholder="'+(type==='grain'?'method, sterilisation…':'media, method…')+'"></div>'+
     '<div class="abrow wide"><button class="mini solid" data-act="save">Add</button>'+
       '<button class="mini ghosty" data-act="cancel">Cancel</button></div></div>';
   return h;
@@ -1429,8 +1608,11 @@ function editCultureFormHtml(c){
       '<select id="e-container" aria-label="Jars or bags">'+
         '<option value="jar"'+(containerOf(c)==='jar'?' selected':'')+'>jars</option>'+
         '<option value="bag"'+(containerOf(c)==='bag'?' selected':'')+'>bags</option>'+
-      '</select></div></div>';
-  h += '<div class="abrow'+(isGrain(c)?'':' wide')+'"><label>Notes</label>'+
+      '</select></div></div>'+
+      '<div class="abrow"><label>Grain <span class="opt">optional</span></label>'+
+      '<input id="e-grain" type="text" maxlength="30" list="grainList" value="'+esc(c.grain||'')+'" placeholder="e.g. oats, millet">'+
+      '<datalist id="grainList">'+grainOptions()+'</datalist></div>';
+  h += '<div class="abrow wide"><label>Notes</label>'+
       '<input id="e-notes" type="text" maxlength="120" value="'+esc(c.notes||'')+'"></div>';
   if(liveChildrenOf(c.id).length)
     h += '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Changing the code here does not change the codes of the cultures below it. Those are already written on the jars.</p></div>';
@@ -1478,6 +1660,8 @@ function saveEdit(id){
       var j = Math.round(parseFloat($('e-jars').value));
       if(isFinite(j) && j>0) c.jars = Math.min(j, 999); else delete c.jars;
       c.container = $('e-container').value==='bag' ? 'bag' : 'jar';
+      var gr = $('e-grain') ? ($('e-grain').value||'').trim().slice(0,30) : '';
+      if(gr) c.grain = gr; else delete c.grain;
     }
   } else {
     s.code = code; s.acquiredAt = d;
@@ -1637,7 +1821,7 @@ function renderBook(){
     $('f-contact').value=[c.phone,c.email].filter(Boolean).join(' · ');
   });
 })();
-function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderStrains(); renderArchive(); renderBook(); }
+function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderGrainHint(); renderGrains(); renderStrains(); renderArchive(); renderBook(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -1697,9 +1881,11 @@ function addCulture(parentId, isSource, type){
     if(isFinite(j) && j>0) c.jars = Math.min(j, 999);
     var ct = $('a-container') ? $('a-container').value : '';
     c.container = (ct==='bag') ? 'bag' : 'jar';
+    var gr = $('a-grain') ? ($('a-grain').value||'').trim().slice(0,30) : '';
+    if(gr) c.grain = gr;
   }
   state.cultures.push(c); addingUnder=null; recordingOn=null; save(); paint();
-  if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0, container:c.container||''}); }catch(_){}
+  if(window.track) try{ track('culture_add',{type:type, jars:c.jars||0, container:c.container||'', grain:c.grain?1:0}); }catch(_){}
   showNudge('culture');
 }
 /* The work queue is a shortcut into the tree, not a second editor: it opens the same
@@ -1727,6 +1913,9 @@ $('riskBody').addEventListener('click', function(e){
   contamOn = id; recordingOn = null; addingUnder = null; paint();
   var n = document.getElementById('node-'+id);
   if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
+});
+$('grainHint').addEventListener('click', function(e){
+  var b=e.target.closest('[data-act="grainFromNotes"]'); if(b) grainFromNotesApply();
 });
 $('sampleNote').addEventListener('click', function(e){
   if(!e.target || e.target.id!=='clearSamples') return;
@@ -2229,7 +2418,7 @@ function chainOf(c){
 $('exportCsv').addEventListener('click', function(){
   // Archived rows are exported too, flagged — a CSV is the copy a grower keeps, so it holds
   // everything they have, not just what is on screen today.
-  var rows = [['code','type','generation','status','contam_cause','made_on','containers','container','shaken_on','days_to_shake',
+  var rows = [['code','type','generation','status','contam_cause','made_on','containers','container','grain','shaken_on','days_to_shake',
     'colonised_on','days_to_colonise','growth','archived',
     'chain','source_code','source_kind','species','supplier','supplier_batch','contact','location','notes','batches']];
   state.cultures.forEach(function(c){
@@ -2241,7 +2430,7 @@ $('exportCsv').addEventListener('click', function(){
       // Same column name and wording as the grow log's export (I113), so one spreadsheet can
       // hold both files and a mould is spelled one way in it.
       c.status==='contaminated' ? MycroCauses.CAUSE[MycroCauses.of(c)] : '', c.createdAt,
-      jarsOf(c)||'', jarsOf(c)?containerOf(c):'', c.shakenAt||'', sd==null?'':sd,
+      jarsOf(c)||'', jarsOf(c)?containerOf(c):'', grainOf(c)||'', c.shakenAt||'', sd==null?'':sd,
       c.colonisedAt||'', cd==null?'':cd, c.vigor?VIGOR[c.vigor].short:'',
       isArchived(c)?'yes':'',
       chainOf(c),
