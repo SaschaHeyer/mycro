@@ -401,6 +401,7 @@
 
   <!-- Batch list -->
   <div id="genHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
+  <div id="spHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="batchList"></div>
   <p id="empty" class="note" style="display:none">No batches yet. Add your first one above — or
     <a href="#" id="seedLink">load sample batches</a> to see how it works.</p>
@@ -946,6 +947,16 @@ function genFromNotesRuns(){
     return !isSeededBatch(b) && MycroGen.clean(b.gen)==null && MycroGen.fromNotes(b.notes)!=null;
   });
 }
+// Runs whose species disagrees with their spawn (I164), named at the top so a long log cannot hide one.
+function renderSpHint(){
+  var el=$('spHint'); if(!el) return;
+  var runs=state.batches.filter(function(b){ return !!speciesMismatch(b); });
+  if(!runs.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.innerHTML='⚠ '+runs.length+' run'+(runs.length===1?' is':'s are')+' logged as a different species from the spawn '+(runs.length===1?'it was':'they were')+' made from: '+
+    runs.slice(0,6).map(function(b){ return '<a href="#batch-'+esc(b.id)+'"><code>'+esc(batchCode(b))+'</code></a>'; }).join(', ')+(runs.length>6?' and '+(runs.length-6)+' more':'')+
+    '. The card says which, and fixes it in one click.';
+  el.style.display='block';
+}
 function renderGenHint(){
   var el=$('genHint'); if(!el) return;
   var runs=genFromNotesRuns();
@@ -1002,6 +1013,55 @@ function parentOptionsHtml(b, keepId, labelled){
       esc(s.code||'Source')+(s.supplier?' · '+esc(String(s.supplier).slice(0,40)):'')+'</option>'; }).join('')+'</optgroup>';
   return h;
 }
+/* WHAT THE SPAWN SAYS THE BLOCK IS (I164). A mushroom cannot change species between the jar and
+   the bag, yet the add form kept whatever species was last picked when a grower chose a parent.
+   Found on a real farm's log: KT-NS-02, spawned from their king oyster grain bag KT-NS-00-G1,
+   saved as Blue / Pearl Oyster, its label printed the same day. Every species surface then lies:
+   the label, the colonisation window, the strain table, the BE range. Rules:
+   (a) the parent's species is read from the record itself, a culture's own species first (I83),
+       else its source's; a batch parent is its own species; a named Other keeps its name;
+   (b) choosing a parent on the add form sets the species select to it, because that choice is
+       the grower telling us what the spawn is; they can still change it before saving;
+   (c) on a saved run a disagreement is SHOWN, never fixed silently: either the species or the
+       link is wrong and only the grower knows which, so the card offers both;
+   (d) two Other species disagree only when both are named and the names differ; an unnamed
+       Other, a species this page does not know, and our seeded examples say nothing. */
+function parentSpecies(id){
+  var cur=id, guard=0, sp=null, nm='';
+  while(cur && guard++ < 200){
+    var c=cultureOf(cur);
+    if(c){ if(!sp && c.species) sp=c.species; cur=c.parentId; continue; }
+    var s=sourceById(cur);
+    if(s){ if(!sp) sp=s.species; if(sp==='other' && s.species==='other') nm=String(s.sci||'').trim(); break; }
+    var p=find(cur);
+    if(p && !sp){ sp=p.species; nm=speciesName(p); }
+    break;
+  }
+  if(!sp || !SPECIES[sp]) return null;                                    // (d)
+  return {species:sp, name: sp==='other' ? nm.slice(0,40) : ''};
+}
+function spKeyName(n){ return String(n||'').replace(/\s+/g,' ').trim().toLowerCase(); }
+function speciesMismatch(b){
+  if(!b || !b.parentId || isSeededBatch(b)) return null;
+  var ps=parentSpecies(b.parentId); if(!ps) return null;
+  if(ps.species!==b.species) return ps;
+  if(ps.species==='other' && ps.name && speciesName(b) && spKeyName(ps.name)!==spKeyName(speciesName(b))) return ps;
+  return null;
+}
+function parentSpLabel(ps){ return ps.name || SPECIES[ps.species].label; }
+function parentCodeOf(b){
+  var c=cultureOf(b.parentId); if(c) return c.code;
+  var p=parentBatchOf(b); if(p) return batchCode(p);
+  var s=sourceById(b.parentId); return (s && s.code) || 'its spawn';
+}
+function syncSpeciesFromParent(){
+  var sel=$('f-culture'); if(!sel || !sel.value) return;
+  var ps=parentSpecies(sel.value); if(!ps) return;                        // (b)
+  $('f-species').value=ps.species;
+  if(ps.species==='other') $('f-speciesName').value=ps.name||'';
+  syncSpeciesName();
+}
+document.addEventListener('change',function(e){ if(e.target && e.target.id==='f-culture') syncSpeciesFromParent(); });
 // Is `v` something this batch may name as its spawn? (null b = a batch not yet created)
 function validParentFor(b, v){
   if(!v) return false;
@@ -2113,6 +2173,11 @@ function batchHtml(b){
     ? '<div class="culline">🧬 Spawned straight from source <a href="culture-library.html"><code>'+esc(ps.code||'Source')+'</code></a>'+
         (ps.kind!=='wild' && ps.supplier ? ' ('+esc(String(ps.supplier).slice(0,60))+')' : '')+'</div>'
     : '';
+  var mis = speciesMismatch(b);                                         // (I164 c)
+  if(mis) culLine += '<div class="culline spmis"><b class="culbad">⚠ Logged as '+esc(speciesLabel(b))+', but '+
+      esc(parentCodeOf(b))+' is '+esc(parentSpLabel(mis))+'.</b> One of the two is wrong: the label, the colonisation window and the strain table all use the species. '+
+      '<button class="mini solid" type="button" data-act="spfix" data-id="'+b.id+'">Change to '+esc(parentSpLabel(mis))+'</button> '+
+      '<button class="mini" type="button" data-act="link" data-id="'+b.id+'">Change the link</button></div>';
   var kids = childBatches(b);
   if(kids.length){
     var kb = kids.reduce(function(a,x){ return a+(x.blocks||0); },0);
@@ -2146,6 +2211,7 @@ function paint(){
   renderCultureSelect();
   renderGenFormHint();
   renderGenHint();
+  renderSpHint();
   renderDelivery();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
@@ -2235,6 +2301,13 @@ document.addEventListener('click',function(e){
   if(!el) return;
   var act=el.getAttribute('data-act'); var id=el.getAttribute('data-id'); var b=id?find(id):null;
   if(act==='genFromNotes'){ genFromNotes(); return; }
+  if(act==='spfix' && b){
+    var fx=speciesMismatch(b); if(!fx) return;
+    b.species=fx.species; b.speciesName = fx.species==='other' ? (fx.name||speciesName(b)||null) : null;
+    save(); render();
+    if(window.track) try{ track('growlog_species_fix',{}); }catch(_){}
+    return;
+  }
   if(act==='advance' && b){ b.stage=el.getAttribute('data-to'); b.stageSince=today(); editingYieldId=null; save(); render(); }
   else if(act==='harvest' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
