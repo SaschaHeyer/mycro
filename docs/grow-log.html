@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-03","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-05","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -360,7 +360,8 @@
           <span id="f-speciesHint" class="hint" style="display:none">Printed on your labels and used to rank this strain on its own.</span></div>
         <div class="field"><label>Dry substrate per block <span id="u-dry" class="hint"></span></label>
           <input id="f-dry" type="number" step="any" min="0" value="5">
-          <span class="hint">Dry weight, before water. Used for biological efficiency.</span></div>
+          <span class="hint">Dry weight, before water. Used for biological efficiency.</span>
+          <span id="f-dryHint" class="hint" style="display:none;color:#a14b00"></span></div>
         <div class="field"><label>Number of blocks / bags</label>
           <input id="f-blocks" type="number" step="1" min="1" value="20"></div>
         <div class="field"><label>Inoculation date</label>
@@ -402,6 +403,7 @@
   <!-- Batch list -->
   <div id="genHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="spHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
+  <div id="wtHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="batchList"></div>
   <p id="empty" class="note" style="display:none">No batches yet. Add your first one above — or
     <a href="#" id="seedLink">load sample batches</a> to see how it works.</p>
@@ -957,6 +959,27 @@ function renderSpHint(){
     '. The card says which, and fixes it in one click.';
   el.style.display='block';
 }
+// Runs whose per-block weight reads as the whole order (I166), named at the top like I164's.
+function renderWtHint(){
+  var el=$('wtHint'); if(!el) return;
+  var runs=state.batches.filter(function(b){ return !!orderWeight(b); });
+  if(!runs.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.innerHTML='⚖ '+runs.length+' run'+(runs.length===1?' has':'s have')+' a dry weight per block several times your usual block, which fits the weight of the whole batch: '+
+    runs.slice(0,6).map(function(b){ return '<a href="#batch-'+esc(b.id)+'"><code>'+esc(batchCode(b))+'</code></a>'; }).join(', ')+(runs.length>6?' and '+(runs.length-6)+' more':'')+
+    '. Biological efficiency divides by it, so the card says what it would read per block.';
+  el.style.display='block';
+}
+// The same check as the form is filled in, before the run exists.
+function renderDryFormHint(){
+  var el=$('f-dryHint'); if(!el) return;
+  var dry=parseFloat(($('f-dry')||{}).value), n=Math.round(parseFloat(($('f-blocks')||{}).value));
+  var med=ownTypicalDryG(null);
+  var per = isFinite(dry) ? orderWeightFit(gFromInput(dry), n, med) : null;
+  if(per==null){ el.style.display='none'; el.textContent=''; return; }
+  el.textContent='That is per block. Your blocks are usually about '+fmtWt(med)+'; if '+fmtWt(gFromInput(dry))+' is all '+n+' together, enter '+fmtWt(per)+'.';
+  el.style.display='block';
+}
+document.addEventListener('input',function(e){ if(e.target && (e.target.id==='f-dry'||e.target.id==='f-blocks')) renderDryFormHint(); });
 function renderGenHint(){
   var el=$('genHint'); if(!el) return;
   var runs=genFromNotesRuns();
@@ -1047,6 +1070,36 @@ function speciesMismatch(b){
   if(ps.species!==b.species) return ps;
   if(ps.species==='other' && ps.name && speciesName(b) && spKeyName(ps.name)!==spKeyName(speciesName(b))) return ps;
   return null;
+}
+/* A PER-BLOCK WEIGHT THAT IS REALLY THE WHOLE ORDER (I166). A real farm logged two bought
+   fruiting kits as 8 blocks at 5.5 kg dry PER BLOCK (44 kg of substrate) while every block of
+   their own sat at 1-2 kg; the harvested kit read 3% biological efficiency and halved that
+   species' average in the strain table. 5.5 kg is what all eight weigh together. Rules, each
+   pinned in tests/order-weight.spec.js:
+   (a) positive identification only: it fires when the per-block figure is at least 3x the
+       median of the grower's OWN other runs AND dividing it by the block count lands inside
+       half-to-double that median. A heavy block that is not explained by the count says nothing;
+   (b) it needs 3 other own runs to form a median, never a published figure and never the seeded
+       examples (I78). A single-block run never fires, and no guard is needed for it: dividing
+       by one leaves the figure at 3x the median, outside the double-the-median window;
+   (c) it never changes a weight on its own; the grower presses the button (I164). */
+function ownTypicalDryG(skip){
+  var v=state.batches.filter(function(x){ return x!==skip && !isSeededBatch(x) && x.dryG>0; })
+    .map(function(x){ return x.dryG; }).sort(function(a,c){ return a-c; });
+  if(v.length<3) return null;                                            // (b)
+  var m=Math.floor(v.length/2);
+  return v.length%2 ? v[m] : (v[m-1]+v[m])/2;
+}
+function orderWeightFit(dryG, blocks, med){
+  if(!(med>0) || !(dryG>0) || !(blocks>0)) return null;
+  if(dryG < 3*med) return null;                                          // (a)
+  var per=dryG/blocks;
+  return (per>=med/2 && per<=2*med) ? per : null;                       // (a)
+}
+function orderWeight(b){
+  if(!b || isSeededBatch(b)) return null;
+  var med=ownTypicalDryG(b); var per=orderWeightFit(b.dryG, b.blocks, med);
+  return per==null ? null : {per:per, med:med};
 }
 function parentSpLabel(ps){ return ps.name || SPECIES[ps.species].label; }
 function parentCodeOf(b){
@@ -2178,6 +2231,15 @@ function batchHtml(b){
       esc(parentCodeOf(b))+' is '+esc(parentSpLabel(mis))+'.</b> One of the two is wrong: the label, the colonisation window and the strain table all use the species. '+
       '<button class="mini solid" type="button" data-act="spfix" data-id="'+b.id+'">Change to '+esc(parentSpLabel(mis))+'</button> '+
       '<button class="mini" type="button" data-act="link" data-id="'+b.id+'">Change the link</button></div>';
+  var ow = orderWeight(b);                                              // (I166)
+  if(ow){
+    var bePer = (b.stage==='harvested' && b.yieldG>0) ? (b.yieldG/(ow.per*b.blocks)*100) : null;
+    culLine += '<div class="culline owt"><b class="culbad">⚠ '+fmtWt(b.dryG)+' dry per block × '+b.blocks+' blocks is '+fmtWt(b.dryG*b.blocks)+' of substrate.</b> '+
+      'Your other blocks are about '+fmtWt(ow.med)+' each. If '+fmtWt(b.dryG)+' is what all '+b.blocks+' weigh together, each block is '+fmtWt(ow.per)+
+      (bePer!=null ? ' and the biological efficiency is '+Math.round(bePer)+'%, not '+Math.round(beOf(b))+'%' : '')+'. '+
+      '<button class="mini solid" type="button" data-act="wtfix" data-id="'+b.id+'">Make it '+fmtWt(ow.per)+' per block</button> '+
+      '<button class="mini" type="button" data-act="edit" data-id="'+b.id+'">Edit the batch</button></div>';
+  }
   var kids = childBatches(b);
   if(kids.length){
     var kb = kids.reduce(function(a,x){ return a+(x.blocks||0); },0);
@@ -2212,6 +2274,8 @@ function paint(){
   renderGenFormHint();
   renderGenHint();
   renderSpHint();
+  renderWtHint();
+  renderDryFormHint();
   renderDelivery();
   var list=$('batchList');
   if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
@@ -2301,6 +2365,13 @@ document.addEventListener('click',function(e){
   if(!el) return;
   var act=el.getAttribute('data-act'); var id=el.getAttribute('data-id'); var b=id?find(id):null;
   if(act==='genFromNotes'){ genFromNotes(); return; }
+  if(act==='wtfix' && b){
+    var ow=orderWeight(b); if(!ow) return;
+    b.dryG=Math.round(ow.per*10)/10;
+    save(); render();
+    if(window.track) try{ track('growlog_weight_fix',{}); }catch(_){}
+    return;
+  }
   if(act==='spfix' && b){
     var fx=speciesMismatch(b); if(!fx) return;
     b.species=fx.species; b.speciesName = fx.species==='other' ? (fx.name||speciesName(b)||null) : null;
