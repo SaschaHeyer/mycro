@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-05","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-06","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -342,7 +342,8 @@
       <div class="inline-grid">
         <div class="field"><label>Batch label</label>
           <input id="f-name" type="text" maxlength="40" placeholder="e.g. Blue Oyster #14" autocomplete="off">
-          <span class="hint">Anything that helps you find it.</span></div>
+          <span class="hint">Anything that helps you find it.</span>
+          <div id="nameHint" class="namehint" style="display:none"></div></div>
         <div class="field"><label>Species</label>
           <select id="f-species">
             <option value="pearl">Blue / Pearl Oyster</option>
@@ -404,6 +405,19 @@
   <div id="genHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="spHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
   <div id="wtHint" class="note" style="display:none;margin:0 0 12px;font-size:.9rem"></div>
+  <div id="listBar" class="listbar no-print" style="display:none">
+    <label for="listSort">Sort</label>
+    <select id="listSort">
+      <option value="stage">Still growing first</option>
+      <option value="newest">Newest spawned</option>
+      <option value="oldest">Oldest spawned</option>
+      <option value="added">Last added</option>
+      <option value="az">Name A to Z</option>
+      <option value="za">Name Z to A</option>
+    </select>
+    <input id="listFind" type="search" placeholder="Find a batch" aria-label="Find a batch" autocomplete="off" maxlength="40">
+    <span id="listCount" class="muted"></span>
+  </div>
   <div id="batchList"></div>
   <p id="empty" class="note" style="display:none">No batches yet. Add your first one above — or
     <a href="#" id="seedLink">load sample batches</a> to see how it works.</p>
@@ -2277,17 +2291,126 @@ function paint(){
   renderWtHint();
   renderDryFormHint();
   renderDelivery();
-  var list=$('batchList');
-  if(!state.batches.length){ list.innerHTML=''; $('empty').style.display='block'; return; }
-  $('empty').style.display='none';
+  renderNameHint();
+  renderBatchList();
+  if(editingYieldId){ var yi=$('yieldInput'); if(yi) yi.focus(); }
+}
+
+/* ---- the batch list: sort and find (I167) ----
+   Asked for by a farm exporting a CSV to sort it, only to learn what their last batch was called.
+   The sort is a view choice for this device, so it is NOT in the shared document: opening the log
+   must never write to it. The find box is never remembered: a filter nobody remembers setting hides
+   a run on the next visit. "Still growing first" stays the default and keeps its old order. */
+var LIST_SORT_KEY='mycro_growlog_sort';
+var LIST_SORTS={stage:1,newest:1,oldest:1,added:1,az:1,za:1};
+var listFindText='';
+function listSortChoice(){
+  try{ var v=localStorage.getItem(LIST_SORT_KEY); if(v && Object.prototype.hasOwnProperty.call(LIST_SORTS,v)) return v; }catch(e){}
+  return 'stage';
+}
+function compareNames(a,b){   // numeric, so ITO-NS-2 sorts before ITO-NS-10
+  return String(a.name||'').localeCompare(String(b.name||''),undefined,{numeric:true,sensitivity:'base'});
+}
+function sortBatches(list,how){
+  var at=new Map(); list.forEach(function(b,i){ at.set(b,i); });
+  function day(a,b){ return a.inoculatedOn<b.inoculatedOn?-1:(a.inoculatedOn>b.inoculatedOn?1:0); }
+  var by={
+    newest:function(a,b){ return day(b,a) || at.get(b)-at.get(a); },
+    oldest:function(a,b){ return day(a,b) || at.get(a)-at.get(b); },
+    added:function(a,b){ return at.get(b)-at.get(a); },
+    az:function(a,b){ return compareNames(a,b) || at.get(a)-at.get(b); },
+    za:function(a,b){ return compareNames(b,a) || at.get(a)-at.get(b); }
+  };
+  if(how!=='stage' && Object.prototype.hasOwnProperty.call(by,how)) return list.slice().sort(by[how]);
   // active first, then harvested, then contaminated; within group newest inoculation first
   var order={inoculated:0,colonizing:0,fruiting:0,harvested:1,contaminated:2};
-  var sorted=state.batches.slice().sort(function(a,b){
+  return list.slice().sort(function(a,b){
     if(order[a.stage]!==order[b.stage]) return order[a.stage]-order[b.stage];
     return a.inoculatedOn<b.inoculatedOn?1:-1;
   });
-  list.innerHTML = sorted.map(batchHtml).join('');
-  if(editingYieldId){ var yi=$('yieldInput'); if(yi) yi.focus(); }
+}
+function batchMatchesFind(b,q){
+  return [b.name,b.code,speciesLabel(b),supplierOf(b)].some(function(x){ return x && String(x).toLowerCase().indexOf(q)>=0; });
+}
+function renderBatchList(){
+  var list=$('batchList'), bar=$('listBar');
+  if(!state.batches.length){ list.innerHTML=''; bar.style.display='none'; $('empty').style.display='block'; return; }
+  $('empty').style.display='none';
+  bar.style.display = state.batches.length>1 ? '' : 'none';
+  $('listSort').value=listSortChoice();
+  if($('listFind').value!==listFindText) $('listFind').value=listFindText;
+  var q=listFindText.trim().toLowerCase();
+  var shown=q ? state.batches.filter(function(b){ return batchMatchesFind(b,q); }) : state.batches;
+  $('listCount').textContent = q ? shown.length+' of '+state.batches.length : '';
+  list.innerHTML = shown.length ? sortBatches(shown,listSortChoice()).map(batchHtml).join('')
+    : '<p class="note">No batch matches that. Clear the box to see all '+state.batches.length+'.</p>';
+}
+
+/* ---- what is my next batch called? (I167) ----
+   A series is a run name with a short number at the end: ITO-NS-06, Blue Oyster #14. Split-off bags
+   (ITO-NS-06-B) belong to the number before the letter. A long digit run (LMFB-NS-092426) is a
+   supplier's date, not a count, so it starts no series. Own runs only: our seeded examples never
+   suggest a name. Only a click fills anything in. */
+function nameSeriesParts(name){
+  var m=/^(.*?\D|)(\d{1,3})((?:-[A-Za-z])*)$/.exec(String(name||'').trim());
+  if(!m || !/[A-Za-z]/.test(m[1])) return null;
+  return {prefix:m[1], digits:m[2], n:parseInt(m[2],10)};
+}
+function nameSeries(){
+  var map=Object.create(null), out=[];
+  state.batches.forEach(function(b,i){
+    if(isSeededBatch(b)) return;
+    var p=nameSeriesParts(b.name); if(!p) return;
+    var k=p.prefix.toLowerCase(), g=map[k];
+    if(!g){ g=map[k]={prefix:p.prefix,max:-1,width:1,last:i,run:b}; out.push(g); }
+    if(p.n>g.max){ g.max=p.n; }
+    g.width=Math.max(g.width,p.digits.length);
+    g.prefix=p.prefix; g.last=i; g.run=b;
+  });
+  out.forEach(function(g){
+    var num=String(g.max+1); while(num.length<g.width) num='0'+num;
+    g.next=g.prefix+num;
+  });
+  return out.sort(function(a,b){ return b.last-a.last; });
+}
+function nameHintFor(typed){
+  var t=String(typed||'').trim().toLowerCase(), all=nameSeries();
+  if(!t) return {clash:null, series:all.slice(0,5)};
+  var hits=all.filter(function(g){
+    var p=g.prefix.toLowerCase(); return p.indexOf(t)===0 || t.indexOf(p)===0;
+  });
+  var clash=null;
+  state.batches.some(function(b){
+    if(!isSeededBatch(b) && String(b.name||'').trim().toLowerCase()===t){ clash=String(b.name).trim(); return true; }
+    return false;
+  });
+  if(hits.some(function(g){ return g.next.toLowerCase()===t; })) hits=[];   // already typing the right one
+  return {clash:clash, series:hits.slice(0,5)};
+}
+function renderNameHint(){
+  var el=$('nameHint'), h=nameHintFor($('f-name').value);
+  el._series=h.series;
+  if(!h.series.length && !h.clash){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML=(h.clash ? '<span class="clash">'+esc(h.clash)+' is already in this log.</span> ' : '')
+    +(h.series.length ? '<span>'+(h.clash?'Next free':'Next in your series')+':</span> ' : '')
+    +h.series.map(function(g,i){
+      return '<button type="button" class="mini" data-next="'+i+'" title="Last was '+esc(g.prefix)+esc(String(g.max))+'">'+esc(g.next)+'</button>';
+    }).join(' ');
+}
+function useNextName(i){
+  var g=($('nameHint')._series||[])[i]; if(!g) return;
+  $('f-name').value=g.next;
+  // The picked spawn already decides the species (I164); otherwise the series' last run does.
+  var sel=$('f-culture');
+  if(!(sel && sel.value && parentSpecies(sel.value))){
+    $('f-species').value=g.run.species;
+    $('f-speciesName').value=g.run.species==='other' ? (g.run.speciesName||'') : '';
+    syncSpeciesName();
+  }
+  renderNameHint();
+  $('f-name').focus();
+  if(window.track) try{ track('growlog_next_name',{}); }catch(_){}
 }
 
 /* ---- actions ---- */
@@ -2312,8 +2435,10 @@ function addBatch(e){
     speciesName: $('f-species').value==='other' ? (($('f-speciesName').value||'').trim().slice(0,40)||null) : null,
     notes:($('f-notes').value||'').trim()
   });
+  listFindText='';                                      // the new run must be on screen
   save(); render();
   $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; if($('f-gen')) $('f-gen').value=''; $('f-speciesName').value=''; $('f-date').value=today();
+  renderNameHint();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value, src:$('f-supplier')&&$('f-supplier').value.trim()?1:0}); }catch(_){}
   showNudge('add');
   return false;
@@ -3042,6 +3167,20 @@ function syncSpeciesName(){
   $('f-speciesHint').style.display = o ? '' : 'none';
 }
 $('f-species').addEventListener('change',syncSpeciesName); syncSpeciesName();
+$('f-name').addEventListener('input',renderNameHint);
+$('nameHint').addEventListener('click',function(e){
+  var btn=e.target.closest && e.target.closest('[data-next]'); if(btn) useNextName(+btn.getAttribute('data-next'));
+});
+$('listSort').addEventListener('change',function(){
+  try{ localStorage.setItem(LIST_SORT_KEY,this.value); }catch(_){}
+  renderBatchList();
+  if(window.track) try{ track('growlog_sort',{by:this.value}); }catch(_){}
+});
+var listFindUsed=false;
+$('listFind').addEventListener('input',function(){
+  listFindText=this.value; renderBatchList();
+  if(!listFindUsed && listFindText){ listFindUsed=true; if(window.track) try{ track('growlog_find',{}); }catch(_){} }
+});
 $('d-qr').addEventListener('change',function(){
   try{ state.labelQr=this.value; save(); }catch(e){}
 });
@@ -3616,7 +3755,7 @@ render();
     var sel=$('f-culture'); if(!sel) return;
     sel.value=id;
     var c=cultureOf(id);
-    if(c && !$('f-name').value) $('f-name').value=c.code+' block';
+    if(c && !$('f-name').value){ $('f-name').value=c.code+' block'; renderNameHint(); }
     $('addForm').scrollIntoView({behavior:'smooth',block:'center'});
   }catch(e){}
 })();
@@ -3662,6 +3801,12 @@ table.strain td.pub{color:var(--muted);white-space:nowrap}
 .flag{font-size:.86rem;color:var(--warn);background:#FBEDE8;border-radius:10px;padding:8px 12px;margin:2px 0 8px}
 .bnotes{font-size:.88rem;color:var(--muted);margin:2px 0 8px;font-style:italic}
 .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.namehint{margin-top:6px;font-size:.84rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.namehint .clash{font-weight:700}
+.listbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:.9rem}
+.listbar label{font-weight:700;margin:0}
+.listbar select,.listbar input{font:inherit;font-size:.9rem;padding:7px 10px;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--surface,#fff);color:inherit;width:auto}
+.listbar input{flex:1;min-width:140px}
 .mini{font:inherit;font-size:.84rem;font-weight:700;padding:7px 12px;border-radius:999px;
   border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s}
 .mini:hover{background:var(--surface-2)}
