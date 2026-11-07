@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-06","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-07","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -2125,11 +2125,11 @@ function actionsHtml(b){
   if(editingContamId===b.id) return contamFormHtml(b);
   if(editingBatchId===b.id) return editFormHtml(b);
   if(splittingId===b.id) return splitFormHtml(b);
+  if(editingYieldId===b.id && yieldMode==='edit') return flushEditHtml(b);
   if(editingYieldId===b.id){
     var n=(b.flushes||[]).length;
-    var lbl = yieldMode==='edit' ? 'Correct total yield ('+unit+')'
-            : 'Fresh yield — flush '+(n+1)+' ('+unit+')';
-    var btn = yieldMode==='edit' ? 'Save total' : (n?'Add flush':'Save harvest');
+    var lbl = 'Fresh yield — flush '+(n+1)+' ('+unit+')';
+    var btn = n?'Add flush':'Save harvest';
     return '<form class="yieldForm" onsubmit="return saveYield(event,\''+b.id+'\')">'+
       '<label class="yl">'+lbl+' '+
       '<input id="yieldInput" type="number" step="any" min="0" autocomplete="off" required></label>'+
@@ -2154,7 +2154,7 @@ function actionsHtml(b){
     var extra='';
     if(b.stage==='harvested'){
       extra = '<button class="mini solid" data-act="logflush" data-id="'+b.id+'">+ Log another flush</button>'+
-              '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit total</button>'+
+              '<button class="mini" data-act="edityield" data-id="'+b.id+'">Edit '+((b.flushes||[]).length>1?'weights':'weight')+'</button>'+
               '<button class="mini" data-act="deliver" data-id="'+b.id+'">📦 Deliver</button>';
     }
     if(b.stage==='contaminated'){
@@ -2444,6 +2444,49 @@ function addBatch(e){
   return false;
 }
 
+/* Correct a harvest one flush at a time (I168). "Edit total" sat beside "+ Log another flush" and
+   replaced the whole list with one number: a real farm's kit went from 534 + 426 + 402 g to 112 g
+   on a phone the night before a market, and nothing could bring the three flushes back. So nothing
+   here overwrites a flush the grower did not touch, a correction never moves the harvest date, and
+   a box left as it was keeps its exact grams however the page rounded it for display. */
+function flushInputValue(g){ return String(+(unit==='lb' ? g/LB : g/1000).toFixed(3)); }
+function flushEditHtml(b){
+  var fl=Array.isArray(b.flushes)&&b.flushes.length ? b.flushes : [b.yieldG||0];
+  return '<form class="yieldForm flushEdit" oninput="this.querySelector(\'.flushInput\').setCustomValidity(\'\')" onsubmit="return saveFlushEdit(event,\''+b.id+'\')">'+
+    fl.map(function(g,i){
+      return '<label class="yl">'+(fl.length>1?'Flush '+(i+1):'Fresh yield')+' ('+unit+') '+
+        '<input'+(i===0?' id="yieldInput"':'')+' class="flushInput" type="number" step="any" min="0" autocomplete="off" value="'+flushInputValue(g)+'"></label>';
+    }).join('')+
+    '<button class="mini solid" type="submit">Save</button>'+
+    '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button>'+
+    (fl.length>1?'<p class="hint flushEditHint">Empty a box to remove that flush. New weights go in with + Log another flush.</p>':'')+
+    '</form>';
+}
+function saveFlushEdit(e,id){
+  e.preventDefault();
+  var b=find(id); if(!b) return false;
+  var old=Array.isArray(b.flushes)&&b.flushes.length ? b.flushes : [b.yieldG||0];
+  var boxes=[].slice.call(e.target.querySelectorAll('.flushInput'));
+  var next=[], changed=0;
+  boxes.forEach(function(box,i){
+    var raw=box.value.trim();
+    if(raw===''){ changed++; return; }
+    if(raw===flushInputValue(old[i])){ next.push(old[i]); return; }   // untouched keeps its exact grams
+    var v=parseFloat(raw);
+    if(!isFinite(v)||v<0){ next.push(old[i]); return; }
+    next.push(gFromInput(v)); changed++;
+  });
+  if(!next.length){
+    boxes[0].setCustomValidity('Keep at least one weight.');
+    boxes[0].reportValidity();
+    return false;
+  }
+  b.flushes=next;
+  b.yieldG=next.reduce(function(a,x){return a+x;},0);
+  editingYieldId=null; yieldMode='append'; save(); render();
+  if(window.track) try{ track('growlog_flush_edit',{n:next.length,was:old.length,changed:changed}); }catch(_){}
+  return false;
+}
 function saveYield(e,id){
   e.preventDefault();
   var b=find(id); if(!b) return false;
@@ -2451,11 +2494,7 @@ function saveYield(e,id){
   if(!isFinite(v)||v<0) return false;
   var g=gFromInput(v);
   var wasHarvested = b.stage==='harvested';
-  if(yieldMode==='edit'){
-    b.flushes=[g];
-  } else {
-    b.flushes=(Array.isArray(b.flushes)?b.flushes:[]).concat([g]);
-  }
+  b.flushes=(Array.isArray(b.flushes)?b.flushes:[]).concat([g]);
   b.yieldG=b.flushes.reduce(function(a,x){return a+x;},0);
   b.stage='harvested'; b.stageSince=today();
   editingYieldId=null; yieldMode='append'; save(); render();
@@ -3790,6 +3829,7 @@ render();
 .berange a{color:var(--muted)}
 table.strain td.pub{color:var(--muted);white-space:nowrap}
 .flushline{font-size:.82rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
+.flushEditHint{flex-basis:100%;margin:2px 0 0}
 .culline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .culline code{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-size:.82rem}
 .culline .culbad{color:#9a3417}
