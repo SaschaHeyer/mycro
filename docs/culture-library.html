@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-02","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-09","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -458,6 +458,7 @@
 <script src="/account.js?v=16"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
+<script src="/logsync.js?v=1"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
    SHARES the grow log's state object (same KEY) so a grain spawn jar and the blocks
@@ -2453,21 +2454,22 @@ var CLOUD_KEY='mycro_growlog_cloud_id';
 function cloudId(){ try{ return localStorage.getItem(CLOUD_KEY)||''; }catch(e){ return ''; } }
 function setSync(txt,isErr){ var el=$('syncStatus'); if(!el) return;
   el.textContent=txt; el.style.color=isErr?'#b23b3b':'var(--muted)'; el.style.display=txt?'block':'none'; }
-var _syncTimer=null;
-function autoSync(){
-  var id=cloudId(); if(!id) return;
-  setSync('Syncing…');
-  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,data:state})})
-    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function(){ setSync('All changes synced to your private link ✓'); })
-    .catch(function(){ setSync('Saved on this device — we’ll sync when the connection is back.',true); });
-}
-function scheduleAutoSync(){
-  if(!cloudId()) return;                 // never upload from an unlinked device
-  if(_syncTimer) clearTimeout(_syncTimer);
-  _syncTimer=setTimeout(autoSync,1500);
-}
-if(cloudId()) setSync('All changes synced to your private link ✓');
+var logSync=MycroLogSync.attach({
+  api:API,
+  state:function(){ return state; },
+  valid:function(d){ return !!(d && typeof d==='object' && Array.isArray(d.batches)); },
+  apply:function(doc){
+    state=doc;
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push, no dirty mark
+    state=load(); render();
+  },
+  reload:function(){ state=load(); render(); },
+  status:function(t,err){ setSync(t,err); },
+  busy:function(){ return !!document.querySelector('#tree input,#tree select,#tree textarea') || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||''); }
+});
+function autoSync(){ return logSync.push(); }
+function scheduleAutoSync(){ if(typeof logSync!=='undefined') logSync.schedule(); }
+if(cloudId()){ setSync('All changes synced to your private link ✓'); if(!localStorage.getItem('mycro_growlog_unsynced') && !/[?&]log=/.test(location.search)) logSync.pull(); }
 
 /* ---- aha nudge: honest email capture at the moment the library gets real ---- */
 var NUDGE_KEY='mycro_growlog_nudge_off';
@@ -2499,7 +2501,7 @@ $('nudgeEmailBtn').addEventListener('click', function(){
   if(!state.sources.length && !state.cultures.length){ note.textContent='Log a source first, then we can email your library.'; note.style.color='#b23b3b'; return; }
   var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
   if(window.track) try{ track('culture_nudge_email_click',{}); }catch(_){}
-  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+  logSync.backup()
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(j){
       try{ localStorage.setItem(CLOUD_KEY, j.id); }catch(e){}
@@ -2563,7 +2565,7 @@ function ownWorkCount(){
        the link that comes back opens the library AND the grow log on any device. */
     hasWork:  function(){ return ownWorkCount() > 0; },
     keepSafe: function(em){
-      return fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+      return logSync.backup()
         .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(j){
           try{ localStorage.setItem(CLOUD_KEY, j.id); }catch(e){}

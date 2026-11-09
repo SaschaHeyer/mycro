@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-07","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-09","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -603,6 +603,7 @@
 <script src="/account.js?v=16"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
+<script src="/logsync.js?v=1"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
    Resilience: versioned key + full-shape validation + self-healing render
@@ -3483,22 +3484,30 @@ function setSync(txt,isErr){ var el=$('syncStatus'); if(!el) return;
    with the older copy on the link. The mark is a stamp, cleared only by a push that carried
    it, so an edit made while a push is in flight keeps the device dirty. */
 function dirtyStamp(){ try{ return localStorage.getItem('mycro_growlog_unsynced')||''; }catch(e){ return ''; } }
-function markDirty(){ try{ localStorage.setItem('mycro_growlog_unsynced',String(Date.now())+Math.random().toString(36).slice(2,6)); }catch(e){} }
-function clearDirty(stamp){ try{ if(localStorage.getItem('mycro_growlog_unsynced')===stamp) localStorage.removeItem('mycro_growlog_unsynced'); }catch(e){} }
-function autoSync(){
-  var id=cloudId(); if(!id || !state.batches.length) return;
-  var stamp=dirtyStamp();
-  setSync('Syncing…');
-  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:id,data:state})})
-    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function(){ clearDirty(stamp); setSync('All changes synced to your private link ✓'); })
-    .catch(function(){ setSync('Saved on this device — we’ll sync when the connection is back.',true); });
+function normSynced(d){
+  d.batches.forEach(function(b){ if(typeof b.yieldG!=='number') b.yieldG=null; if(typeof b.notes!=='string') b.notes=''; normFlushes(b); });
+  return normAux(d);
 }
+function applySynced(doc){
+  state=normSynced(doc);
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push, no dirty mark
+  render();
+}
+var logSync=MycroLogSync.attach({
+  api:API,
+  state:function(){ return state; },
+  valid:validGrowDoc,
+  normalize:normSynced,
+  canPush:function(){ return state.batches.length>0; },
+  apply:applySynced,
+  reload:function(){ state=load(); render(); },
+  status:function(t,err){ setSync(t,err); },
+  busy:function(){ return !!document.querySelector('#batchList input,#batchList select,#batchList textarea') || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||''); }
+});
+function autoSync(){ return logSync.push(); }
 function scheduleAutoSync(){
-  if(typeof cloudId!=='function' || !cloudId()) return;   // only after the device is linked
-  markDirty();
-  if(_syncTimer) clearTimeout(_syncTimer);
-  _syncTimer=setTimeout(autoSync,1500);
+  if(typeof logSync==='undefined') return;
+  logSync.schedule();
 }
 
 /* What the private link actually contains (I127). The link is the thing a grower opens on
@@ -3513,8 +3522,7 @@ function backedUpMsg(){
 }
 $('cloudBackup').addEventListener('click',function(){
   var btn=this, prev=btn.textContent; btn.disabled=true; btn.textContent='Backing up…';
-  var body=JSON.stringify({ id:cloudId()||undefined, data:state });
-  fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:body})
+  logSync.backup()
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(j){
       setCloudId(j.id);
@@ -3627,7 +3635,7 @@ function ownWorkCount(){
        answerable. Nothing is offered on an untouched sample log — there is no work to save. */
     hasWork:  function(){ return ownWorkCount() > 0; },
     keepSafe: function(em){
-      return fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+      return logSync.backup()
         .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(j){
           setCloudId(j.id);
@@ -3671,10 +3679,18 @@ function ownWorkCount(){
       var s=j&&j.data;
       if(!validGrowDoc(s)) throw new Error('bad');
       if(!linkedHere && state.batches.length && !confirm('Restore the backed-up log from this link? This replaces the '+state.batches.length+' batch(es) currently saved in this browser.')) { done(); return; }
-      s.batches.forEach(normFlushes);
-      state=s; setCloudId(id); editingYieldId=null;
-      try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push, no dirty mark
-      render();
+      s=normSynced(s);
+      if(linkedHere){
+        var b=null; try{ b=JSON.parse(localStorage.getItem('mycro_growlog_synced')); }catch(_){}
+        var keep=(b&&b.id===id&&b.doc)?b.doc:null, merged=MycroLogSync.merge(keep,state,s,{prefer:'remote'});
+        logSync.setBase(id,j.updatedAt,s);
+        editingYieldId=null;
+        applySynced(merged);
+        if(!MycroLogSync.same(merged,s)){ scheduleAutoSync(); }
+      } else {
+        setCloudId(id); logSync.setBase(id,j.updatedAt,s); editingYieldId=null;
+        applySynced(s);
+      }
       $('backupMsg').textContent= linkedHere ? 'Up to date with your backup link \u2713' : 'Restored from your backup link \u2713';
       $('backupHint').innerHTML='This device is now linked to that backup. From now on, <b>every change syncs to this link automatically.</b>';
       $('backupUrl').value=restoreUrl(id); $('backupBox').style.display='block';
@@ -3722,6 +3738,9 @@ function focusScanned(bid){
     if(dirtyStamp()){ autoSync(); setSync('Some changes on this device have not reached your link yet. Syncing now…',true); }
     else setSync('All changes synced to your private link ✓');
     paintEmailRow(false);
+    /* The installed app opens this page with no ?log=, so this is the only moment it reads
+       the link. Without it a linked device goes on showing, and then pushing, its old copy. */
+    if(!dirtyStamp()) logSync.pull();
   }catch(e){}
 })();
 
@@ -3762,7 +3781,7 @@ function showNudge(src){
     if(!state.batches.length){ note.textContent='Add a batch first, then we can back it up.'; note.style.color='#b23b3b'; return; }
     btn.disabled=true; btn.textContent='Saving…';
     if(window.track) try{ track('growlog_nudge_email_click',{}); }catch(_){}
-    fetch(API+'/api/growlog/backup',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:cloudId()||undefined,data:state})})
+    logSync.backup()
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(j){
         setCloudId(j.id);
