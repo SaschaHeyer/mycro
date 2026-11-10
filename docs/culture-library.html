@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-09","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-10","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -455,7 +455,7 @@
 <script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
-<script src="/account.js?v=16"></script>
+<script src="/account.js?v=17"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
 <script src="/logsync.js?v=1"></script>
@@ -2549,6 +2549,8 @@ function ownWorkCount(){
   if(!window.MycroAccount) return;
   MycroAccount.init({
     getState:   function(){ return state; },
+    // A pull on return to the app waits while a form is open (I171), as the link's does.
+    busy:       function(){ return !!document.querySelector('#tree input,#tree select,#tree textarea') || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||''); },
     countLocal: function(){ return ownWorkCount(); },
     countOf:    function(doc){ return window.MycroSamples ? MycroSamples.ownTotal(doc)
                                  : ((doc && Array.isArray(doc.cultures)) ? doc.cultures.length : 0); },

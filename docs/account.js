@@ -53,7 +53,7 @@
       body: JSON.stringify(body || {})
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok) { var err = new Error(j.error || ('http ' + r.status)); err.body = j; throw err; }
+        if (!r.ok) { var err = new Error(j.error || ('http ' + r.status)); err.body = j; err.status = r.status; throw err; }
         return j;
       });
     });
@@ -70,17 +70,69 @@
 
   function signedIn() { return !!token() && !!state.email; }
 
-  /* ---- sync (push-only, debounced) ---- */
+  /* ---- sync: push with a base, merge on conflict (I171) ----
+     The account was one slot, the same shape I170 fixed on the private link: a device
+     holding an older copy wrote it over the newer one on its next change, and opening a
+     device with work on it asked "replace?" every single time, where both answers lose
+     something (OK drops this device's unsent edits, Cancel overwrites the other device's
+     on the next push). Now each push says which version it was based on, a stale one
+     comes back as 409 with the account's copy, and the two are merged record by record
+     with the same three-way rules as the link (MycroLogSync.merge). The base is the copy
+     this device last agreed with the account on, kept per email. */
+  var BASE_KEY = 'mycro_account_synced', DIRTY_KEY = 'mycro_account_unsynced';
+  function merger() { return w.MycroLogSync && w.MycroLogSync.merge; }
+  function readBase() {
+    try {
+      var b = JSON.parse(ls(BASE_KEY));
+      return (b && b.doc && b.at && b.email === state.email) ? b : null;
+    } catch (e) { return null; }
+  }
+  function writeBase(at, docStr) {
+    if (!at || !state.email) return;
+    ls(BASE_KEY, '{"email":' + JSON.stringify(state.email) + ',"at":' + JSON.stringify(at) + ',"doc":' + docStr + '}');
+  }
+  function isDirty() { return !!ls(DIRTY_KEY); }
+  function sameDoc(a, b) {
+    var M = w.MycroLogSync;
+    return M ? M.same(a, b) : JSON.stringify(a) === JSON.stringify(b);
+  }
+  /* Adopt a merged document. Answers whether the screen changed. */
+  function adopt(doc) {
+    if (!hooks.setState || sameDoc(doc, hooks.getState())) return false;
+    return hooks.setState(doc) !== false;
+  }
+
   function scheduleSync() {
     if (!signedIn() || !hooks.getState) return;
+    ls(DIRTY_KEY, String(Date.now()));
     if (syncTimer) clearTimeout(syncTimer);
-    syncTimer = setTimeout(pushNow, 1200);
+    syncTimer = setTimeout(function () { syncTimer = null; pushNow(); }, 1200);
   }
-  function pushNow() {
+  /* overwrite: this device's copy is meant to win outright (restoring a version), so a
+     conflict takes the account's version number and sends again without merging. */
+  function sendLog(tries, overwrite) {
+    var b = readBase(), docStr = JSON.stringify(hooks.getState()), stamp = ls(DIRTY_KEY);
+    var body = { token: token(), data: hooks.getState() };
+    if (b) body.base = b.at;
+    return post('/api/account/log', body).then(function (j) {
+      writeBase(j && j.updatedAt, docStr);
+      if (ls(DIRTY_KEY) === stamp) ls(DIRTY_KEY, null);
+      return j;
+    }, function (e) {
+      if (!(e && e.status === 409 && e.body && tries > 0)) throw e;
+      var theirs = e.body.data, M = merger();
+      if (theirs && !overwrite && M) {
+        adopt(M(b ? b.doc : null, hooks.getState(), theirs, { prefer: 'local' }));
+      }
+      writeBase(e.body.updatedAt, JSON.stringify(theirs || {}));
+      return sendLog(tries - 1, overwrite);
+    });
+  }
+  function pushNow(overwrite) {
     if (!signedIn() || !hooks.getState || syncing) return Promise.resolve();
     syncing = true;
     setStatus('Saving to your account…');
-    return post('/api/account/log', { token: token(), data: hooks.getState() })
+    return sendLog(3, overwrite === true)
       .then(function () { setStatus('Saved to your account ✓'); })
       .catch(function (e) {
         // Local-first: the log is safe on the device; a failed push retries on the next change.
@@ -393,7 +445,7 @@
       el('acctHistBox').style.display = 'none';
       // Say it AFTER the push settles: pushNow() writes its own "Saved" line, and the
       // message that matters to someone who just got their work back is the restore.
-      pushNow().then(function () {
+      pushNow(true).then(function () {
         setStatus('Restored the version from ' + whenWords(j.savedAt) + ' ✓');
       });
       if (w.track) try { w.track('account_restore', {}); } catch (e) {}
@@ -415,28 +467,49 @@
         else setStatus('Signed in.');
         return;
       }
-      // Both sides count the SAME population: records the grower wrote themselves,
-      // across the whole shared document (I127). They used to disagree — one side counted
-      // every remote batch, the other counted this device's batches unless the ids matched
-      // the seed exactly — so the sentence put two different measures on one line, and a
-      // device whose own work sat in the other tool's collection counted 0 and was
-      // replaced with no question asked at all.
+      /* Merge, never "replace?" (I171). With a base, the three-way rules decide record by
+         record, and the account's side wins a true conflict on a pull. Without one (a device
+         that has never synced with this account) nothing can be called a deletion, so a
+         device holding the grower's own work is a union: every record on either side
+         survives. A device holding nothing of theirs (the sample seed) simply takes the
+         account copy, as it always did. The counts are the grower's own records on both
+         sides (I127). */
+      var M = merger(), b = readBase();
+      if (!hooks.setState || !hooks.getState) { render(); return; }
+      if (syncTimer || syncing) { render(); return; }      // an edit is on its way; its push merges
+      if (b && j.updatedAt && b.at === j.updatedAt) {
+        render();
+        if (isDirty()) return pushNow();
+        if (manual) setStatus('This device already has your latest log ✓');
+        return;
+      }
+      var before = hooks.getState(), merged;
       var localCount = hooks.countLocal ? hooks.countLocal() : 0;
-      var remoteCount = hooks.countOf ? hooks.countOf(j.data) : 0;
-      var replace = true;
-      if (localCount > 0) {
-        replace = w.confirm(
+      if (!M) {                                           // logsync.js failed to load: the old question
+        var remoteCount = hooks.countOf ? hooks.countOf(j.data) : 0;
+        var replace = localCount <= 0 || w.confirm(
           'Your account has a saved log (' + remoteCount + ' record' + (remoteCount === 1 ? '' : 's') +
           ' you logged yourself). This device has ' + localCount +
           '. Load the account copy and replace what is on this device?');
+        render();
+        if (replace) { hooks.setState(j.data); setStatus('Loaded from your account ✓'); }
+        return;
       }
+      if (b) merged = M(b.doc, before, j.data, { prefer: 'remote' });
+      else if (localCount > 0) merged = M(null, before, j.data, { prefer: 'remote' });
+      else merged = j.data;
       render();
-      if (replace && hooks.setState) {
-        hooks.setState(j.data);
-        setStatus('Loaded from your account ✓');
-      } else if (manual) {
-        setStatus('Kept this device’s log. It will sync to your account on the next change.');
+      var changed = adopt(merged);
+      writeBase(j.updatedAt, JSON.stringify(j.data));
+      var msg = (changed && !b && localCount > 0) ? 'Combined this device’s log with your account ✓'
+              : changed ? 'Loaded the latest from your account ✓'
+              : manual ? 'This device already has your latest log ✓' : '';
+      // Say it after the push settles, or "Saved" overwrites the line that explains what happened.
+      if (!sameDoc(hooks.getState(), j.data)) {
+        ls(DIRTY_KEY, String(Date.now()));
+        return pushNow().then(function () { if (msg) setStatus(msg); });
       }
+      if (msg) setStatus(msg);
     }).catch(function (e) {
       if (/not signed in/i.test(e.message)) { clearSession(); render(); }
       else setStatus('Could not reach your account just now.', true);
@@ -680,6 +753,19 @@
         if (!didLogin && signedIn()) pull(false);   // refresh badge + adopt newer server copy
         state.ready = true;
       });
+      /* Coming back to the app is when another device has most likely moved on (I171, the
+         same rule as the link's pull in logsync.js). Never mid-edit: a form a grower is
+         typing into must not be repainted under them. */
+      var lastPull = 0;
+      function again() {
+        if (document.visibilityState !== 'visible' || !signedIn() || !state.ready) return;
+        if (hooks.busy && hooks.busy()) return;
+        if (Date.now() - lastPull < 15000) return;
+        lastPull = Date.now();
+        pull(false);
+      }
+      document.addEventListener('visibilitychange', again);
+      w.addEventListener('online', function () { if (isDirty()) pushNow(); else again(); });
     },
     signedIn: signedIn,
     email: function () { return state.email; },
