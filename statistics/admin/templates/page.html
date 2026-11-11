@@ -1,0 +1,271 @@
+{%- macro change(v) -%}
+  {%- if v is none -%}<span class="mute">–</span>
+  {%- elif v == "new" -%}<span class="up">new</span>
+  {%- elif v == "gone" -%}<span class="down">gone</span>
+  {%- elif v == 0 -%}<span class="mute">0</span>
+  {%- elif v > 0 -%}<span class="up">+{{ v }}</span>
+  {%- else -%}<span class="down">{{ v }}</span>{%- endif -%}
+{%- endmacro -%}
+{%- macro top(title, rows, label) -%}
+<div><h2>{{ title }}</h2><div class="scroll"><table><tr><th>{{ label }}</th><th class="num">Visits</th><th class="num">Visitors</th></tr>
+{% for r in rows %}<tr><td>{{ r.name }}</td><td class="num">{{ r.visits }}</td><td class="num">{{ r.visitors }}</td></tr>
+{% else %}<tr><td colspan="3" class="mute">None yet.</td></tr>{% endfor %}</table></div></div>
+{%- endmacro -%}
+{%- macro bars(chart, label) -%}
+{% set W, H, L, B, T = 760, 220, 48, 26, 14 %}{% set n = chart.bars|length %}{% set bw = (W - L - 8) / n %}
+<div class="scroll"><svg class="chart" viewBox="0 0 {{ W }} {{ H }}" role="img" aria-label="{{ label }}">
+{% for t in chart.ticks %}{% set y = T + (H - T - B) * (1 - t / chart.top) %}<line x1="{{ L }}" x2="{{ W - 8 }}" y1="{{ y }}" y2="{{ y }}" class="grid"/><text x="{{ L - 6 }}" y="{{ y + 4 }}" text-anchor="end">{{ t }}</text>{% endfor %}
+{% for b in chart.bars %}{% set h = (H - T - B) * b.value / chart.top %}{% set x = L + loop.index0 * bw %}
+<g><title>{{ b.title }}</title><rect x="{{ x + bw * 0.15 }}" y="{{ H - B - h }}" width="{{ bw * 0.7 }}" height="{{ h }}" rx="1.5"{% if b.partial %} class="partial"{% endif %}/>
+{% if chart.values and b.value %}<text x="{{ x + bw / 2 }}" y="{{ H - B - h - 4 }}" text-anchor="middle" class="val">{{ b.shown }}</text>{% endif %}
+{% if b.label %}<text x="{{ x + bw / 2 }}" y="{{ H - 8 }}" text-anchor="middle">{{ b.label }}</text>{% endif %}</g>{% endfor %}
+</svg></div>
+{%- endmacro -%}
+{%- macro pct(c) -%}
+  {%- if c.change is none -%}<span class="mute">{{ "new" if c.fresh else "–" }}</span>
+  {%- elif c.change > 0 -%}<span class="up">+{{ c.change }} %</span>
+  {%- elif c.change < 0 -%}<span class="down">{{ c.change }} %</span>
+  {%- else -%}<span class="mute">±0 %</span>{%- endif -%}
+{%- endmacro -%}
+{%- macro periods_nav(path) -%}
+<p class="days">{% for d in periods %}{% if d == days %}<b>{{ d }} days</b>{% else %}<a href="{{ path }}?days={{ d }}">{{ d }} days</a>{% endif %}{% endfor %}</p>
+{%- endmacro -%}
+{%- macro pos(p) -%}{%- if p -%}<b class="{{ 'p3' if p <= 3 else 'p10' if p <= 10 else '' }}">{{ p }}</b>{%- else -%}<span class="mute">–</span>{%- endif -%}{%- endmacro -%}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>{{ cfg.product }} statistics</title>
+<style>
+:root{--accent:{{ cfg.theme.accent or "#ffe57f" }};--paper:{{ cfg.theme.paper or "#fffbea" }};--ink:{{ cfg.theme.ink or "#1c1910" }};--soft:{{ cfg.theme.soft or "#4f4835" }};--line:rgba(28,25,16,.16);--white:#fff;--leaf:{{ cfg.theme.chart or "#2e6a4c" }};--coral:#b8402c}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 -apple-system,Segoe UI,Helvetica,Arial,sans-serif}
+header{background:var(--accent);border-bottom:1px solid var(--line);padding:14px 16px}
+.wrap{max-width:1100px;margin:0 auto}
+header b{font-size:18px;margin-right:18px}nav{display:inline-flex;flex-wrap:wrap;gap:4px 14px}nav a{color:var(--ink)}nav a.on{font-weight:700}
+main{padding:20px 16px 60px}h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 8px}
+.sub,.mute{color:var(--soft)}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0}
+.tile{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:12px}.tile b{display:block;font-size:26px}.tile b span{font-size:15px;margin-left:4px}.tile small{color:var(--soft)}
+.scroll{overflow-x:auto;background:var(--white);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%}th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:13px;color:var(--soft);background:var(--paper);position:sticky;top:0}td.wrapcell{white-space:normal;min-width:240px}
+tr:last-child td{border-bottom:0}a{color:var(--leaf)}.up{color:var(--leaf);font-weight:600}.down{color:var(--coral);font-weight:600}
+.p3{color:var(--leaf)}.p10{color:#7a5d00}tr.us td{background:color-mix(in srgb,var(--accent) 30%,white)}.num{text-align:right}
+svg{width:100%;height:auto;background:var(--white);border:1px solid var(--line);border-radius:8px}
+.legend span{margin-right:14px}.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 16px}.days a,.days b{margin-right:10px}
+.heat{display:grid;grid-template-columns:34px repeat(24,minmax(14px,1fr));gap:2px;min-width:440px;padding:10px}.heat span{font-size:11px;color:var(--soft);text-align:center}.heat i{height:18px;border-radius:2px;background:rgba(46,106,76,var(--a));display:block}
+svg.chart{min-width:520px;border:0}svg.chart text{font-size:11px;fill:var(--soft)}svg.chart text.val{fill:var(--ink);font-weight:600}svg.chart rect{fill:var(--leaf)}svg.chart g:hover rect{opacity:.8}svg.chart rect.partial{opacity:.5}svg.chart .grid{stroke:var(--line)}
+.ret{display:inline-block;min-width:46px;padding:1px 6px;border-radius:4px;background:rgba(46,106,76,var(--a));color:var(--ink)}
+.loading{position:fixed;top:0;left:0;height:3px;width:100%;background:linear-gradient(90deg,transparent,var(--leaf),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:slide 1s linear infinite;display:none;z-index:9}
+@keyframes slide{from{background-position:-40% 0}to{background-position:140% 0}}
+body.is-loading .loading{display:block}body.is-loading main{display:none}
+.skeleton{display:none;padding:20px 16px}body.is-loading .skeleton{display:block}
+.skeleton i{display:block;height:18px;margin:12px 0;border-radius:6px;background:linear-gradient(90deg,#f3ecd0 25%,#fff8de 50%,#f3ecd0 75%);background-size:200% 100%;animation:shimmer 1.2s infinite}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.report table{margin:8px 0 18px;background:var(--white)}.report{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="loading" aria-hidden="true"></div>
+<header><div class="wrap"><b>{{ cfg.product }}</b><nav>
+{% for path, label, views in tabs %}<a href="{{ path }}" class="{{ 'on' if view in views }}">{{ label }}</a>{% endfor %}
+</nav></div></header>
+<div class="skeleton wrap" aria-hidden="true"><i style="width:40%;height:28px"></i><i style="width:70%"></i><i style="height:80px"></i><i style="height:180px"></i><i></i><i style="width:85%"></i></div>
+<main><div class="wrap">
+{% if view == "no_run" %}
+<h1>No ranking run yet</h1><p class="sub">The first results appear after the weekly job has run. It runs on Mondays at 06:00 ({{ cfg.timezone }}).</p>
+
+{% elif view == "keywords" %}
+<h1>{{ panel.our_domain }} on Google</h1>
+{% set multi = panel.markets|length > 1 %}
+<p class="sub">Week of {{ week.strftime("%d %b %Y") }}. Neutral searches with no history or personalisation, in {{ panel.markets|map(attribute="id")|map("upper")|join(", ") }}{% if prev %}, compared with the week of {{ prev.strftime("%d %b") }}{% else %}. First week, nothing to compare yet{% endif %}.{% if multi %} Each position is our best market, named next to it.{% endif %}</p>
+<div class="tiles">
+<div class="tile"><b>{{ summary.top3 }}</b><small>searches in top 3 {{ change(summary.top3_change) }}</small></div>
+<div class="tile"><b>{{ summary.top10 }}</b><small>searches in top 10 {{ change(summary.top10_change) }}</small></div>
+<div class="tile"><b>{{ summary.top20 }}</b><small>searches in top 20 {{ change(summary.top20_change) }}</small></div>
+<div class="tile"><b>{{ "%.1f"|format(summary.average) if summary.average else "–" }}</b><small>average position when ranked</small></div>
+<div class="tile"><b>{{ summary.keywords }}</b><small>keywords, {{ summary.searches }} searches</small></div>
+</div>
+<h2>Keywords</h2>
+<div class="scroll"><table><tr><th>Keyword</th><th>Desktop</th><th>Change</th><th>Mobile</th><th>Change</th><th>Best competitor</th><th>Its position</th></tr>
+{% for r in keywords %}<tr><td><a href="/keyword?q={{ r.keyword|urlencode }}">{{ r.keyword }}</a></td><td>{{ pos(r.desktop) }}{% if multi and r.desktop %} <span class="mute">{{ r.desktop_market|upper }}</span>{% endif %}</td><td>{{ change(r.desktop_change) }}</td><td>{{ pos(r.mobile) }}{% if multi and r.mobile %} <span class="mute">{{ r.mobile_market|upper }}</span>{% endif %}</td><td>{{ change(r.mobile_change) }}</td><td>{{ r.rival or "–" }}</td><td>{{ r.rival_pos or "–" }}</td></tr>
+{% endfor %}</table></div>
+
+{% elif view == "competitors" %}
+<h1>Competitors</h1><p class="sub">Week of {{ week.strftime("%d %b %Y") }}. Counts are searches, desktop and mobile counted separately.</p>
+<div class="scroll"><table><tr><th>Domain</th><th>Type</th><th class="num">Top 3</th><th class="num">Top 10</th><th class="num">Change</th><th class="num">Top 20</th><th class="num">Average position</th></tr>
+{% for r in rows %}<tr class="{{ 'us' if r.group == 'Us' }}"><td>{{ r.domain }}</td><td>{{ r.group }}</td><td class="num">{{ r.top3 }}</td><td class="num">{{ r.top10 }}</td><td class="num">{{ change(r.top10_change) }}</td><td class="num">{{ r.top20 }}</td><td class="num">{{ "%.1f"|format(r.average) if r.average else "–" }}</td></tr>
+{% endfor %}</table></div>
+<h2>Other domains in the top 20</h2><p class="sub">On no list yet. A product that does what ours does belongs under competitors in keywords.json; blogs, guides and platforms go under ignored_domains.</p>
+<div class="scroll"><table><tr><th>Domain</th><th class="num">Top 3</th><th class="num">Top 10</th><th class="num">Top 20</th><th class="num">Average position</th></tr>
+{% for r in unlisted %}<tr><td>{{ r.domain }}</td><td class="num">{{ r.top3 }}</td><td class="num">{{ r.top10 }}</td><td class="num">{{ r.top20 }}</td><td class="num">{{ "%.1f"|format(r.average) if r.average else "–" }}</td></tr>
+{% else %}<tr><td colspan="5" class="mute">None.</td></tr>{% endfor %}</table></div>
+
+{% elif view == "keyword" %}
+<h1>{{ keyword }}</h1><p class="sub">Our best position over the markets, week by week. Position 1 is at the top; gaps mean we were outside the top 20 everywhere.</p>
+{% set colors = {"desktop": "#2e6a4c", "mobile": "#b8402c"} %}
+<svg viewBox="-8 -8 576 136" role="img" aria-label="Our position over time">
+{% for d, line in lines.items() %}{% if line %}<polyline fill="none" stroke="{{ colors[d] }}" stroke-width="2" points="{{ line }}"/>{% if " " not in line %}{% set xy = line.split(",") %}<circle cx="{{ xy[0] }}" cy="{{ xy[1] }}" r="4" fill="{{ colors[d] }}"/>{% endif %}{% endif %}{% endfor %}
+</svg>
+<p class="legend">{% for d, points in trend.items() %}<span style="color:{{ colors[d] }}"><b>{{ d }}</b>: {{ points[-1][1] or "not in top 20" }}</span>{% endfor %}</p>
+{% for d, rows in results.items() %}<h2>Top 20 on {{ d }}, week of {{ week.strftime("%d %b %Y") }}</h2>
+<div class="scroll"><table><tr><th>#</th><th>Domain</th><th>Page</th></tr>
+{% for r in rows %}<tr class="{{ 'us' if r.domain == ours or r.domain.endswith('.' ~ ours) }}"><td>{{ r.rank_group }}</td><td>{{ r.domain }}</td><td class="wrapcell">{{ r.title or r.url }}</td></tr>
+{% endfor %}</table></div>{% endfor %}
+
+{% elif view == "no_gsc" %}
+<h1>Search Console</h1><p class="sub">No data yet. It appears after the first run that can read the property.</p>
+
+{% elif view == "gsc" %}
+<h1>Search Console</h1><p class="sub">What real searchers saw in the 28 days up to {{ last.strftime("%d %b %Y") }}. Lower position is better.</p>
+<div class="tiles"><div class="tile"><b>{{ clicks }}</b><small>clicks on listed queries</small></div><div class="tile"><b>{{ impressions }}</b><small>impressions on listed queries</small></div></div>
+<div class="scroll"><table><tr><th>Query</th><th class="num">Impressions</th><th class="num">Clicks</th><th class="num">Position</th></tr>
+{% for r in rows %}<tr><td>{{ r.query }}</td><td class="num">{{ r.impressions }}</td><td class="num">{{ r.clicks }}</td><td class="num">{{ "%.1f"|format(r.position) if r.position else "–" }}</td></tr>
+{% endfor %}</table></div>
+
+{% elif view == "index" %}
+<h1>Index status</h1><p class="sub">Week of {{ week.strftime("%d %b %Y") }}. The pages in the sitemap, checked with Search Console's URL Inspection{% if panel.index_sample_pattern %}; pages matching {{ panel.index_sample_pattern }} are a weekly sample{% endif %}.</p>
+<div class="tiles"><div class="tile"><b>{{ indexed }} / {{ total }}</b><small>inspected URLs in Google's index</small></div></div>
+<div class="scroll"><table><tr><th>Google's status</th><th class="num">URLs</th></tr>{% for s, n in states %}<tr><td>{{ s }}</td><td class="num">{{ n }}</td></tr>{% else %}<tr><td colspan="2" class="mute">Not checked yet.</td></tr>{% endfor %}</table></div>
+<h2>Pages</h2>
+<div class="scroll"><table><tr><th>Page</th><th>Google's status</th><th>Last crawl</th></tr>{% for r in rows|sort(attribute="verdict") %}<tr><td>{{ r.url }}</td><td class="{{ 'up' if r.verdict == 'PASS' else 'down' }}">{{ r.coverage_state or "–" }}</td><td>{{ r.last_crawl_time.strftime("%d %b %Y") if r.last_crawl_time else "–" }}</td></tr>{% else %}<tr><td colspan="3" class="mute">Not checked yet.</td></tr>{% endfor %}</table></div>
+
+{% elif view == "users" %}
+<h1>Users</h1>
+<p class="sub">Firebase accounts, read live. Times are {{ cfg.timezone }}.</p>
+<div class="tiles">
+<div class="tile"><b>{{ users.total }}</b><small>users</small></div>
+<div class="tile"><b>{{ users.signups_7 }}</b><small>signups, 7 days</small></div>
+<div class="tile"><b>{{ users.signups_30 }}</b><small>signups, 30 days</small></div>
+<div class="tile"><b>{{ users.active_7 }}</b><small>logins, 7 days</small></div>
+<div class="tile"><b>{{ users.active_30 }}</b><small>logins, 30 days</small></div>
+</div>
+<div class="scroll"><table><tr><th>Email</th><th>Signed up</th><th>Last login</th></tr>
+{% for u in users.rows %}<tr><td>{{ u.email }}</td><td>{{ u.signup.strftime("%d %b %Y %H:%M") if u.signup else "–" }}</td><td>{{ u.login.strftime("%d %b %Y %H:%M") if u.login else "–" }}</td></tr>
+{% else %}<tr><td colspan="3" class="mute">No users yet.</td></tr>{% endfor %}</table></div>
+{% elif view == "visitors" %}
+<h1>Visitors</h1>
+<p class="sub">{% if cfg.visitors and cfg.visitors.consent %}Everyone is counted. Visitors who did not allow statistics are unique per day only and never show as returning.{% else %}Nothing is stored in the visitor's browser, so a visitor is a browser on one day: the same person on two days counts twice.{% endif %} Country comes from the browser's time zone. Times are {{ cfg.timezone }}.</p>
+{{ periods_nav("/visitors") }}
+<div class="tiles">
+<div class="tile"><b>{{ stats.totals.visits }}</b><small>visits</small></div>
+<div class="tile"><b>{{ stats.totals.visitors }}</b><small>daily unique visitors, summed</small></div>
+<div class="tile"><b>{{ stats.totals.ai }}</b><small>visits from AI search</small></div>
+{% if cfg.visitors and cfg.visitors.consent %}<div class="tile"><b>{{ stats.totals.returning }}</b><small>returning visits</small></div>{% endif %}
+</div>
+<h2>Visits per day</h2>
+{{ bars(chart, "Visits per day, last " ~ days ~ " days") }}
+<h2>Visits per week</h2>
+<p class="sub">Weeks start on Monday and are labelled with that day. The last 26 weeks; the lighter bar is the week still running.</p>
+{{ bars(weekly, "Visits per week") }}
+<h2>Visits per month</h2>
+<p class="sub">The last 24 months; the lighter bar is the month still running.</p>
+{{ bars(monthly, "Visits per month") }}
+<h2>Visit heat map</h2>
+<div class="scroll"><div class="heat"><span></span>{% for h in range(24) %}<span>{{ h if h % 3 == 0 else "" }}</span>{% endfor %}
+{% for label in ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") %}{% set row = grid[loop.index0] %}<span>{{ label }}</span>{% for n in row %}<i style="--a:{{ (0.08 + n / peak * 0.92)|round(2) if n else 0.04 }}" title="{{ label }} {{ loop.index0 }}:00, {{ n }} visits"></i>{% endfor %}
+{% endfor %}</div></div>
+<div class="pair">
+{{ top("AI search engines", stats.ai, "Engine") }}{{ top("Sources", stats.sources, "Source") }}
+{{ top("Countries", stats.countries, "Country") }}{{ top("Browsers", stats.browsers, "Browser") }}
+{{ top("Devices", stats.devices, "Device") }}{{ top("Operating systems", stats.systems, "System") }}
+{{ top("Referrers", stats.referrers, "Domain") }}{{ top("Site sections", stats.sections, "Section") }}
+{{ top("Campaigns", stats.campaigns, "utm_campaign") }}
+</div>
+{{ top("Landing pages", stats.pages, "Page") }}
+
+{% elif view == "growth" %}
+<h1>Growth</h1>
+{% set P = cfg.growth.people %}
+<p class="sub">{% if has_activity %}{{ P|capitalize }} are signed-in accounts; active means they {{ cfg.growth.active_means or "used the product" }} (weeks run Monday to Sunday, {{ cfg.timezone }}).{% endif %}{% if has_revenue %} Revenue is Stripe payments less refunds.{% endif %} WoW compares the last 7 days with the 7 before, MoM the last 30 days with the 30 before, so a week or month in progress never shows as a drop.</p>
+<p class="days">{% for w in (8, 12, 26, 52) %}{% if w == weeks %}<b>{{ w }} weeks</b>{% else %}<a href="/growth?weeks={{ w }}">{{ w }} weeks</a>{% endif %}{% endfor %}</p>
+<div class="tiles">
+{% if has_activity %}<div class="tile"><b>{{ active.wow.now }} {{ pct(active.wow) }}</b><small>active {{ P }}, 7 days (WoW, before: {{ active.wow.before }})</small></div>
+<div class="tile"><b>{{ active.mom.now }} {{ pct(active.mom) }}</b><small>active {{ P }}, 30 days (MoM, before: {{ active.mom.before }})</small></div>{% endif %}
+{% if has_revenue %}<div class="tile"><b>{{ money.changes.wow.now }} {{ pct(money.changes.wow) }}</b><small>revenue, 7 days (WoW, before: {{ money.changes.wow.before }})</small></div>
+<div class="tile"><b>{{ money.changes.mom.now }} {{ pct(money.changes.mom) }}</b><small>revenue, 30 days (MoM, before: {{ money.changes.mom.before }})</small></div>{% endif %}
+{% if has_activity %}<div class="tile"><b>{{ people }}</b><small>{{ P }} ever</small></div>{% endif %}
+{% if has_revenue %}<div class="tile"><b>{{ money.total }}</b><small>revenue, all time ({{ money.count }} payments)</small></div>
+{% if money.net %}<div class="tile"><b>{{ money.net }}</b><small>after Stripe fees</small></div>{% endif %}{% endif %}
+</div>
+{% if has_activity %}<h2>Weekly active {{ P }}</h2>
+{{ bars(wau, "Active " ~ P ~ " per week") }}
+<h2>Retention</h2>
+<p class="sub">{{ P|capitalize }} by the week they were first active, and the share who came back in each following week.</p>
+<div class="scroll"><table><tr><th>Started</th><th class="num">{{ P|capitalize }}</th><th class="num">Week 1</th><th class="num">Week 2</th><th class="num">Week 3</th><th class="num">Week 4</th></tr>
+{% for r in cohorts|reverse %}<tr><td>{{ r.week.strftime("%d %b %Y") }}</td><td class="num">{{ r.size }}</td>{% for p in r.later %}<td class="num">{% if p is none %}<span class="mute">–</span>{% else %}<span class="ret" style="--a:{{ (0.1 + p / 100 * 0.9)|round(2) }}">{{ p }} %</span>{% endif %}</td>{% endfor %}</tr>
+{% endfor %}</table></div>
+{% endif %}
+{% if has_revenue %}<h2>Revenue per week</h2>
+{{ bars(money.chart, "Revenue per week") }}
+<h2>Latest payments</h2>
+<div class="scroll"><table><tr><th>When</th><th>Email</th><th>What</th><th class="num">Amount</th></tr>
+{% for p in money.recent %}<tr><td>{{ p.when.strftime("%d %b %Y %H:%M") }}</td><td>{{ p.email }}</td><td>{{ p.what }}</td><td class="num">{{ p.amount }}</td></tr>
+{% else %}<tr><td colspan="4" class="mute">No payments yet.</td></tr>{% endfor %}</table></div>{% endif %}
+
+{% elif view == "appstore" %}
+<h1>App Store</h1>
+<p class="sub">Purchases and proceeds come from Apple's daily Sales reports, impressions and page views from its Analytics reports. Both run a day or two behind{% if stats.last.sales or stats.last.analytics %}: sales up to {{ stats.last.sales or "–" }}, analytics up to {{ stats.last.analytics or "–" }}{% endif %}. Apple leaves out analytics from people who opted out of sharing, and hides small numbers.</p>
+{{ periods_nav("/app-store") }}
+<div class="tiles">
+<div class="tile"><b>{{ stats.totals.units }}</b><small>purchases, net of refunds</small></div>
+{% for p in stats.proceeds %}<div class="tile"><b>{{ "%.2f"|format(p.amount) }}</b><small>proceeds in {{ p.currency }}</small></div>{% else %}<div class="tile"><b>0</b><small>proceeds</small></div>{% endfor %}
+<div class="tile"><b>{{ stats.funnel.impressions }}</b><small>impressions</small></div>
+<div class="tile"><b>{{ stats.funnel.page_views }}</b><small>product page views</small></div>
+<div class="tile"><b>{{ "%.1f"|format(conversion) ~ "%" if conversion is not none else "–" }}</b><small>purchases per page view</small></div>
+</div>
+<h2>Purchases per day</h2>
+{{ bars(chart, "Purchases per day") }}
+<div class="pair">
+<div><h2>Countries</h2><div class="scroll"><table><tr><th>Country</th><th class="num">Purchases</th></tr>
+{% for r in stats.countries %}<tr><td>{{ r.name }}</td><td class="num">{{ r.units }}</td></tr>{% else %}<tr><td colspan="2" class="mute">None yet.</td></tr>{% endfor %}</table></div></div>
+<div><h2>How people found the app</h2><div class="scroll"><table><tr><th>Source</th><th class="num">Page views</th><th class="num">Downloads</th></tr>
+{% for r in stats.sources %}<tr><td>{{ r.name }}</td><td class="num">{{ r.page_views }}</td><td class="num">{{ r.downloads }}</td></tr>{% else %}<tr><td colspan="3" class="mute">None yet.</td></tr>{% endfor %}</table></div></div>
+</div>
+<h2>Updates by version</h2>
+<div class="scroll"><table><tr><th>Version</th><th class="num">Updates</th></tr>
+{% for r in stats.versions %}<tr><td>{{ r.name }}</td><td class="num">{{ r.units }}</td></tr>{% else %}<tr><td colspan="2" class="mute">None yet.</td></tr>{% endfor %}</table></div>
+
+{% elif view == "googleplay_empty" %}
+<h1>Google Play</h1>
+<p class="sub">No Play data yet. This tab reads BigQuery's Google Play transfer, which copies Play Console's bulk reports into the <code>{{ cfg.datasets.play }}</code> dataset once a day. Play Console offers the reports' Cloud Storage address only after it has written a first report for the app; then one <code>bq mk --transfer_config</code> (the skill's references/manual-steps.md) starts the transfer, and this tab fills from the next day.</p>
+
+{% elif view == "googleplay" %}
+{%- macro n(v, digits=0) -%}{%- if v is none -%}<span class="mute">–</span>{%- elif digits -%}{{ "%.*f"|format(digits, v) }}{%- else -%}{{ "{:,.0f}".format(v) }}{%- endif -%}{%- endmacro -%}
+<h1>Google Play</h1>
+<p class="sub">From Play Console's reports, copied into BigQuery once a day; they trail by about two days. WoW compares the last 7 days with the 7 before, MoM the last 30 with the 30 before. Installs and uninstalls are devices per day; active devices is the latest day's count.{% if p.missing %} Not in the transfer yet: {{ p.missing|join(", ") }}.{% endif %}</p>
+{{ periods_nav("/google-play") }}
+<div class="tiles">
+<div class="tile"><b>{{ n(s.installs.wow.now) }} {{ pct(s.installs.wow) }}</b><small>installs, 7 days (WoW, before: {{ n(s.installs.wow.before) }})</small></div>
+<div class="tile"><b>{{ n(s.installs.mom.now) }} {{ pct(s.installs.mom) }}</b><small>installs, 30 days (MoM, before: {{ n(s.installs.mom.before) }})</small></div>
+<div class="tile"><b>{{ n(s.uninstalls.mom.now) }}</b><small>uninstalls, 30 days</small></div>
+<div class="tile"><b>{{ n(s.active) }}</b><small>active devices</small></div>
+<div class="tile"><b>{{ n(s.rating, 2) }}</b><small>average rating</small></div>
+<div class="tile"><b>{{ n(s.crashes_30) }} / {{ n(s.anrs_30) }}</b><small>crashes / ANRs, 30 days</small></div>
+<div class="tile"><b>{{ n(s.visitors_30) }}</b><small>store listing visitors, 30 days</small></div>
+<div class="tile"><b>{{ n(s.conversion, 1) }}{% if s.conversion is not none %} %{% endif %}</b><small>of listing visitors installed, 30 days</small></div>
+</div>
+{% if has_installs %}<h2>Installs per day</h2>
+{{ bars(chart, "Installs per day") }}{% endif %}
+<div class="pair">
+<div><h2>Countries, by installs</h2><div class="scroll"><table><tr><th>Country</th><th class="num">Installs</th></tr>
+{% for r in p.countries %}<tr><td>{{ r.name }}</td><td class="num">{{ n(r.installs) }}</td></tr>
+{% else %}<tr><td colspan="2" class="mute">None yet.</td></tr>{% endfor %}</table></div></div>
+<div><h2>Earnings per month</h2><div class="scroll"><table><tr><th>Month</th><th class="num">Amount</th></tr>
+{% for r in p.earnings %}<tr><td>{{ r.month.strftime("%b %Y") }}</td><td class="num">{{ n(r.amount, 2) }} {{ r.currency or "" }}</td></tr>
+{% else %}<tr><td colspan="2" class="mute">None yet. Google reports earnings monthly, once the app sells.</td></tr>{% endfor %}</table></div></div>
+</div>
+
+{% elif view == "report" %}
+<div class="report">{{ html|safe }}</div>
+{% endif %}
+</div></main>
+<script>
+// Pages are built from BigQuery on the server and take a moment: show that the click landed.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("a");
+  if (!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || a.origin !== location.origin || a.getAttribute("href").startsWith("#")) return;
+  document.body.classList.add("is-loading");
+});
+window.addEventListener("pageshow", () => document.body.classList.remove("is-loading"));
+</script>
+</body></html>

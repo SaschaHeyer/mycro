@@ -1,0 +1,68 @@
+{
+  "_comment": "Copy to statistics.json and fill in. Everything project-specific lives here and in keywords.json; the code stays the same. Secrets never go in here: they live in Secret Manager (see setup.sh).",
+  "product": "Mycro",
+  "domain": "usemycro.com",
+  "admin_host": "",
+  "timezone": "America/New_York",
+  "currency": "USD",
+  "gcp": {
+    "project": "niche-ceo-3",
+    "number": "806349486128",
+    "region": "europe-west1",
+    "account": "heyersaschastud@gmail.com",
+    "viewers": [
+      "heyersaschastud@googlemail.com",
+      "heyersaschastud@gmail.com"
+    ]
+  },
+  "theme": {
+    "accent": "#57534E",
+    "paper": "#fff5ec",
+    "ink": "#17120e",
+    "soft": "#5c4d41",
+    "chart": "#57534E"
+  },
+  "modules": {
+    "visitors": true,
+    "growth": false,
+    "users": false,
+    "appstore": false,
+    "googleplay": false,
+    "rankings": false
+  },
+  "visitors": {
+    "consent": false
+  },
+  "datasets": {
+    "site": "site_analytics",
+    "rankings": "seo_rankings",
+    "play": "play"
+  },
+  "growth": {
+    "people": "learners",
+    "active_means": "answered at least one question that week",
+    "activity": {
+      "source": "firestore_days",
+      "collection": "progress",
+      "field": "days"
+    },
+    "revenue": "stripe"
+  },
+  "appstore": {
+    "app_id": "0000000000",
+    "sku": "example-app",
+    "vendor_number": "00000000",
+    "key_id": "XXXXXXXXXX",
+    "issuer_id": "00000000-0000-0000-0000-000000000000"
+  },
+  "googleplay": {
+    "_comment": "package is the app's application id. bucket is the id between gs:// and the next / in Play Console, Download reports, Copy Cloud Storage URI; Play Console shows it only after it has written a first report for the app. table_suffix is any short tag, unique per transfer in the dataset.",
+    "package": "com.example.app",
+    "bucket": "",
+    "table_suffix": "GP"
+  },
+  "rankings": {
+    "dataforseo_secret_project": "a-project-that-already-has-DATAFORSEO_LOGIN",
+    "gsc_site": "sc-domain:example.com"
+  }
+}
