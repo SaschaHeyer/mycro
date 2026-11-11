@@ -1,0 +1,64 @@
+{
+  "_comment": "The fixed weekly panel. Keep keywords stable: a changed keyword starts a new series, so add rather than edit. competitors are products only (apps or services that do what ours does); the first one is the report's main rival. Blogs, guides and platforms that only rank for the topic go under ignored_domains, so the Competitors page stops suggesting them. Pick competitors from the first run's 'Other domains in the top 20', checking each site. index_sample_pattern: optional URL part of a page kind too numerous to inspect every week (e.g. /question/).",
+  "devices": [
+    "desktop",
+    "mobile"
+  ],
+  "depth": 20,
+  "our_domain": "example.com",
+  "competitors": {
+    "Direct competitors": [
+      "rival-one.com",
+      "rival-two.app"
+    ],
+    "Apps with a similar feature": [
+      "bigger-suite.dev"
+    ]
+  },
+  "ignored_domains": [
+    "google.com",
+    "youtube.com",
+    "apps.apple.com",
+    "play.google.com",
+    "wikipedia.org",
+    "reddit.com",
+    "facebook.com",
+    "x.com",
+    "linkedin.com",
+    "medium.com",
+    "quora.com",
+    "github.com",
+    "dev.to",
+    "news.ycombinator.com",
+    "stackoverflow.com"
+  ],
+  "markets": [
+    {
+      "id": "us",
+      "location_code": 2840,
+      "language_code": "en",
+      "keywords": "en"
+    },
+    {
+      "id": "gb",
+      "location_code": 2826,
+      "language_code": "en",
+      "keywords": "en"
+    }
+  ],
+  "keyword_sets": {
+    "en": [
+      "example app",
+      "example alternative",
+      "how to do the thing",
+      "best tool for the thing"
+    ]
+  },
+  "sitemaps": [
+    "https://example.com/sitemap.xml"
+  ],
+  "key_pages": [
+    "https://example.com/"
+  ],
+  "index_sample_pattern": null
+}

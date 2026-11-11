@@ -1,0 +1,4 @@
+# Test environment: the job's runtime set plus the test runner.
+#   uv run --with-requirements requirements-dev.txt pytest tests -q
+-r requirements.txt
+pytest>=8
