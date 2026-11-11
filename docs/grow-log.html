@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-10","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-11","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -176,6 +176,21 @@
       The full Mycro app keeps every season's per-strain history in a real account you log into from
       any device — no link to keep track of. <a href="/#founding">Become a Founding Grower · $99</a>
     </p>
+  </div>
+
+  <!-- Days to colonise, per mix within a species (I172; appears once one species has two mixes measured) -->
+  <div class="results no-print" id="mixPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">How fast each mix colonises</h3>
+      <span class="muted" style="font-size:.82rem">Days from spawning to the day you moved the bags to fruiting, from your own log</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="mixTable">
+        <thead><tr><th>Species</th><th>Mix</th><th>Runs measured</th><th>Typical days</th><th>Fastest – slowest</th></tr></thead>
+        <tbody id="mixBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="mixNote" style="font-size:.84rem;margin:12px 2px 0"></p>
   </div>
 
   <!-- Cost per run → cost per pound (appears once a run has costs on it) -->
@@ -599,7 +614,7 @@
 <script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
-<script src="/csvimport.js?v=3"></script>
+<script src="/csvimport.js?v=4"></script>
 <script src="/account.js?v=17"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
@@ -764,6 +779,7 @@ function validBatch(b){
     (b.splitFrom==null || typeof b.splitFrom==='string') && // batch its bags were split off (I137)
     (b.supplier==null || typeof b.supplier==='string') &&   // where the spawn came from (I145)
     (b.gen==null || typeof b.gen==='number') &&             // culture generation, typed (I150)
+    (b.fruitAt==null || typeof b.fruitAt==='string') &&     // day it moved to fruiting, kept after (I172)
     (b.priceG==null || typeof b.priceG==='number');
 }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
@@ -1742,6 +1758,87 @@ function sourceVerdict(rows, none){
   return '<b>'+esc(worst.name)+'</b> has lost '+worst.lost+' of the '+worst.started+' bags it supplied so far ('+pct(worst)+'), against '+
     best.lost+' of '+best.started+' ('+pct(best)+') from <b>'+esc(best.name)+'</b>.'+clue+gapTail;
 }
+/* ---- days to colonise, per mix (I172) ----
+   A run's stageSince is overwritten on every move, so the day it went into fruiting (the day the
+   grower judged it fully colonised) used to vanish at the first harvest. moveStage() is the ONE
+   place a stage changes: it keeps that day in fruitAt as the run leaves fruiting, and stamps it
+   as the run enters. A run already fruiting before this shipped still reads it off stageSince,
+   and that is written down the moment it moves on. Nothing is written on load. */
+function moveStage(b, to, day){
+  day = day || today();
+  if(b.stage==='fruiting' && !b.fruitAt && typeof b.stageSince==='string') b.fruitAt=b.stageSince;
+  if(to==='fruiting' && !b.fruitAt) b.fruitAt=day;
+  b.stage=to; b.stageSince=day;
+}
+function fruitDay(b){
+  if(typeof b.fruitAt==='string' && /^\d{4}-\d{2}-\d{2}$/.test(b.fruitAt)) return b.fruitAt;
+  return (b.stage==='fruiting' && typeof b.stageSince==='string') ? b.stageSince : null;
+}
+function coloniseDays(b){
+  var f=fruitDay(b); if(!f || typeof b.inoculatedOn!=='string') return null;
+  var d=Math.round((parseIso(f)-parseIso(b.inoculatedOn))/86400000);
+  return (isFinite(d) && d>=0 && d<=365) ? d : null;
+}
+function medianOf(a){
+  var x=a.slice().sort(function(p,q){return p-q;}), m=x.length>>1;
+  return x.length%2 ? x[m] : (x[m-1]+x[m])/2;
+}
+/* Rows grouped by species, then mix. Seeded examples never count, and a split that carries its
+   origin's own fruiting day (same mix) is the same measurement, so it is counted once. */
+function mixRows(){
+  var by={}, seen={};
+  state.batches.forEach(function(b){
+    if(isSeededBatch(b) || !SPECIES[b.species]) return;
+    var d=coloniseDays(b); if(d==null) return;
+    var o=b.splitFrom ? find(b.splitFrom) : null;
+    if(o && fruitDay(o)===fruitDay(b) && methodKey(o)===methodKey(b) && o.inoculatedOn===b.inoculatedOn) return;
+    var sk=speciesKey(b), sp=by[sk]||(by[sk]={label:speciesLabel(b), mixes:{}});
+    var mk=methodKey(b), m=sp.mixes[mk]||(sp.mixes[mk]={name:methodOf(b), days:[]});
+    m.days.push(d);
+  });
+  return Object.keys(by).map(function(k){
+    var sp=by[k];
+    sp.list=Object.keys(sp.mixes).map(function(mk){
+      var m=sp.mixes[mk]; m.med=medianOf(m.days);
+      m.min=Math.min.apply(null,m.days); m.max=Math.max.apply(null,m.days); return m;
+    }).sort(function(a,b){ return a.med-b.med || b.days.length-a.days.length; });
+    return sp;
+  }).filter(function(sp){ return sp.list.length>=2; });
+}
+/* A faster mix is named only when it has two measured runs, so does the one it beats, and every
+   run on it came in sooner than every run on the other. Two runs that overlap say nothing yet,
+   however far apart their middles are: spawn rate, temperature and the spawn itself move this too. */
+function mixVerdict(sp){
+  var ok=sp.list.filter(function(m){ return m.days.length>=2; });
+  if(ok.length<2) return null;
+  var fast=ok[0], slow=ok[ok.length-1];
+  if(fast.max>=slow.min) return null;
+  return {fast:fast, slow:slow};
+}
+function renderMix(){
+  var panel=$('mixPanel'); if(!panel) return;
+  var sps=mixRows();
+  if(!sps.length){ panel.style.display='none'; return; }
+  var fmt=function(n){ return (Math.round(n*10)/10)+' day'+(n===1?'':'s'); };
+  $('mixBody').innerHTML = sps.map(function(sp){
+    return sp.list.map(function(m,i){
+      return '<tr><td>'+(i?'':'<b>'+esc(sp.label)+'</b>')+'</td><td>'+esc(m.name)+'</td><td>'+m.days.length+'</td>'+
+        '<td>'+fmt(m.med)+'</td><td>'+(m.days.length>1?m.min+' – '+m.max:'—')+'</td></tr>';
+    }).join('');
+  }).join('');
+  var said=[];
+  sps.forEach(function(sp){
+    var v=mixVerdict(sp); if(!v) return;
+    said.push('<b>'+esc(sp.label)+'</b>: every run on '+esc(v.fast.name)+' ('+v.fast.days.length+') went to fruiting sooner than every run on '+
+      esc(v.slow.name)+' ('+v.slow.days.length+'), typically '+fmt(v.fast.med)+' against '+fmt(v.slow.med)+'.');
+  });
+  $('mixNote').innerHTML = (said.length ? said.join(' ')+' ' :
+      'No mix is clearly faster yet: a mix needs two measured runs, and every one of them sooner than every run on the other. ')+
+    'Spawn rate, temperature and the spawn itself move this too, so compare runs started around the same time. '+
+    'A run counts from the day you press <b>Move to fruiting</b>; runs harvested before November 2026 did not keep that day.';
+  panel.style.display='block';
+}
+
 function renderSources(){
   var wrap=$('srcWrap'), set=$('srcSet'), dl=$('supplierList');
   if(dl) dl.innerHTML = knownSuppliers().map(function(n){ return '<option value="'+esc(n)+'"></option>'; }).join('');
@@ -1940,8 +2037,7 @@ function saveContam(e,id){
   if(b.stage!=='contaminated'){
     // Capture the stage BEFORE the mark overwrites it. This is the only moment it is knowable.
     b.lostAt = b.stage;
-    b.stage  = 'contaminated';
-    b.stageSince = today();
+    moveStage(b, 'contaminated');
     editingYieldId = null;
   }
   editingContamId=null; save(); render();
@@ -2099,6 +2195,7 @@ function saveSplit(e,id){
     parentId:b.parentId||null, method:b.method||null, code:null,
     supplier:b.supplier||null,   // a record carries its own facts (I83); splitFrom would also find it
     gen:(window.MycroGen ? MycroGen.clean(b.gen) : null),   // same bags, same generation (I150)
+    fruitAt:b.fruitAt||null,   // same bags, same day they went to fruiting (I172)
     costs:c[1], priceG:(typeof b.priceG==='number'?b.priceG:null),
     notes:b.notes||'', labelAt:null,
     // Where these bags came from, so they can go back (I137). Without it the only "undo" was
@@ -2112,7 +2209,7 @@ function saveSplit(e,id){
   if(why==='contam'){ editingContamId=nb.id; }
   else if(why==='next'){
     if(nx[0]==='harvest'){ editingYieldId=nb.id; yieldMode='append'; }
-    else { nb.stage=nx[0]; nb.stageSince=today(); }
+    else moveStage(nb, nx[0]);
   }
   save(); render();
   if(window.track) try{ track('growlog_batch_split',{why:why, moved:k, left:b.blocks}); }catch(_){}
@@ -2281,6 +2378,7 @@ function paint(){
   setUnitLabels();
   renderSummary();
   renderStrains();
+  renderMix();
   renderCosts();
   renderLoss();
   renderSources();
@@ -2497,7 +2595,7 @@ function saveYield(e,id){
   var wasHarvested = b.stage==='harvested';
   b.flushes=(Array.isArray(b.flushes)?b.flushes:[]).concat([g]);
   b.yieldG=b.flushes.reduce(function(a,x){return a+x;},0);
-  b.stage='harvested'; b.stageSince=today();
+  moveStage(b, 'harvested');
   editingYieldId=null; yieldMode='append'; save(); render();
   if(window.track) try{ track('growlog_harvest',{flush:b.flushes.length}); }catch(_){}
   // Only nudge on the first harvest of a batch (the aha moment), not on every extra flush.
@@ -2544,7 +2642,7 @@ document.addEventListener('click',function(e){
     if(window.track) try{ track('growlog_species_fix',{}); }catch(_){}
     return;
   }
-  if(act==='advance' && b){ b.stage=el.getAttribute('data-to'); b.stageSince=today(); editingYieldId=null; save(); render(); }
+  if(act==='advance' && b){ moveStage(b, el.getAttribute('data-to')); editingYieldId=null; save(); render(); }
   else if(act==='harvest' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='logflush' && b){ editingYieldId=id; yieldMode='append'; render(); }
   else if(act==='edityield' && b){ editingYieldId=id; yieldMode='edit'; render(); }

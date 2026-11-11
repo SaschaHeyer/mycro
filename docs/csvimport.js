@@ -257,6 +257,8 @@
         notes: ''
       };
       if (flushes) b.flushes = flushes;
+      // The sheet's own "fully colonised" day is the day the Grow Log keeps as fruitAt (I172).
+      if (colD && colD >= date && stage !== 'inoculated' && stage !== 'colonizing') b.fruitAt = colD;
       if (stage === 'contaminated') {
         var ct = cell(r, 'cause');
         b.cause = causeOf(ct, ctx.CAUSE);
