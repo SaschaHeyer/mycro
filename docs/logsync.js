@@ -177,6 +177,7 @@
       timer=setTimeout(function(){ timer=null; push(); },1500);
     }
     /* Read the link. Resolves true when what is on screen changed. */
+    var WAKE_GAP_MS=90000;
     function pull(){
       var id=get(CLOUD);
       if(!id || running || timer) return Promise.resolve(false);
@@ -214,6 +215,20 @@
       pull();
     }
     document.addEventListener('visibilitychange',quiet);
+    /* A laptop closed with the app open wakes up still "visible": no visibilitychange fires, so the
+       page would show (and print labels from) the copy it had when the lid closed. Found at a farm
+       where the phone added batches overnight and the laptop printed from its old copy. Two more
+       ways back to the page: focus (throttled), and a clock jump that only sleep produces. */
+    var lastFocus=0;
+    window.addEventListener('focus',function(){
+      var n=Date.now(); if(n-lastFocus<15000) return; lastFocus=n; quiet();
+    });
+    window.addEventListener('pageshow',function(e){ if(e.persisted) quiet(); });
+    var tick=Date.now();
+    setInterval(function(){
+      var n=Date.now(), slept=n-tick>WAKE_GAP_MS; tick=n;
+      if(slept) quiet();
+    },30000);
     window.addEventListener('online',function(){ if(dirty()) push(); else quiet(); });
     /* The other tool, or another tab, wrote this browser's copy: this page's is now old. */
     window.addEventListener('storage',function(e){ if(e.key===KEY && e.newValue && cfg.reload) cfg.reload(); });
