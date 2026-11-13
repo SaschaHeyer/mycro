@@ -765,6 +765,17 @@
         pull(false);
       }
       document.addEventListener('visibilitychange', again);
+      /* A laptop shut with the app open wakes still "visible": no visibilitychange fires (I173 on
+         the link, ported here in I175 so a signed-in laptop does not print labels from the copy it
+         had before the lid closed). Focus shares the 15 s throttle above; a bfcache return and a
+         clock jump that only sleep produces are the other two ways back. */
+      w.addEventListener('focus', again);
+      w.addEventListener('pageshow', function (e) { if (e.persisted) again(); });
+      var tick = Date.now();
+      setInterval(function () {
+        var n = Date.now(), slept = n - tick > 90000; tick = n;
+        if (slept) again();
+      }, 30000);
       w.addEventListener('online', function () { if (isDirty()) pushNow(); else again(); });
     },
     signedIn: signedIn,
