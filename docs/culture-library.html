@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-11","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-13","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -117,6 +117,25 @@
       <div class="kpi" id="k-contam-card"><div class="v" id="k-contam">–</div><div class="l">Culture loss rate</div></div>
       <div class="kpi"><div class="v" id="k-traced">–</div><div class="l">Blocks traced to a culture</div></div>
     </div>
+  </div>
+
+  <!-- On the shelf (I174): every live culture by type, ready or still running. Sanctuary Moon
+       asked for "a list of all of the liquid culture jars, how many in total and which ones are
+       ready", and the working list only shows what has NOT finished, so it read 4 of 8. -->
+  <div class="results" id="shelfPanel" style="display:none;margin-bottom:18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">🗃 On the shelf — what you have, by type</h3>
+      <button class="mini" id="shelfCopy" type="button">📋 Copy this list</button>
+    </div>
+    <div id="shelfTypes" class="shelfTypes"></div>
+    <p id="shelfSum" style="margin:10px 2px 12px;font-size:.92rem"></p>
+    <div style="overflow-x:auto">
+      <table class="strain" id="shelfTable">
+        <thead><tr><th>Culture</th><th>Type</th><th>Ready?</th><th>Made</th><th></th></tr></thead>
+        <tbody id="shelfBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="shelfNote" style="font-size:.84rem;margin:12px 2px 0"></p>
   </div>
 
   <!-- Working cultures: the day count and the "this is going long" flag the Grow Log has
@@ -1104,6 +1123,143 @@ function renderWork(){
         'cultures of the same species and type and this list starts flagging against <b>your own</b> pace instead.');
   panel.style.display='block';
 }
+/* ---- on the shelf (I174) ----
+   The working list answers "what is still running". A grower planning the week asks the other
+   question: how many of each do I HAVE, and which can I use today. Sanctuary Moon tried to count
+   their liquid culture jars off the working list and got 4 of 8, because the four that had
+   finished are, correctly, not "still running".
+   Ready = healthy AND a colonisation date. Running = healthy with none yet. Used up, lost and
+   discarded are not on a shelf. Our seeded examples never count once the grower has their own
+   (I78): a stock count that includes our fiction sends someone to look for a jar that does not
+   exist. A running culture that has not been marked is NOT called ready, because the only thing
+   the page knows is that nobody has said it finished; the note says so, and the row offers the
+   same one colonisation form the working list opens. */
+var shelfType = 'all';
+var SHELF_ORDER = ['lc','grain','petri'];
+function shelfCultures(){
+  var own = (function(){ try{ return hasOwnData(); }catch(_){ return true; } })();
+  return liveCultures().filter(function(c){
+    if(c.status!=='healthy' || !CTYPE[c.type]) return false;
+    if(own && window.MycroSamples && MycroSamples.isSample('cultures', c.id)) return false;
+    return true;
+  });
+}
+function shelfReady(c){ return !!c.colonisedAt; }
+function shelfSorted(list){
+  return list.slice().sort(function(a,b){
+    var t = SHELF_ORDER.indexOf(a.type) - SHELF_ORDER.indexOf(b.type);
+    if(t) return t;
+    var r = (shelfReady(b)?1:0) - (shelfReady(a)?1:0);
+    if(r) return r;
+    var d = String(a.createdAt||'').localeCompare(String(b.createdAt||''));
+    return d || String(a.code||'').localeCompare(String(b.code||''));
+  });
+}
+function shelfPlural(type, n){
+  var w = {lc:['liquid culture','liquid cultures'], grain:['grain spawn','grain spawns'], petri:['petri dish','petri dishes']}[type];
+  return n+' '+w[n===1?0:1];
+}
+/* One sentence per type, the same words on screen and in the copied list. Grain also names its
+   containers, because a grain culture can be several bags and the shelf is counted in bags. */
+function shelfLine(type, list){
+  var ready = list.filter(shelfReady).length, run = list.length - ready;
+  var s = shelfPlural(type, list.length);
+  if(type==='grain'){ var u = unitPhrase(list); if(u) s += ' ('+u+')'; }
+  return s+': '+ready+' ready, '+run+' still running';
+}
+function shelfState(c){
+  if(shelfReady(c)){
+    var d = colonisedDays(c);
+    return {ready:true, text:'Ready', sub:'colonised '+fmtShort(c.colonisedAt)+(d!=null?' · took '+d+'d':'')};
+  }
+  return {ready:false, text:'Running', sub:'day '+daysSince(c.createdAt)+(c.shakenAt?' · shaken':'')};
+}
+function fmtShort(isoDate){
+  var d = parseIso(isoDate); if(!isFinite(d)) return String(isoDate||'');
+  return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+}
+function shelfGroups(){
+  var all = shelfCultures(), g = {};
+  all.forEach(function(c){ (g[c.type] = g[c.type] || []).push(c); });
+  return g;
+}
+function renderShelf(){
+  var panel = $('shelfPanel'), g = shelfGroups();
+  var types = SHELF_ORDER.filter(function(t){ return g[t] && g[t].length; });
+  if(!types.length){ panel.style.display='none'; return; }
+  if(shelfType!=='all' && !g[shelfType]) shelfType = 'all';
+  var total = types.reduce(function(a,t){ return a+g[t].length; },0);
+  $('shelfTypes').innerHTML =
+    '<button type="button" class="shelfChip'+(shelfType==='all'?' on':'')+'" data-shelf="all">All · '+total+'</button>'+
+    types.map(function(t){
+      return '<button type="button" class="shelfChip'+(shelfType===t?' on':'')+'" data-shelf="'+t+'">'+
+        CTYPE[t].icon+' '+esc(CTYPE[t].label)+' · '+g[t].length+'</button>';
+    }).join('');
+  var shown = shelfType==='all' ? types : [shelfType];
+  $('shelfSum').innerHTML = shown.map(function(t){ return '<span class="shelfLine">'+esc(shelfLine(t, g[t]))+'</span>'; }).join('<br>');
+  var rows = shelfSorted(shown.reduce(function(a,t){ return a.concat(g[t]); }, []));
+  $('shelfBody').innerHTML = rows.map(function(c){
+    var st = shelfState(c), n = jarsOf(c);
+    return '<tr data-id="'+esc(c.id)+'">'+
+      '<td class="sname">'+esc(c.code)+
+        '<div class="sub">'+esc(speciesLabelOf(c) || 'unknown species')+
+        (c.grain ? ' · '+esc(c.grain) : '')+(c.notes ? ' · '+esc(c.notes) : '')+'</div></td>'+
+      '<td><span class="sub">'+CTYPE[c.type].icon+' '+esc(CTYPE[c.type].label)+
+        (n ? ' · '+esc(unitWord(n, containerOf(c))) : '')+'</span></td>'+
+      '<td class="'+(st.ready?'lg':'')+'">'+(st.ready?'✓ ':'')+st.text+'<div class="sub">'+esc(st.sub)+'</div></td>'+
+      '<td><span class="sub">'+esc(fmtShort(c.createdAt))+'</span></td>'+
+      '<td>'+(st.ready ? '' : '<button class="mini" data-act="goperf" data-id="'+esc(c.id)+'">✓ Record colonisation</button>')+'</td>'+
+    '</tr>';
+  }).join('');
+  var running = rows.filter(function(c){ return !shelfReady(c); }).length;
+  $('shelfNote').innerHTML = 'Ready means you recorded the day it was fully colonised. '+
+    (running ? '<b>Running</b> only means nobody has said it finished yet: if one already has, '+
+      '<b>✓ Record colonisation</b> moves it to ready. ' : '')+
+    'Used up, contaminated and discarded cultures are not counted here.';
+  panel.style.display='block';
+}
+/* Plain text for a message or a note on the fridge. Same lines as the screen. */
+function shelfText(){
+  var g = shelfGroups();
+  var types = SHELF_ORDER.filter(function(t){ return g[t] && g[t].length && (shelfType==='all' || shelfType===t); });
+  return types.map(function(t){
+    var list = shelfSorted(g[t]);
+    var line = function(c){
+      var st = shelfState(c), n = jarsOf(c), sp = speciesLabelOf(c);
+      return '  '+c.code+(sp?' ('+sp+')':'')+(n?' · '+unitWord(n, containerOf(c)):'')+' · '+st.sub;
+    };
+    var ready = list.filter(shelfReady), run = list.filter(function(c){ return !shelfReady(c); });
+    var out = [CTYPE[t].label.toUpperCase()+' · '+shelfLine(t, list)];
+    if(ready.length) out.push('Ready:', ready.map(line).join('\n'));
+    if(run.length) out.push('Still running:', run.map(line).join('\n'));
+    return out.join('\n');
+  }).join('\n\n');
+}
+window.mycroShelfText = shelfText;
+$('shelfTypes').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('[data-shelf]') : null;
+  if(!el) return;
+  shelfType = el.getAttribute('data-shelf');
+  renderShelf();
+  if(window.track) try{ track('culture_shelf_filter',{type:shelfType}); }catch(_){}
+});
+$('shelfCopy').addEventListener('click', function(){
+  var text = shelfText(), btn = this;
+  function done(ok){
+    btn.textContent = ok ? 'Copied ✓' : 'Could not copy';
+    setTimeout(function(){ btn.textContent = '📋 Copy this list'; }, 2000);
+  }
+  function fallback(){
+    try{
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly','');
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+      var ok = document.execCommand('copy'); document.body.removeChild(ta); done(ok);
+    }catch(_){ done(false); }
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function(){ done(true); }, fallback);
+  else fallback();
+  if(window.track) try{ track('culture_shelf_copy',{type:shelfType}); }catch(_){}
+});
 /* The archive bar: always says how much is filed away, and opens it in place. */
 var archiveOpen = false;
 function renderArchive(){
@@ -1824,7 +1980,7 @@ function renderBook(){
     $('f-contact').value=[c.phone,c.email].filter(Boolean).join(' · ');
   });
 })();
-function paint(){ render(); renderSummary(); renderSampleNote(); renderWork(); renderRisk(); renderGrainHint(); renderGrains(); renderStrains(); renderArchive(); renderBook(); }
+function paint(){ render(); renderSummary(); renderSampleNote(); renderShelf(); renderWork(); renderRisk(); renderGrainHint(); renderGrains(); renderStrains(); renderArchive(); renderBook(); }
 
 /* ---- actions ---- */
 function setKind(k){
@@ -1893,7 +2049,7 @@ function addCulture(parentId, isSource, type){
 }
 /* The work queue is a shortcut into the tree, not a second editor: it opens the same
    colonisation form on the same node, so there is one place the value is written. */
-$('workPanel').addEventListener('click', function(e){
+function goPerfClick(e){
   var el = e.target.closest ? e.target.closest('[data-act="goperf"]') : null;
   if(!el) return;
   e.preventDefault();
@@ -1904,7 +2060,9 @@ $('workPanel').addEventListener('click', function(e){
   if(pf){ try{ pf.focus({preventScroll:true}); }catch(_){ pf.focus(); } }
   var n = document.getElementById('node-'+id);
   if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
-});
+}
+$('workPanel').addEventListener('click', goPerfClick);
+$('shelfPanel').addEventListener('click', goPerfClick);
 /* Same shortcut shape from the traceback (I117): "name it" opens the one cause form, on the
    node itself, rather than growing a second editor inside the risk panel. */
 $('riskBody').addEventListener('click', function(e){
@@ -2625,6 +2783,9 @@ function ownWorkCount(){
   padding:12px 16px;margin:0 0 16px;font-size:.88rem;color:var(--muted);
   gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .samplebar b{color:var(--ink)}
+.shelfTypes{display:flex;flex-wrap:wrap;gap:6px}
+.shelfChip{font:inherit;font-size:.84rem;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.shelfChip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 table.strain td.wklong{color:#9a3417;font-weight:700}
 .addbox .opt{font-weight:600;color:var(--muted);opacity:.75}
 .addbox select{font:inherit;font-size:.92rem;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
