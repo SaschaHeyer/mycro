@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-13","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-14","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -525,6 +525,7 @@ var BATCH_STAGE = {inoculated:'Inoculated',colonizing:'Colonizing',fruiting:'Fru
 
 var addingUnder = null;   // {parentId, type} while an inline "add culture" form is open
 var recordingOn = null;   // culture id while its colonisation-performance form is open
+var recordingMode = null; // 'shake' | 'done' | null (I176): which date the button that opened the form was for
 var attachingId = null;   // culture id while its "attach to a source" picker is open (I79)
 var speciesOn  = null;    // orphan-root id while its "set species" picker is open (I84)
 var contamOn   = null;    // culture id while its "what contaminated it" form is open (I117)
@@ -909,13 +910,28 @@ function ownPace(key, type){
   if(d.length < 2) return null;
   return d.reduce(function(a,b){ return a+b; },0)/d.length;
 }
+/* Not every grain is shaken (I176). Sanctuary Moon moved to oats because they colonise fast
+   enough to go straight to inoculation; only their millet ever needed the shake. So the shake is
+   offered, never assumed: once two of the grower's OWN finished bags of the same grain went
+   through with no shake recorded (and none of that grain was shaken), the working list stops
+   asking for one on that grain. Archived bags count, they are still evidence. Seeded never. */
+function shakeSkipped(c){
+  var g = grainOf(c); if(!g) return false;
+  var k = grainKey(g); if(!k) return false;
+  var done = state.cultures.filter(function(x){
+    return x!==c && isGrain(x) && !isSeededCulture(x) && grainOf(x) && grainKey(grainOf(x))===k && x.colonisedAt;
+  });
+  if(done.length < 2) return false;
+  return !done.some(function(x){ return !!x.shakenAt; });
+}
 function workingCultures(){
   return liveCultures().filter(function(c){
     return c.status==='healthy' && !c.colonisedAt;
   }).map(function(c){
     var sp = speciesOf(c), key = paceKey(c), pace = ownPace(key, c.type), days = daysSince(c.createdAt);
     return {c:c, sp:sp, days:days, pace:pace, long: pace!=null && days > Math.round(pace*1.5),
-            shook: shakenDays(c), needsShake: isGrain(c) && !c.shakenAt,
+            shook: shakenDays(c), needsShake: isGrain(c) && !c.shakenAt && !shakeSkipped(c),
+            skipsShake: isGrain(c) && !c.shakenAt && shakeSkipped(c),
             shakePace: isGrain(c) ? ownShakePace(key) : null};
   }).sort(function(a,b){ return b.days - a.days; });
 }
@@ -1099,6 +1115,7 @@ function renderWork(){
     else if(r.needsShake) against += '<div class="sub">'+(r.shakePace!=null
       ? 'you usually shake around day '+Math.round(r.shakePace)
       : 'not shaken yet')+'</div>';
+    else if(r.skipsShake) against += '<div class="sub">your '+esc(grainOf(r.c))+' usually goes through with no shake</div>';
     return '<tr>'+
       '<td class="sname">'+esc(r.c.code)+
         '<div class="sub">'+esc(r.sp ? speciesLabelOf(r.c) : 'unknown species')+
@@ -1107,8 +1124,7 @@ function renderWork(){
       '<td'+(r.long?' class="wklong"':'')+'>day '+r.days+
         (r.shook!=null?' · shaken day '+r.shook:'')+(r.long?' · running long':'')+'</td>'+
       '<td>'+against+'</td>'+
-      '<td><button class="mini" data-act="goperf" data-id="'+esc(r.c.id)+'">'+
-        (r.needsShake ? '🥄 Record shake' : '✓ Record colonisation')+'</button></td>'+
+      '<td>'+perfButtons(r.c, 'goperf', r.needsShake)+'</td>'+
     '</tr>';
   }).join('');
   $('workNote').innerHTML = 'Counted from the day you made it. Recording the day one finished takes it off '+
@@ -1208,7 +1224,7 @@ function renderShelf(){
         (n ? ' · '+esc(unitWord(n, containerOf(c))) : '')+'</span></td>'+
       '<td class="'+(st.ready?'lg':'')+'">'+(st.ready?'✓ ':'')+st.text+'<div class="sub">'+esc(st.sub)+'</div></td>'+
       '<td><span class="sub">'+esc(fmtShort(c.createdAt))+'</span></td>'+
-      '<td>'+(st.ready ? '' : '<button class="mini" data-act="goperf" data-id="'+esc(c.id)+'">✓ Record colonisation</button>')+'</td>'+
+      '<td>'+(st.ready ? '' : '<button class="mini" data-act="goperf" data-mode="done" data-id="'+esc(c.id)+'">✓ Record colonisation</button>')+'</td>'+
     '</tr>';
   }).join('');
   var running = rows.filter(function(c){ return !shelfReady(c); }).length;
@@ -1643,9 +1659,8 @@ function cultureNodeHtml(c, depth){
   h += '<div class="nactions">';
   h += '<button class="mini" data-act="edit" data-id="'+c.id+'">✎ Edit</button>';
   if(c.status!=='contaminated')
-    h += '<button class="mini" data-act="perf" data-id="'+c.id+'">'+
-      (cd!=null ? '✎ Edit colonisation'
-                : (isGrain(c) && sd==null ? '🥄 Record shake' : '✓ Record colonisation'))+'</button>';
+    h += (cd!=null ? '<button class="mini" data-act="perf" data-mode="edit" data-id="'+c.id+'">✎ Edit colonisation</button>'
+                   : perfButtons(c, 'perf', isGrain(c) && sd==null && !shakeSkipped(c)));
   CTYPE[c.type].next.forEach(function(t){
     h += '<button class="mini" data-act="new" data-parent="'+c.id+'" data-type="'+t+'">+ '+CTYPE[t].label+'</button>';
   });
@@ -1717,15 +1732,28 @@ function contamFormHtml(c){
       '<button class="mini ghosty" data-act="cancelContam">Cancel</button></div></div>';
   return h;
 }
+/* The two dates a running grain bag can get (I176). One button used to read "Record shake" on
+   every unshaken bag and opened a form with "Fully colonised" already set to today, so recording
+   a shake also finished the bag, and a bag that is never shaken had to be finished through the
+   shake button. Now each button says which date it is for, and only that date is filled in. */
+function perfButtons(c, act, offerShake){
+  var id = esc(c.id), h = '';
+  if(offerShake) h += '<button class="mini" data-act="'+act+'" data-mode="shake" data-id="'+id+'">🥄 Record shake</button>';
+  h += '<button class="mini" data-act="'+act+'" data-mode="done" data-id="'+id+'">'+
+    (isGrain(c) ? '✓ Fully colonised' : '✓ Record colonisation')+'</button>';
+  return h;
+}
 function perfFormHtml(c){
   var h = '<div class="addbox">';
   /* Grain only: the shake belongs between made and finished, and it is the milestone a grower
      acts on — one form, so there is still exactly one place each date is written. */
   if(isGrain(c))
     h += '<div class="abrow"><label>Shaken on <span class="opt">optional</span></label>'+
-      '<input id="p-shake" type="date" value="'+esc(c.shakenAt||'')+'" min="'+esc(c.createdAt)+'"></div>';
-  h += '<div class="abrow"><label>Fully colonised on</label>'+
-      '<input id="p-date" type="date" value="'+esc(c.colonisedAt||today())+'" min="'+esc(c.createdAt)+'"></div>'+
+      '<input id="p-shake" type="date" value="'+esc(c.shakenAt||(recordingMode==='shake'?today():''))+'" min="'+esc(c.createdAt)+'"></div>';
+  /* A shake is not the end of the run: opened to record one, the finish date starts empty. */
+  var doneVal = c.colonisedAt || (isGrain(c) && recordingMode==='shake' ? '' : today());
+  h += '<div class="abrow"><label>Fully colonised on'+(isGrain(c)?' <span class="opt">when it is</span>':'')+'</label>'+
+      '<input id="p-date" type="date" value="'+esc(doneVal)+'" min="'+esc(c.createdAt)+'"></div>'+
     '<div class="abrow"><label>Growth thickness</label><select id="p-vigor">'+
       '<option value="">— not judged —</option>';
   ['thin','medium','thick'].forEach(function(k){
@@ -1734,7 +1762,7 @@ function perfFormHtml(c){
   h += '</select></div>'+
     '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Made '+esc(c.createdAt)+
       '. Days to full colonisation and thickness are your strain-strength signals — they show up per source below.'+
-      (isGrain(c) ? ' Leave the shake blank until you do it — you can come back and fill it in.' : '')+
+      (isGrain(c) ? ' Fill in only what has happened: leave Fully colonised blank while it is still running, and the shake blank if you did not shake it (not every grain needs one).' : '')+
       '</p></div>'+
     '<div class="abrow wide"><button class="mini solid" data-act="savePerf" data-id="'+c.id+'">Save</button>'+
       ((c.colonisedAt||c.shakenAt) ? '<button class="mini ghosty" data-act="clearPerf" data-id="'+c.id+'">Clear</button>' : '')+
@@ -2055,8 +2083,8 @@ function goPerfClick(e){
   e.preventDefault();
   var id = el.getAttribute('data-id');
   if(!findCulture(id)) return;
-  recordingOn = id; addingUnder = null; paint();
-  var pf = $('p-date');
+  recordingOn = id; recordingMode = el.getAttribute('data-mode'); addingUnder = null; paint();
+  var pf = $(recordingMode==='shake' && $('p-shake') ? 'p-shake' : 'p-date');
   if(pf){ try{ pf.focus({preventScroll:true}); }catch(_){ pf.focus(); } }
   var n = document.getElementById('node-'+id);
   if(n && n.scrollIntoView) n.scrollIntoView({behavior:'smooth', block:'center'});
@@ -2127,8 +2155,8 @@ $('tree').addEventListener('click', function(e){
     }
     return;
   }
-  if(act==='perf'){ e.preventDefault(); recordingOn=el.getAttribute('data-id'); addingUnder=null; paint();
-    var pf=$('p-date'); if(pf) pf.focus(); return; }
+  if(act==='perf'){ e.preventDefault(); recordingOn=el.getAttribute('data-id'); recordingMode=el.getAttribute('data-mode'); addingUnder=null; paint();
+    var pf=$(recordingMode==='shake' && $('p-shake') ? 'p-shake' : 'p-date'); if(pf) pf.focus(); return; }
   if(act==='cancelPerf'){ e.preventDefault(); recordingOn=null; paint(); return; }
   if(act==='savePerf'){
     e.preventDefault();
@@ -2138,6 +2166,8 @@ $('tree').addEventListener('click', function(e){
       var sh = $('p-shake') ? $('p-shake').value : '';
       // A plate can't finish before it was started — ignore an impossible date rather than store it.
       if(d && daysBetween(pc.createdAt, d)!=null) pc.colonisedAt = d;
+      // Grain (I176): an empty finish date means still running, so a shake alone never finishes it.
+      else if(!d && isGrain(pc)) pc.colonisedAt = null;
       // Nor can a jar be shaken before it was made, or after it finished. Same rule: an
       // impossible date is dropped, never stored — a wrong date is worse than no date.
       var shOk = sh && daysBetween(pc.createdAt, sh)!=null &&
