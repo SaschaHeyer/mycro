@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-14","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-16","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -501,11 +501,16 @@ var SPECIES = {
   reishi:   {label:'Reishi', pre:'REI', sci:'Ganoderma lucidum'},
   other:    {label:'Other', pre:'CUL', sci:''}
 };
-/* Culture types, in chain order. `next` = what you can legally make from this one. */
+/* Culture types, in chain order. `next` = what you can make from this one.
+   Since I178 the chain also runs back up: liquid culture from a grain bag (grain to LC) and a
+   petri dish off an LC or a grain bag (to check it or clean it up) are ordinary bench work.
+   Sanctuary Moon made two LC jars from grain LM-NS-01A-G1 to replace contaminated cultures and
+   could only file them under the source, with the real parent typed into notes, so a flag on
+   that grain bag would never have reached the jars. The first item stays the usual next step. */
 var CTYPE = {
   petri: {label:'Petri dish', icon:'🧫', letter:'P', next:['petri','lc','grain']},
-  lc:    {label:'Liquid culture', icon:'💧', letter:'L', next:['lc','grain']},
-  grain: {label:'Grain spawn', icon:'🌾', letter:'G', next:['grain']}
+  lc:    {label:'Liquid culture', icon:'💧', letter:'L', next:['lc','grain','petri']},
+  grain: {label:'Grain spawn', icon:'🌾', letter:'G', next:['grain','lc','petri']}
 };
 /* Growth thickness on a plate — the grower's own judgement, scored only so it can be averaged.
    Michael (Founding Grower #1): "how long does it take to fully colonize the dish and the
@@ -870,6 +875,58 @@ function speciesUnder(isSource, parentId){
   var p=findCulture(parentId); return p ? speciesOf(p) : null;
 }
 function stampSpecies(c, sp){ if(sp && SPECIES[sp] && !SPECIES[c.species]) c.species = sp; }
+
+/* ---- what a culture was made from, corrected after the fact (I178) ----
+   The code on a jar is never rewritten (it is written on the jar); only the link moves, and
+   with it the traceback and the generation. A culture can never hang under itself or its own
+   descendants, never under a type that cannot make it, never under another species, and never
+   under one of our seeded examples. Archived parents are offered only when already linked. */
+function descendsFrom(id, ancestorId){
+  var cur=findCulture(id), guard=0;
+  while(cur && guard++ < 200){
+    if(cur.id===ancestorId) return true;
+    if(cur.parentKind==='source' || cur.parentId===ancestorId) return cur.parentId===ancestorId;
+    cur=findCulture(cur.parentId);
+  }
+  return false;
+}
+function parentChoices(c){
+  var sp=speciesOf(c), out=[];
+  function sameSp(x){ return !(sp && x && sp!==x); }
+  state.sources.forEach(function(s){
+    if(s.id!==c.parentId && (isArchived(s) || (window.MycroSamples && MycroSamples.isSample('sources', s.id)))) return;
+    if(sameSp(s.species)) out.push({kind:'source', rec:s});
+  });
+  state.cultures.forEach(function(p){
+    if(p.id===c.id || !CTYPE[p.type] || CTYPE[p.type].next.indexOf(c.type)<0) return;
+    if(p.id!==c.parentId && (isArchived(p) || isSeededCulture(p))) return;
+    if(descendsFrom(p.id, c.id) || !sameSp(speciesOf(p))) return;
+    out.push({kind:'culture', rec:p});
+  });
+  return out;
+}
+function relink(c, kind, pid){
+  var ok = parentChoices(c).some(function(o){ return o.kind===kind && o.rec.id===pid; });
+  if(!ok) return false;
+  c.parentKind = kind; c.parentId = pid;
+  stampSpecies(c, speciesUnder(kind==='source', pid));
+  return true;
+}
+/* A culture code the grower typed into notes ("Sourced from LM-NS-01A-G1") that could be its
+   parent and is not already above it. The longest match wins; a code inside a longer code
+   (LM-NS-01A-G1 inside LM-NS-01A-G1-G1) does not count. Display only: one click links it. */
+function notesParent(c){
+  if(!c.notes || isSeededCulture(c)) return null;
+  var best=null;
+  parentChoices(c).forEach(function(o){
+    var p=o.rec;
+    if(o.kind!=='culture' || p.id===c.parentId || descendsFrom(c.id, p.id)) return;
+    var code=String(p.code||''); if(code.length<3) return;
+    var re=new RegExp('(^|[^A-Za-z0-9-])'+code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![A-Za-z0-9-])','i');
+    if(re.test(c.notes) && (!best || code.length>String(best.code).length)) best=p;
+  });
+  return best;
+}
 
 /* ---- what two records can be compared within (I162) ----
    "Other" is a bucket, not a species (the Grow Log learnt this at I130). Sanctuary Moon files
@@ -1656,6 +1713,10 @@ function cultureNodeHtml(c, depth){
         : (cc==='other' ? 'Contaminated: something else' : 'Cause not recorded'))+'</div>';
   }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
+  var np = notesParent(c);
+  if(np) h += '<div class="perfline relinkhint">📎 Your notes say this came from <code>'+esc(np.code)+'</code>. '+
+    '<button class="mini" data-act="relink" data-id="'+c.id+'" data-kind="culture" data-parent="'+np.id+'">Link it under '+esc(np.code)+'</button> '+
+    '<span class="muted">Its code stays as written on the jar.</span></div>';
   h += '<div class="nactions">';
   h += '<button class="mini" data-act="edit" data-id="'+c.id+'">✎ Edit</button>';
   if(c.status!=='contaminated')
@@ -1801,6 +1862,16 @@ function editCultureFormHtml(c){
       '<datalist id="grainList">'+grainOptions()+'</datalist></div>';
   h += '<div class="abrow wide"><label>Notes</label>'+
       '<input id="e-notes" type="text" maxlength="120" value="'+esc(c.notes||'')+'"></div>';
+  var pc = parentChoices(c);
+  if(pc.length > 1 || (pc.length===1 && pc[0].rec.id!==c.parentId)){
+    var cur = (c.parentKind==='culture'?'culture':(findSource(c.parentId)?'source':'culture'))+':'+c.parentId;
+    h += '<div class="abrow wide"><label>Made from</label><select id="e-parent">'+
+      (pc.some(function(o){ return o.kind+':'+o.rec.id===cur; }) ? '' : '<option value="" selected>(not linked)</option>')+
+      pc.map(function(o){ var v=o.kind+':'+o.rec.id;
+        return '<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(o.rec.code)+' · '+
+          esc(o.kind==='source' ? 'source' : CTYPE[o.rec.type].label)+'</option>'; }).join('')+
+      '</select></div>';
+  }
   if(liveChildrenOf(c.id).length)
     h += '<div class="abrow wide"><p class="muted" style="margin:0;font-size:.8rem">Changing the code here does not change the codes of the cultures below it. Those are already written on the jars.</p></div>';
   h += editNote()+
@@ -1842,7 +1913,17 @@ function saveEdit(id){
   if(c){
     if(c.shakenAt && daysBetween(d, c.shakenAt)==null) return editRefusal('It was shaken on '+c.shakenAt+', so it cannot have been made after that.');
     if(c.colonisedAt && daysBetween(d, c.colonisedAt)==null) return editRefusal('It was fully colonised on '+c.colonisedAt+', so it cannot have been made after that.');
+    var pv = $('e-parent') ? $('e-parent').value : '';
+    var cur = (c.parentKind==='culture'?'culture':(findSource(c.parentId)?'source':'culture'))+':'+c.parentId;
+    var moved = false;
+    if(pv && pv!==cur){
+      var k = pv.slice(0, pv.indexOf(':')), pid = pv.slice(pv.indexOf(':')+1);
+      if(!parentChoices(c).some(function(o){ return o.kind===k && o.rec.id===pid; }))
+        return editRefusal('That cannot be what it was made from.');
+      moved = true;
+    }
     c.code = code; c.createdAt = d; c.notes = ($('e-notes').value||'').trim();
+    if(moved){ relink(c, k, pid); if(window.track) try{ track('culture_relink',{from:'edit'}); }catch(_){} }
     if(isGrain(c) && $('e-jars')){
       var j = Math.round(parseFloat($('e-jars').value));
       if(isFinite(j) && j>0) c.jars = Math.min(j, 999); else delete c.jars;
@@ -2219,6 +2300,15 @@ $('tree').addEventListener('click', function(e){
     editingId=(editingId===eid?null:eid); addingUnder=null; recordingOn=null; contamOn=null; paint();
     var ef=$('e-code'); if(ef) ef.focus(); return; }
   if(act==='cancelEdit'){ e.preventDefault(); editingId=null; paint(); return; }
+  if(act==='relink'){
+    e.preventDefault();
+    var rc = findCulture(el.getAttribute('data-id'));
+    if(rc && relink(rc, el.getAttribute('data-kind'), el.getAttribute('data-parent'))){
+      save(); paint();
+      if(window.track) try{ track('culture_relink',{from:'notes'}); }catch(_){}
+    }
+    return;
+  }
   if(act==='saveEdit'){ e.preventDefault(); saveEdit(el.getAttribute('data-id')); return; }
   if(act==='save'){ e.preventDefault(); if(addingUnder) addCulture(addingUnder.parentId, addingUnder.isSource, addingUnder.type); return; }
   var id = el.getAttribute('data-id');
