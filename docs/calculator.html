@@ -123,15 +123,15 @@
     <div class="inline-grid">
       <div class="field"><label>Species (sets a typical BE)</label>
         <select id="species">
-          <option value="85">Blue / Pearl Oyster</option>
-          <option value="75">Pink / Yellow Oyster</option>
-          <option value="60">King Oyster (Trumpet)</option>
-          <option value="60">Lion's Mane</option>
-          <option value="90">Shiitake</option>
-          <option value="60">Chestnut</option>
-          <option value="60">Pioppino</option>
-          <option value="60">Nameko</option>
-          <option value="45">Reishi</option>
+          <option data-sp="pearl" value="85">Blue / Pearl Oyster</option>
+          <option data-sp="pink" value="75">Pink / Yellow Oyster</option>
+          <option data-sp="king" value="60">King Oyster (Trumpet)</option>
+          <option data-sp="lions" value="60">Lion's Mane</option>
+          <option data-sp="shiitake" value="90">Shiitake</option>
+          <option data-sp="chestnut" value="60">Chestnut</option>
+          <option data-sp="pioppino" value="60">Pioppino</option>
+          <option data-sp="nameko" value="60">Nameko</option>
+          <option data-sp="reishi" value="45">Reishi</option>
           <option value="custom">Custom…</option>
         </select>
         <span class="hint">Typical mid-range — edit BE to match your strain.</span></div>
@@ -181,6 +181,15 @@
       <div class="kpi" id="k-profit-card"><div class="v" id="k-profit">–</div><div class="l">Profit · <span id="k-margin">–</span> margin</div></div>
     </div>
     <p class="muted" id="r-note" style="margin:14px 0 0;font-size:.9rem"></p>
+
+    <!-- Hand the batch to the Grow Log (I179). The calculator's only onward link opened the Grow Log
+         on our demo farm and dropped everything the grower had just typed. This carries the three
+         things this tool knows about a batch (species, block count, dry substrate per block, in
+         GRAMS so the Grow Log's own unit decides how it is shown) into its add-batch form. Nothing
+         is saved there until the grower presses Add batch. -->
+    <p class="no-print" id="toLog" style="margin:16px 0 0;font-size:.95rem">
+      <a id="toLogLink" class="btn secondary" href="grow-log.html">🗒 Track this batch in the free Grow Log →</a>
+      <span class="muted" style="display:block;margin-top:6px;font-size:.88rem">Opens the add-batch form with these blocks, species and dry weight filled in. No account.</span></p>
 
     <!-- Email me this plan. The ask sits ON the result, not below it in a generic early-access
          box: a grower who has just worked out water, spawn and cost for a real batch wants those
@@ -304,6 +313,18 @@ function setUnitLabels(){
   $('u-p2').textContent='('+pw+')';
   $('u-p3').textContent='('+pw+', wholesale)';
   Array.prototype.forEach.call(document.querySelectorAll('.o-wu'),function(e){e.textContent=unit;});
+}
+
+/* The Grow Log link carries this batch (I179). Species comes from the option's data-sp, never
+   from its value (several species share a BE value). A custom BE names no species, so none is
+   sent and the Grow Log keeps its own default. */
+function growLogHref(){
+  var sel=$('species'), o=sel && sel.options[sel.selectedIndex];
+  var p=['from=calc'];
+  var sp=o && o.getAttribute('data-sp'); if(sp) p.push('sp='+sp);
+  var n=Math.round(val('bags')); if(n>0) p.push('blocks='+n);
+  var g=toG(val('dryPerBag')); if(isFinite(g)&&g>0) p.push('dryG='+Math.round(g));
+  return 'grow-log.html?'+p.join('&')+'#addForm';
 }
 
 function calc(){
@@ -557,6 +578,12 @@ function mycroPlanEmail(e){
 }
 
 restorePlan(); setUnitLabels(); calc();
+function paintLogLink(){ var a=$('toLogLink'); if(a) a.href=growLogHref(); }
+paintLogLink();
+// Counted by a handler, not a data-track attribute: tool pages carry none (I115/I121 rule).
+$('toLogLink').addEventListener('click',function(){ this.href=growLogHref(); if(window.track) try{ track('calc_to_growlog',{}); }catch(_){} });
+document.addEventListener('input',paintLogLink); document.addEventListener('change',paintLogLink);
+document.addEventListener('click',function(e){ if(e.target && e.target.closest && e.target.closest('#unitToggle')) setTimeout(paintLogLink,0); });
 </script>
 <script src="waitlist.js?v=2"></script>
   <script src="/tooluse.js?v=2"></script>

@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-11","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-17","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -3916,6 +3916,44 @@ render();
     var c=cultureOf(id);
     if(c && !$('f-name').value){ $('f-name').value=c.code+' block'; renderNameHint(); }
     $('addForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){}
+})();
+/* Opened from the Grow Calculator's "Track this batch" link (I179): fill the add-batch form with
+   what that tool knew (species, block count, dry substrate per block in GRAMS, shown in this
+   log's own unit). It FILLS, it never saves: the batch exists only when the grower presses Add
+   batch, so a stray click leaves no fictional run in their log. Every value is checked; an
+   unknown species, or a number outside a sane range, is simply not filled. The query is then
+   taken off the URL so a reload after adding does not fill the form a second time. */
+(function prefillFromCalc(){
+  try{
+    var qs=new URLSearchParams(location.search); if(qs.get('from')!=='calc') return;
+    var filled=[];
+    var sp=qs.get('sp');
+    if(sp && sp!=='other' && Object.prototype.hasOwnProperty.call(SPECIES,sp)){
+      $('f-species').value=sp; syncSpeciesName(); filled.push('species');
+    }
+    var n=parseInt(qs.get('blocks'),10);
+    if(isFinite(n) && n>=1 && n<=10000){ $('f-blocks').value=String(n); filled.push('blocks'); }
+    var g=parseFloat(qs.get('dryG'));
+    if(isFinite(g) && g>0 && g<=100000){
+      $('f-dry').value=String(Math.round((unit==='lb' ? g/LB : g/1000)*100)/100); filled.push('dry');
+    }
+    try{ history.replaceState(null,'',location.pathname+location.hash); }catch(_){}
+    if(!filled.length) return;
+    renderDryFormHint();
+    var note=$('calcFillNote');
+    if(!note){
+      note=document.createElement('p'); note.id='calcFillNote'; note.className='note';
+      note.style.cssText='margin:0 0 12px;font-size:.92rem';
+      $('addForm').insertBefore(note,$('addForm').firstChild);
+    }
+    note.textContent='Filled in from your Grow Calculator batch. Give it a name, check the inoculation date, and press Add batch. Nothing is saved until you do.';
+    $('addForm').scrollIntoView({behavior:'smooth',block:'center'});
+    // track.js is deferred and loads after this inline script: resolve it at event time.
+    (function fire(tries){
+      if(window.track){ try{ track('growlog_from_calc',{fields:filled.length}); }catch(_){} return; }
+      if(tries>0) setTimeout(function(){ fire(tries-1); },250);
+    })(40);
   }catch(e){}
 })();
 </script>
