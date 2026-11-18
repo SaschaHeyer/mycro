@@ -72,6 +72,7 @@
     harvest: ['harvest_date', 'harvested_on'],
     yield:   ['fresh_yield', 'yield', 'total_yield', 'fresh_weight'],
     flushes: ['flushes'],
+    flushDays: ['flush_dates', 'flush_days', 'picked_on'],
     method:  ['method', 'substrate', 'recipe'],
     spawn:   ['spawn_type_ratio', 'spawn', 'spawn_ratio'],
     source:  ['spawn_source', 'spawn_supplier', 'supplier', 'vendor'],
@@ -225,6 +226,13 @@
         flushes = fl.split(/[;|+]/).map(num).filter(function (x) { return x != null && x >= 0; }).map(function (x) { return toG(x, fu); });
         if (!flushes.length) flushes = null;
       }
+      // The day each flush was picked (I180), index for index beside the weights. Only trusted when
+      // the sheet gives exactly one cell per weight; a list that does not line up is dropped whole.
+      var flushDays = null, fdc = cell(r, 'flushDays');
+      if (flushes && fdc && fl && fl.split(/[;|+]/).length === flushes.length) {
+        var fdp = fdc.split(/[;|]/).map(function (x) { return x.trim() ? parseDate(x.trim(), ctx.dayFirst) : null; });
+        if (fdp.length === flushes.length) flushDays = fdp.map(function (x) { return x || null; });
+      }
       var y = num(cell(r, 'yield'));
       if (!flushes && y != null && y > 0) flushes = [toG(y, yu)];
 
@@ -257,6 +265,10 @@
         notes: ''
       };
       if (flushes) b.flushes = flushes;
+      // With no days in the sheet, only the sheet's own harvest date is a day, and only for the last
+      // flush. Written out so the Grow Log never reads the day off stageSince, which for a sheet
+      // with no harvest date is the spawn or fruiting day.
+      if (flushes) b.flushDates = flushDays || flushes.map(function (_, i) { return (i === flushes.length - 1 && harvestD && harvestD >= date) ? harvestD : null; });
       // The sheet's own "fully colonised" day is the day the Grow Log keeps as fruitAt (I172).
       if (colD && colD >= date && stage !== 'inoculated' && stage !== 'colonizing') b.fruitAt = colD;
       if (stage === 'contaminated') {

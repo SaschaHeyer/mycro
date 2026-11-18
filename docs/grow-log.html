@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-17","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-18","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -36,7 +36,7 @@
 {"@type":"Question","name":"How do I work out my cost per pound of mushrooms?","acceptedAnswer":{"@type":"Answer","text":"Add up what a run cost you — substrate, spawn, supplies and bags, and your labour — then divide by the fresh weight that run actually harvested. Cost per pound = total run cost ÷ fresh yield. Count your failed runs too: a contaminated batch cost real money and produced nothing, so leaving it out flatters the number. The free Mycro grow log does this per batch and then groups it by method and by strain, so you can see which recipe genuinely produces the cheapest pound rather than which one has the cheapest substrate."}},
 {"@type":"Question","name":"What should go on a mushroom delivery label?","acceptedAnswer":{"@type":"Answer","text":"A delivery label for fresh mushrooms should carry the buyer's name, the delivery address, the species, the weight in the box, your batch or lot number, and a contact number the buyer can reach you on. The batch number is the part growers most often leave off, and it is the one that matters: if a buyer calls about a delivery, the batch number is what lets you trace it back to the block, the spawn jar and the culture it came from. The free Mycro grow log prints all six on a label from a delivery you log, and adds a QR code the buyer can scan to call you or to text you about that batch."}},
 {"@type":"Question","name":"How do I keep track of who I sold mushrooms to?","acceptedAnswer":{"@type":"Answer","text":"Keep an address book of buyers and suppliers, and record each delivery against the batch it came out of — date, buyer, weight. That gives you two things a sales spreadsheet does not: you can see how much of a harvest has actually gone out and how much is still on the shelf, and if a buyer reports a problem you can trace that exact delivery back to the batch and its culture. The free Mycro grow log does this in the browser with no sign-up, and exports the deliveries to CSV."}},
-{"@type":"Question","name":"Why track the cause of a mushroom contamination, not just the rate?","acceptedAnswer":{"@type":"Answer","text":"A contamination rate tells you how often you lose a run; it never tells you what to change. Green mould on grain, a bacterial wet spot in a block and cobweb in the fruiting room have three different fixes, so a single percentage groups together problems that have nothing to do with each other. Record what went wrong and which stage the run was in when it went, and the same losses turn into a shortlist: this mould took this many blocks, at this point in the grow, and cost this much. The free Mycro grow log asks for the cause when you mark a run contaminated, keeps the stage it was in before the mark overwrites it, and ranks your losses by the blocks they took. Losses you could not identify stay in the total and are counted separately, because a guessed cause is worse than a gap."}},{"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 35–70 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}}]}
+{"@type":"Question","name":"Why track the cause of a mushroom contamination, not just the rate?","acceptedAnswer":{"@type":"Answer","text":"A contamination rate tells you how often you lose a run; it never tells you what to change. Green mould on grain, a bacterial wet spot in a block and cobweb in the fruiting room have three different fixes, so a single percentage groups together problems that have nothing to do with each other. Record what went wrong and which stage the run was in when it went, and the same losses turn into a shortlist: this mould took this many blocks, at this point in the grow, and cost this much. The free Mycro grow log asks for the cause when you mark a run contaminated, keeps the stage it was in before the mark overwrites it, and ranks your losses by the blocks they took. Losses you could not identify stay in the total and are counted separately, because a guessed cause is worse than a gap."}},{"@type":"Question","name":"How long does mushroom colonization take?","acceptedAnswer":{"@type":"Answer","text":"Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 35–70 days. The grow log flags a batch that is sitting in colonization longer than typical for its species."}},{"@type":"Question","name":"How do I track how much I harvest each week?","acceptedAnswer":{"@type":"Answer","text":"Log each flush with the day you picked it. The free Mycro grow log keeps that day beside the weight, so a run that gave three flushes over a month shows three dated harvests, not one total. It then adds up what came off each week, Monday to Sunday, split by species, which is the number a market stall or a weekly delivery is planned on. Flushes logged with no day are counted separately until you date them, never spread across weeks as a guess."}}]}
 </script>
 <script src="/visit.js" defer></script>
 </head>
@@ -177,6 +177,21 @@
       The full Mycro app keeps every season's per-strain history in a real account you log into from
       any device — no link to keep track of. <a href="/#founding">Become a Founding Grower · $99</a>
     </p>
+  </div>
+
+  <!-- What was picked, week by week (I180; appears once one of the grower's own flushes has a day) -->
+  <div class="results no-print" id="pickPanel" style="display:none;margin:-4px 0 18px">
+    <div class="strainHead">
+      <h3 style="margin:0;font-size:1.02rem;letter-spacing:-.01em">What you picked, week by week</h3>
+      <span class="muted" style="font-size:.82rem" id="pickLead"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="strain" id="pickTable">
+        <thead><tr><th>Week and species</th><th>Picked</th><th>Flushes</th></tr></thead>
+        <tbody id="pickBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="pickNote" style="font-size:.84rem;margin:12px 2px 0"></p>
   </div>
 
   <!-- Days to colonise, per mix within a species (I172; appears once one species has two mixes measured) -->
@@ -596,6 +611,8 @@
 
     <h3 style="margin-top:22px">How long does mushroom colonization take?</h3>
     <p>Oyster mushrooms typically colonize a supplemented sawdust or straw block in 10–14 days; king oyster, lion's mane and chestnut in roughly 14–21 days; shiitake sawdust blocks can take 35–70 days. The grow log flags a batch that is sitting in colonization longer than typical for its species.</p>
+    <h3 style="margin-top:22px">How do I track how much I harvest each week?</h3>
+    <p>Log each flush with the day you picked it. The free Mycro grow log keeps that day beside the weight, so a run that gave three flushes over a month shows three dated harvests, not one total. It then adds up what came off each week, Monday to Sunday, split by species, which is the number a market stall or a weekly delivery is planned on. Flushes logged with no day are counted separately until you date them, never spread across weeks as a guess.</p>
     <p class="disclaimer">For legal culinary &amp; medicinal mushroom cultivation only. Durations and
       ranges are general guidance from common practice, not guarantees.</p>
   </section>
@@ -615,7 +632,7 @@
 <script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
-<script src="/csvimport.js?v=4"></script>
+<script src="/csvimport.js?v=5"></script>
 <script src="/account.js?v=18"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=1"></script>
@@ -781,13 +798,22 @@ function validBatch(b){
     (b.supplier==null || typeof b.supplier==='string') &&   // where the spawn came from (I145)
     (b.gen==null || typeof b.gen==='number') &&             // culture generation, typed (I150)
     (b.fruitAt==null || typeof b.fruitAt==='string') &&     // day it moved to fruiting, kept after (I172)
+    (b.flushDates==null || Array.isArray(b.flushDates)) &&  // day each flush was picked, beside flushes (I180)
     (b.priceG==null || typeof b.priceG==='number');
 }
+function isIsoDay(d){ return typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d); }
 // Back-compat: flushes[] is authoritative for yieldG. A pre-flush harvested batch
 // (yieldG set, no flushes) is treated as a single flush so the model stays consistent.
 function normFlushes(b){
   if(Array.isArray(b.flushes)){
-    b.flushes = b.flushes.filter(function(x){return typeof x==='number' && isFinite(x) && x>=0;});
+    // flushDates sits beside flushes index for index, so a dropped weight drops its day too (I180).
+    var fd = Array.isArray(b.flushDates) ? b.flushDates : null, kept=[], keptDays=[];
+    b.flushes.forEach(function(x,i){
+      if(!(typeof x==='number' && isFinite(x) && x>=0)) return;
+      kept.push(x); keptDays.push(fd && isIsoDay(fd[i]) ? fd[i] : null);
+    });
+    b.flushes = kept;
+    if(fd) b.flushDates = keptDays;
     b.yieldG = b.flushes.length ? b.flushes.reduce(function(a,x){return a+x;},0) : (b.stage==='harvested'?0:null);
   } else if(b.stage==='harvested' && typeof b.yieldG==='number' && b.yieldG>0){
     b.flushes = [b.yieldG];
@@ -1759,6 +1785,70 @@ function sourceVerdict(rows, none){
   return '<b>'+esc(worst.name)+'</b> has lost '+worst.lost+' of the '+worst.started+' bags it supplied so far ('+pct(worst)+'), against '+
     best.lost+' of '+best.started+' ('+pct(best)+') from <b>'+esc(best.name)+'</b>.'+clue+gapTail;
 }
+/* ---- when each flush was picked (I180) ----
+   A harvest was a weight with no day: a farm picking for a Saturday market logged seven runs in one
+   evening and the log could not say what came off that week. Each flush now keeps the day it was
+   picked in flushDates, index for index beside flushes. A flush logged before this shipped has no
+   day, with one exception that is a fact and not a guess: stageSince on a harvested run is the day
+   its LAST flush was logged. Earlier flushes stay undated until the grower dates them, and are
+   counted apart, never spread over weeks they may not belong to. Nothing is written on load. */
+function flushDay(b,i){
+  var d = Array.isArray(b.flushDates) ? b.flushDates[i] : null;
+  if(isIsoDay(d)) return d;
+  var n=(b.flushes||[]).length;
+  if(!Array.isArray(b.flushDates) && i===n-1 && b.stage==='harvested' && isIsoDay(b.stageSince)) return b.stageSince;
+  return null;
+}
+function flushDays(b){ return (b.flushes||[]).map(function(_,i){ return flushDay(b,i); }); }
+function weekStart(day){ var d=parseIso(day); d.setDate(d.getDate()-((d.getDay()+6)%7)); return iso(d); }
+/* Weeks run Monday to Sunday. Seeded examples never count. A zero weight is a flush that was
+   logged and weighed nothing, so it adds no row. */
+function pickRows(){
+  var weeks={}, undated={n:0,g:0};
+  state.batches.forEach(function(b){
+    if(isSeededBatch(b)) return;
+    (b.flushes||[]).forEach(function(g,i){
+      if(!(g>0)) return;
+      var d=flushDay(b,i);
+      if(!d){ undated.n++; undated.g+=g; return; }
+      var wk=weekStart(d), w=weeks[wk]||(weeks[wk]={wk:wk,g:0,n:0,sp:{}});
+      w.g+=g; w.n++;
+      var sk=speciesKey(b), sp=Object.prototype.hasOwnProperty.call(w.sp,sk) ? w.sp[sk] : (w.sp[sk]={label:speciesLabel(b),g:0});
+      sp.g+=g;
+    });
+  });
+  var list=Object.keys(weeks).sort().reverse().map(function(k){
+    var w=weeks[k];
+    w.species=Object.keys(w.sp).map(function(s){ return w.sp[s]; }).sort(function(a,c){ return c.g-a.g; });
+    return w;
+  });
+  return {weeks:list, undated:undated};
+}
+var PICK_WEEKS_SHOWN = 12;
+function renderPicks(){
+  var panel=$('pickPanel'); if(!panel) return;
+  var r=pickRows();
+  if(!r.weeks.length){ panel.style.display='none'; return; }
+  var thisWk=weekStart(today());
+  var shown=r.weeks.slice(0,PICK_WEEKS_SHOWN);
+  $('pickBody').innerHTML = shown.map(function(w){
+    var end=parseIso(w.wk); end.setDate(end.getDate()+6);
+    return '<tr><td>'+(w.wk===thisWk ? '<b>This week</b> <span class="muted">(from '+esc(fmtDay(w.wk))+')</span>'
+                                     : esc(fmtDay(w.wk))+' – '+esc(fmtDay(iso(end))))+
+      // under the week, not in a column of its own: on a phone a fourth column scrolls out of sight
+      '<div class="picksp">'+w.species.map(function(sp){ return esc(sp.label)+' '+fmtWt(sp.g); }).join(' · ')+'</div></td>'+
+      '<td><b>'+fmtWt(w.g)+'</b></td><td>'+w.n+'</td></tr>';
+  }).join('');
+  var all=r.weeks.reduce(function(a,w){ return a+w.g; },0);
+  $('pickLead').textContent = fmtWt(all)+' picked over '+r.weeks.length+' week'+(r.weeks.length===1?'':'s')+' with a harvest, from your own log';
+  var note='Weeks run Monday to Sunday. Each flush counts in the week of the day you picked it, which you set as you log it.';
+  if(r.weeks.length>shown.length) note+=' Showing the latest '+shown.length+' weeks.';
+  if(r.undated.n) note+=' <b>'+r.undated.n+' earlier flush'+(r.undated.n===1?'':'es')+' ('+fmtWt(r.undated.g)+')</b> '+
+    (r.undated.n===1?'has':'have')+' no day and '+(r.undated.n===1?'is':'are')+' not in this table: open <b>Edit weights</b> on the batch to add one.';
+  $('pickNote').innerHTML = note;
+  panel.style.display='block';
+}
+
 /* ---- days to colonise, per mix (I172) ----
    A run's stageSince is overwritten on every move, so the day it went into fruiting (the day the
    grower judged it fully colonised) used to vanish at the first harvest. moveStage() is the ONE
@@ -1815,6 +1905,30 @@ function mixVerdict(sp){
   var fast=ok[0], slow=ok[ok.length-1];
   if(fast.max>=slow.min) return null;
   return {fast:fast, slow:slow};
+}
+/* The recipe box offers the grower's own recipes first (I180). The list was five fixed names, so a
+   farm retyped its own mix on every batch and ended up with "King Trumpet Mix", "KING TRUMPET MIX"
+   and "KT mix" as three recipes in the tables that compare them. Most used first, one spelling per
+   recipe (the one typed most), seeded examples never. */
+var METHOD_DEFAULTS = ["Master's Mix (50/50)","Supplemented sawdust","Pasteurised straw","Straw + soy hull","Coco coir + vermiculite"];
+function ownMethods(){
+  var by={};
+  state.batches.forEach(function(b){
+    if(isSeededBatch(b) || !(b.method||'').trim()) return;
+    var k=methodKey(b), m=Object.prototype.hasOwnProperty.call(by,k) ? by[k] : (by[k]={n:0,sp:{}});
+    m.n++; var name=methodOf(b); m.sp[name]=(Object.prototype.hasOwnProperty.call(m.sp,name)?m.sp[name]:0)+1;
+  });
+  return Object.keys(by).map(function(k){
+    var m=by[k], best=Object.keys(m.sp).sort(function(a,c){ return m.sp[c]-m.sp[a]; })[0];
+    return {key:k, name:best, n:m.n};
+  }).sort(function(a,c){ return c.n-a.n; });
+}
+function renderMethodList(){
+  var dl=$('methodList'); if(!dl) return;
+  var own=ownMethods(), seen={};
+  own.forEach(function(m){ seen[m.key]=1; });
+  var names=own.map(function(m){ return m.name; }).concat(METHOD_DEFAULTS.filter(function(n){ return !Object.prototype.hasOwnProperty.call(seen,n.toLowerCase()); }));
+  dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'"></option>'; }).join('');
 }
 function renderMix(){
   var panel=$('mixPanel'); if(!panel) return;
@@ -2232,6 +2346,8 @@ function actionsHtml(b){
     return '<form class="yieldForm" onsubmit="return saveYield(event,\''+b.id+'\')">'+
       '<label class="yl">'+lbl+' '+
       '<input id="yieldInput" type="number" step="any" min="0" autocomplete="off" required></label>'+
+      '<label class="yl">Picked on '+
+      '<input id="yieldDate" type="date" value="'+today()+'" min="'+esc(b.inoculatedOn)+'" max="'+today()+'"></label>'+
       '<button class="mini solid" type="submit">'+btn+'</button>'+
       '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button></form>';
   }
@@ -2282,8 +2398,10 @@ function batchHtml(b){
              (genOf(b)!=null ? ' · '+esc(MycroGen.label(genOf(b))) : '');
   var fl=(b.flushes||[]);
   var flushLine = fl.length>1
-    ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x){return fmtWt(x);}).join(' + ')+'</div>'
-    : '';
+    ? '<div class="flushline">'+fl.length+' flushes: '+fl.map(function(x,i){
+        var d=flushDay(b,i); return fmtWt(x)+(d?' <span class="flushday">('+esc(fmtDay(d))+')</span>':'');
+      }).join(' + ')+'</div>'
+    : (fl.length===1 && flushDay(b,0) ? '<div class="pickline">Picked '+esc(fmtDay(flushDay(b,0)))+'</div>' : '');
   var beLine = be!=null
     ? '<div class="beline">Biological efficiency <b>'+Math.round(be)+'%</b> · '+fmtWt(b.yieldG)+' fresh from '+fmtWt(b.dryG*b.blocks)+' dry'+
       (beContext(b) ? '<div class="berange">'+beContext(b)+'</div>' : '')+'</div>'+flushLine
@@ -2379,7 +2497,9 @@ function paint(){
   setUnitLabels();
   renderSummary();
   renderStrains();
+  renderPicks();
   renderMix();
+  renderMethodList();
   renderCosts();
   renderLoss();
   renderSources();
@@ -2555,11 +2675,12 @@ function flushEditHtml(b){
   return '<form class="yieldForm flushEdit" oninput="this.querySelector(\'.flushInput\').setCustomValidity(\'\')" onsubmit="return saveFlushEdit(event,\''+b.id+'\')">'+
     fl.map(function(g,i){
       return '<label class="yl">'+(fl.length>1?'Flush '+(i+1):'Fresh yield')+' ('+unit+') '+
-        '<input'+(i===0?' id="yieldInput"':'')+' class="flushInput" type="number" step="any" min="0" autocomplete="off" value="'+flushInputValue(g)+'"></label>';
+        '<input'+(i===0?' id="yieldInput"':'')+' class="flushInput" type="number" step="any" min="0" autocomplete="off" value="'+flushInputValue(g)+'">'+
+        ' <input class="flushDate" type="date" aria-label="Day '+(fl.length>1?'flush '+(i+1):'this')+' was picked" value="'+(flushDay(b,i)||'')+'" max="'+today()+'"></label>';
     }).join('')+
     '<button class="mini solid" type="submit">Save</button>'+
     '<button class="mini ghosty" type="button" data-act="cancelYield">Cancel</button>'+
-    (fl.length>1?'<p class="hint flushEditHint">Empty a box to remove that flush. New weights go in with + Log another flush.</p>':'')+
+    (fl.length>1?'<p class="hint flushEditHint">Empty a box to remove that flush. New weights go in with + Log another flush. The date is the day it was picked.</p>':'')+
     '</form>';
 }
 function saveFlushEdit(e,id){
@@ -2567,10 +2688,16 @@ function saveFlushEdit(e,id){
   var b=find(id); if(!b) return false;
   var old=Array.isArray(b.flushes)&&b.flushes.length ? b.flushes : [b.yieldG||0];
   var boxes=[].slice.call(e.target.querySelectorAll('.flushInput'));
-  var next=[], changed=0;
+  var dayBoxes=[].slice.call(e.target.querySelectorAll('.flushDate'));
+  var oldDays=flushDays(b);   // read before anything moves: the last flush may be reading its day off stageSince
+  var next=[], nextDays=[], changed=0, dated=0;
   boxes.forEach(function(box,i){
     var raw=box.value.trim();
-    if(raw===''){ changed++; return; }
+    if(raw===''){ changed++; return; }     // the flush goes, and its day goes with it
+    var dv=dayBoxes[i] ? dayBoxes[i].value : (oldDays[i]||'');
+    var day = dv==='' ? null : ((isIsoDay(dv) && dv<=today()) ? dv : oldDays[i]);
+    if(day!==oldDays[i]) dated++;
+    nextDays.push(day);
     if(raw===flushInputValue(old[i])){ next.push(old[i]); return; }   // untouched keeps its exact grams
     var v=parseFloat(raw);
     if(!isFinite(v)||v<0){ next.push(old[i]); return; }
@@ -2582,9 +2709,10 @@ function saveFlushEdit(e,id){
     return false;
   }
   b.flushes=next;
+  b.flushDates=nextDays;
   b.yieldG=next.reduce(function(a,x){return a+x;},0);
   editingYieldId=null; yieldMode='append'; save(); render();
-  if(window.track) try{ track('growlog_flush_edit',{n:next.length,was:old.length,changed:changed}); }catch(_){}
+  if(window.track) try{ track('growlog_flush_edit',{n:next.length,was:old.length,changed:changed,dated:dated}); }catch(_){}
   return false;
 }
 function saveYield(e,id){
@@ -2594,9 +2722,16 @@ function saveYield(e,id){
   if(!isFinite(v)||v<0) return false;
   var g=gFromInput(v);
   var wasHarvested = b.stage==='harvested';
+  // The day it was picked: today unless the grower says otherwise. Never the future, never before spawning.
+  var dEl=$('yieldDate'), day=dEl ? dEl.value : '';
+  if(!isIsoDay(day) || day>today() || day<b.inoculatedOn) day=today();
+  var days=flushDays(b);      // read before the append: an undated last flush is still reading stageSince
   b.flushes=(Array.isArray(b.flushes)?b.flushes:[]).concat([g]);
+  b.flushDates=days.concat([day]);
   b.yieldG=b.flushes.reduce(function(a,x){return a+x;},0);
-  moveStage(b, 'harvested');
+  // A flush typed in late must not pull the run's harvest day backwards.
+  if(wasHarvested){ if(!isIsoDay(b.stageSince) || day>b.stageSince) b.stageSince=day; }
+  else moveStage(b, 'harvested', day);
   editingYieldId=null; yieldMode='append'; save(); render();
   if(window.track) try{ track('growlog_harvest',{flush:b.flushes.length}); }catch(_){}
   // Only nudge on the first harvest of a batch (the aha moment), not on every extra flush.
@@ -2925,20 +3060,21 @@ $('srcSave').addEventListener('click',function(){
 });
 $('exportCsv').addEventListener('click',function(){
   var per = unit==='lb'? LB : 1000;
-  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'biological_efficiency_pct','spawned_from','generation','method','spawn_source','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
+  var rows=[['label','batch_number','species','blocks','dry_'+unit+'_per_block','inoculated_on','stage','days_in_production','fresh_yield_'+unit,'flushes_'+unit,'flush_dates','biological_efficiency_pct','spawned_from','generation','method','spawn_source','cost_substrate','cost_spawn','cost_supplies','cost_labor','cost_total','cost_per_'+unit,'price_per_'+unit,'delivered_'+unit,'contam_cause','lost_at_stage','notes']];
   var toU=function(g){ return unit==='lb'? g/LB : g/1000; };
   var m2=function(x){ return x==null||!isFinite(x) ? '' : x.toFixed(2); };
   state.batches.forEach(function(b){
     var dry = unit==='lb'? b.dryG/LB : b.dryG/1000;
     var y = b.yieldG!=null ? toU(b.yieldG) : '';
     var flu = (b.flushes||[]).map(function(x){return toU(x).toFixed(2);}).join('; ');
+    var fluDays = flushDays(b).some(function(d){return d;}) ? flushDays(b).map(function(d){return d||'';}).join('; ') : '';
     var be=beOf(b);
     var cul = b.parentId ? cultureOf(b.parentId) : null, pbt = cul ? null : parentBatchOf(b);
     var pst = (cul || pbt) ? null : sourceParentOf(b);
     var c=b.costs||{}, cpg=costPerG(b);
     var dlv=deliveredG(b.id);
     rows.push([b.name,b.code||'',speciesLabel(b),b.blocks,dry.toFixed(2),b.inoculatedOn,b.stage,
-      daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, be!=null?be.toFixed(0):'',
+      daysSince(b.inoculatedOn), y===''?'':y.toFixed(2), flu, fluDays, be!=null?be.toFixed(0):'',
       cul?cul.code:(pbt?batchCode(pbt):(pst?(pst.code||''):'')), genOf(b)==null?'':genOf(b), (b.method||'').replace(/"/g,'""'), supplierOf(b).replace(/"/g,'""'),
       m2(c.substrate), m2(c.spawn), m2(c.supplies), m2(c.labor), m2(costTotal(b)),
       m2(cpg!=null?cpg*per:null), m2(typeof b.priceG==='number'?b.priceG*per:null),
@@ -3986,7 +4122,9 @@ render();
 .berange{font-size:.82rem;color:var(--muted);margin-top:4px;font-weight:400}
 .berange a{color:var(--muted)}
 table.strain td.pub{color:var(--muted);white-space:nowrap}
-.flushline{font-size:.82rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
+.flushline,.pickline{font-size:.82rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
+.flushEdit .flushDate{max-width:150px}
+.picksp{font-size:.8rem;color:var(--muted);margin-top:2px}
 .flushEditHint{flex-basis:100%;margin:2px 0 0}
 .culline{font-size:.85rem;color:var(--muted);margin:0 0 8px;padding:0 4px}
 .culline code{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-size:.82rem}
