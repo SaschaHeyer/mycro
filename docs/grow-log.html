@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-18","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-20","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -3725,9 +3725,19 @@ function normSynced(d){
 }
 function applySynced(doc){
   state=normSynced(doc);
-  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push, no dirty mark
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}   // a pull is not an edit: no push to the link, no dirty mark
   render();
+  relayToAccount();
 }
+/* A device can hold BOTH a private link and an account session: a farm that ran the free link
+   on a laptop and a phone, then bought the founding offer and signed in on one of them (I182).
+   Each pull only told its own store, so a batch the phone added through the link sat on the
+   signed-in laptop and never reached the account until the laptop's next edit, and a batch the
+   phone deleted stayed in the account, ready to come back on the next device to sign in. What
+   one store hands this device is passed on to the other. Pushes compare against their own base,
+   so an identical document goes nowhere and nothing loops. */
+function relayToAccount(){ try{ if(window.MycroAccount && MycroAccount.signedIn()) MycroAccount.scheduleSync(); }catch(e){} }
+function relayToLink(){ try{ if(cloudId()) scheduleAutoSync(); }catch(e){} }
 var logSync=MycroLogSync.attach({
   api:API,
   state:function(){ return state; },
@@ -3863,6 +3873,7 @@ function ownWorkCount(){
       state = normAux(doc); editingYieldId=null; editingCostId=null; editingLinkId=null; editingContamId=null; editingSpNameId=null; editingBatchId=null; splittingId=null;
       try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
       render();
+      relayToLink();                       // what the account handed us goes to the link too (I182)
       return true;
     },
     /* Refused at the gate (I94): give them the free thing they actually came for, here,
