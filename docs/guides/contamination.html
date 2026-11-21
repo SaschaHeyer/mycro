@@ -22,7 +22,7 @@
 "description":"A practical guide to identifying and preventing the common contaminants on a mushroom farm: green mold (Trichoderma), cobweb mold, black/pin mold, and bacterial blotch / wet spot.",
 "author":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},
 "publisher":{"@type":"Organization","name":"Mycro"},
-"datePublished":"2026-06-13","dateModified":"2026-09-21",
+"datePublished":"2026-06-13","dateModified":"2026-11-21",
 "mainEntityOfPage":"https://usemycro.com/guides/contamination.html",
 "image":"https://usemycro.com/og.png"}
 </script>
@@ -67,7 +67,7 @@
     <b style="color:var(--ink)">Almost all mushroom contamination is one of five organisms:</b> green mould (Trichoderma), cobweb mould, black pin mould, bacterial blotch and wet spot. Green mould is the commonest and the most expensive. Each one points at a different cause — sterilisation, spawn rate, airflow or moisture — so identify it first and change that one habit, not everything.
   </p>
 
-  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 21 September 2026.</p>
+  <p class="muted" style="font-size:.88rem;margin:10px 0 0">Written by <a href="../index.html#about">Sascha Heyer</a>, who builds Mycro. Updated 21 November 2026.</p>
 
   <article style="font-size:1.05rem;line-height:1.7">
 
@@ -161,6 +161,7 @@
         <p id="c-cause" style="margin:10px 0 0"></p>
         <p id="c-change" style="margin:10px 0 0"></p>
         <p id="c-also" style="margin:10px 0 0;display:none"></p>
+        <p id="c-more" style="margin:10px 0 0;display:none">Cobweb is the one most often called wrong, in both directions. The full <a href="cobweb-mold.html">cobweb mold guide</a> has the three-hour test and says when a block is worth saving.</p>
         <p class="muted" style="font-size:.85rem;margin:14px 0 0">This reads appearance, which is a
           strong hint and never a certainty &mdash; two organisms can look alike on a bad day and
           lighting lies. Where it is unsure it will say the more cautious of the two, because
@@ -262,7 +263,7 @@
     <p>Bright forest-green powder on grain or substrate is almost always Trichoderma. It starts as a white fuzzy patch that is easy to mistake for mycelium, then turns green as it sporulates. By the time it is green it has already released spores, so bag and remove it immediately and do not open it near clean blocks.</p>
 
     <h3 style="margin-top:22px">What does cobweb mold look like?</h3>
-    <p>Cobweb mold (Dactylium / Hypomyces) is a fast, wispy, grey-to-translucent growth that looks like spider silk and spreads across the surface visibly faster than mushroom mycelium — often overnight. Unlike the dense, rooted look of healthy mycelium, it sits loosely on top. It usually signals stagnant, overly humid air with poor fresh-air exchange.</p>
+    <p><a href="cobweb-mold.html">Cobweb mold</a> (Dactylium / Hypomyces) is a fast, wispy, grey-to-translucent growth that looks like spider silk and spreads across the surface visibly faster than mushroom mycelium — often overnight. Unlike the dense, rooted look of healthy mycelium, it sits loosely on top. It usually signals stagnant, overly humid air with poor fresh-air exchange.</p>
 
     <h3 style="margin-top:22px">What causes wet spot or bacterial blotch?</h3>
     <p>Wet spot (sour rot, usually Bacillus) shows as slimy, grey, foul-smelling patches in grain or substrate and comes from under-sterilization or substrate that is too wet. Bacterial blotch on caps is sticky brown lesions from water sitting on the mushrooms with poor air movement. Both are bacterial, not fungal, and the fix is cleaner process and less standing moisture.</p>
@@ -414,6 +415,7 @@
       $('c-change').textContent = '';
       $('c-hazard').style.display = 'none';
       $('c-also').style.display = 'none';
+      $('c-more').style.display = 'none';
       return;
     }
 
@@ -455,6 +457,10 @@
        runner-up means binning a block that is fine. Leaning cautious has to mean check it
        again, not destroy it — over-caution on our say-so is still our mistake. */
     var second = r[1];
+    /* The dedicated cobweb page is named whenever cobweb is the answer or the close second,
+       because that is exactly the pair (cobweb vs healthy aerial mycelium) its test settles. */
+    var cobwebNear = top.c.id === 'cobweb' || (second && second.c.id === 'cobweb' && second.n >= 2 && (top.n - second.n) <= 1);
+    $('c-more').style.display = cobwebNear ? '' : 'none';
     if(second && second.n >= 2 && (top.n - second.n) <= 1){
       $('c-also').textContent = 'It could also be ' + second.c.name.toLowerCase()
         + (top.c.id === 'healthy'
