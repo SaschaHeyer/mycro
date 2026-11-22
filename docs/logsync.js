@@ -113,6 +113,7 @@
         if(!r.ok) throw new Error(r.status);
         return r.json();
       }).then(function(j){
+        if(j && j.emailedAt && window.MycroNudge && MycroNudge.learnEmailed) MycroNudge.learnEmailed(id, j.emailedAt);
         return (j && j.data && cfg.valid(j.data)) ? {data:norm(j.data), updatedAt:j.updatedAt||''} : null;
       });
     }

@@ -27,6 +27,18 @@
          return (o && id && o.id===id && typeof o.at==='number') ? o.at : null; }catch(e){ return null; }
   }
   function rememberEmailed(id){ if(id) set(EMAILED_KEY, JSON.stringify({id:id, at:Date.now()})); }
+  /* The link knows it has been emailed even when this device never sent it (I184): the
+     server stamps `emailedAt` on the link and every read of the link hands it back. Learn it
+     only for the link this device is on, never overwrite a day already known here, and take
+     only a real date. Fires `mycro:link-emailed` so a page can repaint what it shows. */
+  function learnEmailed(id, iso){
+    if(!id || id!==cloudId() || emailedAt(id)) return false;
+    var t=typeof iso==='string' ? Date.parse(iso) : NaN;
+    if(!(t>0)) return false;
+    set(EMAILED_KEY, JSON.stringify({id:id, at:t}));
+    try{ window.dispatchEvent(new CustomEvent('mycro:link-emailed',{detail:{id:id, at:t}})); }catch(e){}
+    return true;
+  }
   function state(){
     var id=cloudId();
     if(!id) return 'unlinked';
@@ -56,6 +68,6 @@
     for(var j=0;j<whens.length;j++) whens[j].textContent = at
       ? new Date(at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : 'earlier';
   }
-  window.MycroNudge={ state:state, emailedAt:emailedAt, rememberEmailed:rememberEmailed,
+  window.MycroNudge={ state:state, emailedAt:emailedAt, rememberEmailed:rememberEmailed, learnEmailed:learnEmailed,
                       due:due, shown:shown, paint:paint, PITCH_GAP:PITCH_GAP };
 })();
