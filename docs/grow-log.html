@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-22","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-24","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -630,7 +630,7 @@
 <script src="/qr.js"></script>
 <script src="/savefile.js?v=1"></script>
 <script src="/samples.js?v=4"></script>
-<script src="/causes.js?v=1"></script>
+<script src="/causes.js?v=2"></script>
 <script src="/generation.js?v=1"></script>
 <script src="/csvimport.js?v=5"></script>
 <script src="/account.js?v=18"></script>
@@ -1074,7 +1074,8 @@ function flaggedLine(b){
     }
     var p=parentBatchOf(cur);
     if(!p) return null;
-    if(p.stage==='contaminated') return {kind:'batch', code:batchCode(p), cause:causeOf(p), self:first};
+    // A stalled run is a loss, not a contaminant: nothing came down the line from it (I186).
+    if(p.stage==='contaminated' && causeOf(p)!=='stalled') return {kind:'batch', code:batchCode(p), cause:causeOf(p), self:first};
     cur=p; first=false;
   }
   return null;
@@ -1377,7 +1378,7 @@ function renderCosts(){
   var note=$('costNote');
   if(lost>0){
     note.style.display='block';
-    note.innerHTML = 'Contaminated runs are counted: '+money(lost)+' of that spend produced nothing. '+
+    note.innerHTML = 'Lost runs are counted: '+money(lost)+' of that spend produced nothing. '+
       'That loss is part of your real cost per '+unit+' — which is why the cheapest substrate '+
       'is not always the cheapest pound.';
   } else { note.style.display='none'; }
@@ -1400,7 +1401,8 @@ function renderSummary(){
   var bes=bs.map(beOf).filter(function(x){return x!=null;});
   var avgBe = bes.length ? bes.reduce(function(a,x){return a+x;},0)/bes.length : null;
   var finished=bs.filter(function(b){return b.stage==='harvested'||b.stage==='contaminated';});
-  var contam=bs.filter(function(b){return b.stage==='contaminated';});
+  // A stalled run (I186) is a loss and stays in the denominator, but it was never contaminated.
+  var contam=bs.filter(function(b){return b.stage==='contaminated' && causeOf(b)!=='stalled';});
   var rate = finished.length ? sumBags(contam)/sumBags(finished)*100 : null;
   $('k-active').textContent=active.length;
   $('k-blocks').textContent=blocks;
@@ -2126,7 +2128,7 @@ function contamFormHtml(b){
   var opts = CAUSE_ORDER.map(function(k){
     return '<option value="'+k+'"'+(cur===k?' selected':'')+'>'+esc(CAUSE[k])+'</option>';
   }).join('');
-  var btn = b.stage==='contaminated' ? 'Save cause' : 'Mark contaminated';
+  var btn = b.stage==='contaminated' ? 'Save cause' : 'Mark lost';
   /* If a culture above this run was flagged with a named cause, say so beside the question,
      and DO NOT pre-select it (I117). The culture's cause is a clue about this run, never an
      answer: a block spawned off a bacterial liquid culture can still go down to trich on the
@@ -2383,7 +2385,7 @@ function actionsHtml(b){
     ? '<button class="mini solid" data-act="harvest" data-id="'+b.id+'">'+n[1]+'</button>'
     : '<button class="mini solid" data-act="advance" data-id="'+b.id+'" data-to="'+n[0]+'">'+n[1]+'</button>';
   return advance+costBtn+
-    '<button class="mini" data-act="contam" data-id="'+b.id+'">Mark contaminated</button>'+
+    '<button class="mini" data-act="contam" data-id="'+b.id+'">✕ Mark lost</button>'+
     '<button class="mini ghosty" data-act="delete" data-id="'+b.id+'">Delete</button>';
 }
 
@@ -2436,7 +2438,7 @@ function batchHtml(b){
   if(b.stage==='contaminated'){
     var lc=causeOf(b), where=lostAtLabel(b);
     lossLine = '<div class="flushline">✕ '+
-      (causeIsNamed(lc) ? 'Lost to '+esc(CAUSE[lc]) : (lc==='other' ? 'Lost to something else' : 'Cause not recorded'))+
+      (lc==='stalled' ? 'Stalled, never fruited' : causeIsNamed(lc) ? 'Lost to '+esc(CAUSE[lc]) : (lc==='other' ? 'Lost to something else' : 'Cause not recorded'))+
       (where ? ', at the '+esc(where)+' stage' : '')+'</div>';
   }
   var cul = b.parentId ? cultureOf(b.parentId) : null;
@@ -2479,7 +2481,7 @@ function batchHtml(b){
   }
   return '<div class="batch" id="batch-'+esc(b.id)+'">'+
     '<div class="bhead"><div><span class="bname">'+esc(b.name||'Untitled batch')+'</span> '+
-      '<span class="chip '+chipCls+'">'+STAGE_LABEL[b.stage]+'</span></div>'+
+      '<span class="chip '+chipCls+'">'+(b.stage==='contaminated' && causeOf(b)==='stalled' ? 'Stalled' : STAGE_LABEL[b.stage])+'</span></div>'+
       '<span class="bsp">'+esc(speciesLabel(b))+'</span></div>'+
     '<div class="bmeta">'+meta+'</div>'+
     stepperHtml(b)+ culLine + beLine + lossLine + costLine + delLine + odLine + notes +
@@ -2817,6 +2819,17 @@ document.addEventListener('click',function(e){
     if(backInto && !confirm('Deleting '+b.name+' takes its '+countWord(b.blocks,'bag','bags')+' out of your log. '+
       backInto.name+' stays at '+countWord(backInto.blocks,'bag','bags')+'.\n\nTo return '+(b.blocks===1?'it':'them')+' to '+backInto.name+
       ' instead, press Cancel and use ↩ Put back. Delete anyway?')) return;
+    /* A run that failed is a result, not a typo (I186). A real farm deleted two 1-bag runs that
+       had colonised for eight weeks with $11 of costs on them, because nothing on the card ended a
+       run without a harvest except "Mark contaminated". Deleting takes the spend out of cost per
+       pound and the run out of the loss rate. So when the run is clearly a real attempt (costs on
+       it, or two weeks since spawning) and never gave a harvest, say what Delete erases and name
+       the button that keeps it. A run added by mistake today is not asked about. */
+    var spent=costTotal(b), age=daysSince(b.inoculatedOn);
+    if(!hadYield && b.stage!=='contaminated' && (spent!=null || age>=14) &&
+       !confirm(b.name+' has '+(spent!=null ? money(spent)+' of costs on it and has ' : '')+'been running '+age+' day'+(age===1?'':'s')+
+         ' without a harvest.\n\nDeleting it takes it out of your cost per '+unit+' and your loss figures, as if it never happened. '+
+         'If it failed, press Cancel and use ✕ Mark lost: "Stalled, never fruited" is one of the answers, and nothing has to be contaminated.\n\nDelete anyway?')) return;
     kidsOf.forEach(function(x){ x.parentId=null; });
     // A split-off batch pointing at the one being deleted keeps no dead link (I78).
     state.batches.forEach(function(x){ if(x.splitFrom===id) x.splitFrom=null; });

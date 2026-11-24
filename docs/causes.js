@@ -28,22 +28,33 @@
     wetspot:   'Wet spot or sour rot, Bacillus',
     bactyeast: 'A bacterial or yeast contamination',
     blotch:    'Bacterial blotch, Pseudomonas',
+    stalled:   'Stalled, never fruited (no mould)',
     other:     'Something else',
     unknown:   'Not sure'
   };
-  var ORDER = ['trich', 'cobweb', 'black', 'wetspot', 'bactyeast', 'blotch', 'other', 'unknown'];
+  var ORDER = ['trich', 'cobweb', 'black', 'wetspot', 'bactyeast', 'blotch', 'stalled', 'other', 'unknown'];
+
+  /* 'stalled' (I186) is a LOSS, not a contaminant. A real farm deleted two 1-bag runs that had
+     sat colonising for eight weeks with their costs on them, because the only way to end a run
+     without a harvest was "Mark contaminated" and nothing was contaminated. Deleting took the
+     spend out of cost per pound and the run out of the loss rate, as if the attempt never
+     happened. So: it is a named answer (it says what to change: spawn, conditions, genetics),
+     it ranks and clusters with the other losses, and it is NOT mould, so it never counts toward
+     a contamination rate and is never offered on a culture (a culture flag means contaminated). */
 
   /* A culture is a plate, a broth or a jar of grain. Bacterial blotch is a disease of the
      mushroom cap, so it is left out of the culture picker. A culture that somehow carries
      it (an import) still reads and exports correctly — only the offer is narrower. */
-  var CULTURE_ORDER = ORDER.filter(function (k) { return k !== 'blotch'; });
+  var CULTURE_ORDER = ORDER.filter(function (k) { return k !== 'blotch' && k !== 'stalled'; });
 
   function has(k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(CAUSE, k); }
   // A record from before causes existed carries none. It reads as 'unknown', never guessed.
   function of(rec) { return (rec && has(rec.cause)) ? rec.cause : 'unknown'; }
   // Does this cause name something a grower could actually change?
   function isNamed(k) { return has(k) && k !== 'other' && k !== 'unknown'; }
+  // Is this a contaminant (mould, bacteria, yeast)? Only these count toward a contamination rate.
+  function isMould(k) { return isNamed(k) && k !== 'stalled'; }
 
   root.MycroCauses = { CAUSE: CAUSE, ORDER: ORDER, CULTURE_ORDER: CULTURE_ORDER,
-                       has: has, of: of, isNamed: isNamed };
+                       has: has, of: of, isNamed: isNamed, isMould: isMould };
 })(typeof window !== 'undefined' ? window : this);
