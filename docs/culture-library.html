@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-20","url":"https://usemycro.com/culture-library.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Culture Library","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free mushroom traceability software and culture library. It records where each culture came from and follows it through petri dish, liquid culture, grain spawn and finished blocks, so a contamination can be traced back through the whole chain in both directions.","dateModified":"2026-11-26","url":"https://usemycro.com/culture-library.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -482,6 +482,7 @@
 <script src="/account.js?v=18"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=2"></script>
+<script src="/scanfocus.js?v=1"></script>
 <script src="/logsync.js?v=3"></script>
 <script>
 /* ---------- Mycro Culture Library — no backend, localStorage only ----------
@@ -2592,12 +2593,19 @@ function focusScannedCulture(cid, logId){
       n.innerHTML = 'The culture on that label is not in the library on this device. '+
         '<a href="grow-log.html?log='+encodeURIComponent(logId)+'">Load your backed-up log here</a>, then scan it again.';
     else n.textContent = 'The culture on that label is not in the library on this device. Scan it with the device you made it on.';
-    tree.parentNode.insertBefore(n, tree); n.scrollIntoView({block:'start'}); return;
+    tree.parentNode.insertBefore(n, tree); scanFocus(function(){ return document.getElementById('scanMiss'); }); return;
   }
-  el.classList.add('scanned');
-  var tag = document.createElement('div'); tag.className='scanline'; tag.textContent='↓ The culture on the label you scanned';
-  el.insertBefore(tag, el.firstChild);
-  el.scrollIntoView({block:'start'});
+  // Held in view below the sticky bar while the page finishes drawing (I187): see scanfocus.js.
+  scanFocus(function(){ return (function(){ var c2 = findCulture(cid); return c2 && !isArchived(c2) && document.getElementById('node-'+cid); })(); }, function(e){
+    if(e.classList.contains('scanned')) return;
+    e.classList.add('scanned');
+    var tag=document.createElement('div'); tag.className='scanline'; tag.textContent='↓ The culture on the label you scanned';
+    e.insertBefore(tag, e.firstChild);
+  });
+}
+function scanFocus(find, decorate){
+  if(window.mycroScanFocus) return mycroScanFocus(find, decorate);
+  var e=find(); if(!e) return; if(decorate) decorate(e); e.scrollIntoView({block:'center'});   // module failed to load
 }
 function fullExport(){
   return { v:state.v||1, cur:state.cur, unit:state.unit, labelQr:state.labelQr, labelPerBag:state.labelPerBag, labelSize:state.labelSize, seller:state.seller,

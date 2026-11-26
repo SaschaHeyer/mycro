@@ -636,6 +636,7 @@
 <script src="/account.js?v=18"></script>
 <script src="/pwa.js?v=1"></script>
 <script src="/nudge.js?v=2"></script>
+<script src="/scanfocus.js?v=1"></script>
 <script src="/logsync.js?v=3"></script>
 <script>
 /* ---------- Mushroom Grow Log — no backend, localStorage only ----------
@@ -3979,12 +3980,19 @@ function focusScanned(bid){
     var list=$('batchList'); if(!list) return;
     var n=document.createElement('div'); n.className='scanmiss'; n.id='scanMiss';
     n.textContent='The label you scanned is for a batch that is no longer in this log. Everything else is below.';
-    list.parentNode.insertBefore(n,list); n.scrollIntoView({block:'start'}); return;
+    list.parentNode.insertBefore(n,list); scanFocus(function(){ return document.getElementById('scanMiss'); }); return;
   }
-  el.classList.add('scanned');
-  var tag=document.createElement('div'); tag.className='scanline'; tag.textContent='\u2193 The batch on the label you scanned';
-  el.insertBefore(tag, el.firstChild);
-  el.scrollIntoView({block:'start'});
+  // Held in view below the sticky bar while the page finishes drawing (I187): see scanfocus.js.
+  scanFocus(function(){ return document.getElementById('batch-'+bid); }, function(e){
+    if(e.classList.contains('scanned')) return;
+    e.classList.add('scanned');
+    var tag=document.createElement('div'); tag.className='scanline'; tag.textContent='\u2193 The batch on the label you scanned';
+    e.insertBefore(tag, e.firstChild);
+  });
+}
+function scanFocus(find, decorate){
+  if(window.mycroScanFocus) return mycroScanFocus(find, decorate);
+  var e=find(); if(!e) return; if(decorate) decorate(e); e.scrollIntoView({block:'center'});   // module failed to load
 }
 
 /* On load, if this device is already linked to a backup (and we're not mid-restore),
