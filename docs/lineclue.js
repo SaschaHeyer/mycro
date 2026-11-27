@@ -67,7 +67,9 @@
     if (kind === 'culture') return rec.status === 'contaminated';
     return rec.stage === 'contaminated';
   }
-  function codeOf(n) { return n.kind === 'culture' ? (n.rec.code || 'culture') : ((n.rec.code && String(n.rec.code).trim()) || n.rec.name || 'run'); }
+  // A run is named by what is on its card (its name); its lot code can equal the bag's code and then
+  // the list reads as if the bag itself were one of the losses. Found on the farm's real log.
+  function codeOf(n) { return n.kind === 'culture' ? (n.rec.code || 'culture') : (n.rec.name || (n.rec.code && String(n.rec.code).trim()) || 'run'); }
 
   // Is this parent a suspect? -> {cause, lost:[nodes], finished} or null.
   function suspectOf(state, kind, rec, ix) {
