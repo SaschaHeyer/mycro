@@ -633,6 +633,7 @@
 <script src="/savefile.js?v=1"></script>
 <script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=2"></script>
+<script src="/lineclue.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
 <script src="/csvimport.js?v=5"></script>
 <script src="/account.js?v=18"></script>
@@ -2511,6 +2512,17 @@ function batchHtml(b){
       esc(parentCodeOf(b))+' is '+esc(parentSpLabel(mis))+'.</b> One of the two is wrong: the label, the colonisation window and the strain table all use the species. '+
       '<button class="mini solid" type="button" data-act="spfix" data-id="'+b.id+'">Change to '+esc(parentSpLabel(mis))+'</button> '+
       '<button class="mini" type="button" data-act="link" data-id="'+b.id+'">Change the link</button></div>';
+  /* Two runs off this run's spawn were lost to the same mould (I188). A clue, never a flag:
+     only on a run still going; suspectAbove itself stops at a flag, which already warns. */
+  var sus = (b.stage!=='harvested' && b.stage!=='contaminated' && window.MycroLineClue)
+    ? MycroLineClue.suspectAbove(state, 'batch', b) : null;
+  if(sus){
+    var susKind = sus.kind==='batch' ? 'spawn' : (CULTURE_LABEL[sus.rec.type]||'culture').toLowerCase();
+    culLine += '<div class="culline suspect"><b class="culbad">⚠ '+MycroLineClue.lossSentence(sus, esc, CAUSE[sus.cause])+'</b> '+
+      'This run came from the same '+esc(susKind)+'. A clue, not the answer: two losses to one mould off one '+esc(susKind)+
+      ' usually means it came in with the spawn, so look this one over before it goes into fruiting.'+
+      (sus.kind==='culture' ? ' <a href="culture-library.html?c='+encodeURIComponent(sus.rec.id)+'">See '+esc(sus.code)+' in the Culture Library</a>' : '')+'</div>';
+  }
   var ow = orderWeight(b);                                              // (I166)
   if(ow){
     var bePer = (b.stage==='harvested' && b.yieldG>0) ? (b.yieldG/(ow.per*b.blocks)*100) : null;

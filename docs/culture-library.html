@@ -478,6 +478,7 @@
 <script src="/qr.js"></script>
 <script src="/samples.js?v=4"></script>
 <script src="/causes.js?v=2"></script>
+<script src="/lineclue.js?v=1"></script>
 <script src="/generation.js?v=1"></script>
 <script src="/account.js?v=18"></script>
 <script src="/pwa.js?v=1"></script>
@@ -1718,6 +1719,21 @@ function cultureNodeHtml(c, depth){
       (MycroCauses.isNamed(cc) ? 'Contaminated: <b>'+esc(MycroCauses.CAUSE[cc])+'</b>'
         : (cc==='other' ? 'Contaminated: something else' : 'Cause not recorded'))+'</div>';
   }
+  /* Two or more things made from this one were lost to the same mould and it is not flagged (I188).
+     A clue for the grower to act on, never a flag: the Mark contaminated button below is theirs. */
+  var sus = window.MycroLineClue ? MycroLineClue.suspectOf(state, 'culture', c) : null;
+  if(sus){
+    var lb = MycroLineClue.liveBelow(state, 'culture', c);
+    var live = [];
+    if(lb.cultures.length) live.push(lb.cultures.length+' culture'+(lb.cultures.length===1?'':'s')+' ('+lb.cultures.map(function(x){ return '<code>'+esc(x.code)+'</code>'; }).join(', ')+')');
+    if(lb.batches.length) live.push(lb.batches.length+' run'+(lb.batches.length===1?'':'s')+', '+lb.blocks+' block'+(lb.blocks===1?'':'s')+' ('+lb.batches.map(function(x){ return '<code>'+esc((x.code&&String(x.code).trim())||x.name)+'</code>'; }).join(', ')+')');
+    if(live.length || c.status==='healthy'){
+      h += '<div class="perfline suspectline">⚠ <b>'+MycroLineClue.lossSentence(sus, esc, MycroCauses.CAUSE[sus.cause])+'</b> '+
+        (live.length ? 'Still going from it: '+live.join(' and ')+'. ' : '')+
+        'A clue, not the answer: two losses to one mould off one '+esc(CTYPE[c.type].label.toLowerCase())+' usually means it came in with the spawn. '+
+        'If you think it did, ⚑ Mark contaminated warns everything made from it.</div>';
+    }
+  }
   if(c.notes) h += '<div class="nnotes">'+esc(c.notes)+'</div>';
   var np = notesParent(c);
   if(np) h += '<div class="perfline relinkhint">📎 Your notes say this came from <code>'+esc(np.code)+'</code>. '+
@@ -2916,6 +2932,7 @@ function ownWorkCount(){
 .chip-jars{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
 .chip-gen{background:var(--surface-2);color:var(--ink,inherit);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .perfline{font-size:.85rem;color:#1f6b3c;margin:6px 0 0}
+.perfline.suspectline{color:#9a3417}
 .samplebar{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);
   padding:12px 16px;margin:0 0 16px;font-size:.88rem;color:var(--muted);
   gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
