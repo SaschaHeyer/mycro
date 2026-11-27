@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-24","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-27","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -400,7 +400,9 @@
           <input id="f-date" type="date"></div>
         <div class="field" id="f-culture-wrap" style="display:none"><label>Spawn from <span class="hint">(optional)</span></label>
           <select id="f-culture"></select>
-          <span class="hint">The jar or bag this batch came from, logged here or in the Culture Library, so a contamination can be traced back.</span></div>
+          <span class="hint">The jar or bag this batch came from, logged here or in the Culture Library, so a contamination can be traced back.</span>
+          <label id="f-usedUp-wrap" class="usedup" style="display:none"><input id="f-usedUp" type="checkbox"> <span id="f-usedUp-text"></span></label>
+          <span id="f-usedUp-hint" class="hint" style="display:none"></span></div>
         <div class="field"><label>Generation <span class="hint">(optional)</span></label>
           <input id="f-gen" type="number" step="1" min="0" max="99" inputmode="numeric" placeholder="e.g. 1" autocomplete="off">
           <span class="hint" id="f-gen-hint">Transfers away from your first culture off the source (that one is Gen 0). Gen 0 liquid culture into a grain bag makes Gen 1.</span></div>
@@ -1084,9 +1086,15 @@ function flaggedLine(b){
 function childBatches(b){ return state.batches.filter(function(x){ return x.parentId===b.id && x.id!==b.id && !cultureOf(b.id); }); }
 function parentOptionsHtml(b, keepId, labelled){
   var cs=pickableCultures(keepId), bs=pickableParentBatches(b, keepId), h='';
-  if(cs.length) h += '<optgroup label="From the Culture Library">'+cs.map(function(c){
-    return '<option value="'+esc(c.id)+'"'+(keepId===c.id?' selected':'')+'>'+
-      esc(c.code)+(labelled?' · '+esc(CULTURE_LABEL[c.type]||c.type):'')+'</option>'; }).join('')+'</optgroup>';
+  /* What is still on the shelf comes first (I188). A farm with 55 cultures, 28 of them grain bags
+     already emptied into blocks, scrolled past every one of them to find the bag in their hand.
+     Used and lost cultures stay pickable (a run is often logged after its bag was marked used),
+     just below, in their own group. */
+  var cOpt=function(c){ return '<option value="'+esc(c.id)+'"'+(keepId===c.id?' selected':'')+'>'+
+      esc(c.code)+(labelled?' · '+esc(CULTURE_LABEL[c.type]||c.type):'')+'</option>'; };
+  var cOpen=cs.filter(function(c){ return !cultureDone(c); }), cDone=cs.filter(cultureDone);
+  if(cOpen.length) h += '<optgroup label="From the Culture Library">'+cOpen.map(cOpt).join('')+'</optgroup>';
+  if(cDone.length) h += '<optgroup label="Culture Library: used up or lost">'+cDone.map(cOpt).join('')+'</optgroup>';
   if(bs.length) h += '<optgroup label="Spawn in this log">'+bs.map(function(p){
     return '<option value="'+esc(p.id)+'"'+(keepId===p.id?' selected':'')+'>'+
       esc(batchCode(p))+' · '+esc(speciesLabel(p))+'</option>'; }).join('')+'</optgroup>';
@@ -1188,6 +1196,43 @@ function validParentFor(b, v){
   return !isSeededBatch(p) || !!(b && b.parentId===v);
 }
 document.addEventListener('change',function(e){ if(e.target && e.target.id==='f-culture') renderGenFormHint(); });
+function cultureDone(c){ return !!c && (c.status==='used' || c.status==='contaminated' || c.status==='discarded'); }
+/* THE BAG THIS RUN EMPTIED (I188). Every time a real farm spawned blocks from a grain bag here, it
+   opened the Culture Library to mark that bag used, then came back: 13 times in 10 days, and 28 of
+   the 29 bags that ever fed a run are marked used. So the add form offers it in the same step.
+   Rules, each pinned in tests/parent-used-up.spec.js:
+   (a) only an own grain culture that is still healthy is offered; a petri or LC feeds many runs,
+       a seeded example is ours, a lost or used one has nothing left to mark;
+   (b) ticked by default only when this run takes the last container the culture was logged
+       with (runs already off it + this one >= its bag count), so a two-bag culture is not
+       closed by its first run; the grower can change it either way;
+   (c) it writes only when the run is actually added, and only `status`, the same field the
+       library's own "Mark used" button writes, so the library reads it as if pressed there;
+   (d) never on load and never on an existing run. */
+function usedUpCandidate(id){
+  var c=id ? cultureOf(id) : null;
+  if(!c || c.type!=='grain' || c.archived===true || (c.status && c.status!=='healthy')) return null;
+  if(window.MycroSamples && MycroSamples.isSample('cultures', c.id)) return null;
+  return c;
+}
+function runsOffCulture(id){ return state.batches.filter(function(b){ return b && b.parentId===id; }).length; }
+function cultureContainers(c){ var n=Math.round(+c.jars); return n>=1 ? n : 1; }
+function usedUpDefault(c){ return runsOffCulture(c.id)+1 >= cultureContainers(c); }
+function renderUsedUp(){
+  var wrap=$('f-usedUp-wrap'), cb=$('f-usedUp'), hint=$('f-usedUp-hint'), sel=$('f-culture');
+  if(!wrap || !cb) return;
+  var c=usedUpCandidate(sel && sel.value);
+  if(!c){ wrap.style.display='none'; hint.style.display='none'; cb.checked=false; wrap._for=null; return; }
+  var word=c.container==='jar' ? 'jar' : 'bag', n=cultureContainers(c), done=runsOffCulture(c.id);
+  $('f-usedUp-text').textContent='This run empties '+c.code+': mark it used in the Culture Library';
+  if(wrap._for!==c.id){ cb.checked=usedUpDefault(c); wrap._for=c.id; }    // a choice the grower made stays made
+  wrap.style.display='flex';
+  if(n>1){
+    hint.textContent=c.code+' was logged as '+n+' '+word+'s; '+(done===0 ? 'no run is' : done===1 ? '1 run is' : done+' runs are')+' off it so far.';
+    hint.style.display='block';
+  } else hint.style.display='none';
+}
+document.addEventListener('change',function(e){ if(e.target && e.target.id==='f-culture') renderUsedUp(); });
 function renderCultureSelect(){
   var wrap=$('f-culture-wrap'), sel=$('f-culture');
   if(!wrap||!sel) return;
@@ -1197,6 +1242,7 @@ function renderCultureSelect(){
   var cur=sel.value;
   sel.innerHTML='<option value="">— not linked —</option>'+opts;
   if(cur) sel.value=cur;
+  renderUsedUp();
 }
 
 /* ---- computations ---- */
@@ -2646,6 +2692,7 @@ function addBatch(e){
   var d=$('f-date').value||today();
   var culSel=$('f-culture'), parentId=(culSel && culSel.value) || null;
   if(parentId && !validParentFor(null, parentId)) parentId=null;
+  var emptied = ($('f-usedUp') && $('f-usedUp').checked) ? usedUpCandidate(parentId) : null;   // read before the push: (b) counts runs before this one
   state.batches.push({
     id:newId(), name:($('f-name').value||'').trim()||'Batch '+(state.batches.length+1),
     species:$('f-species').value, dryG:gFromInput(dry), blocks:blocks,
@@ -2659,7 +2706,10 @@ function addBatch(e){
     notes:($('f-notes').value||'').trim()
   });
   listFindText='';                                      // the new run must be on screen
+  if(emptied) emptied.status='used';
+  if($('f-usedUp-wrap')) $('f-usedUp-wrap')._for=null;   // the next run off the same culture is judged afresh
   save(); render();
+  if(emptied && window.track) try{ track('growlog_parent_used',{n:cultureContainers(emptied), runs:runsOffCulture(emptied.id)}); }catch(_){}
   $('f-name').value=''; $('f-notes').value=''; $('f-code').value=''; if($('f-gen')) $('f-gen').value=''; $('f-speciesName').value=''; $('f-date').value=today();
   renderNameHint();
   if(window.track) try{ track('growlog_add',{species:$('f-species').value, src:$('f-supplier')&&$('f-supplier').value.trim()?1:0}); }catch(_){}
@@ -4084,7 +4134,7 @@ render();
     var m=/[?&]spawn=([^&]+)/.exec(location.search); if(!m) return;
     var id=decodeURIComponent(m[1]); if(!cultureOf(id)) return;
     var sel=$('f-culture'); if(!sel) return;
-    sel.value=id;
+    sel.value=id; renderUsedUp();
     var c=cultureOf(id);
     if(c && !$('f-name').value){ $('f-name').value=c.code+' block'; renderNameHint(); }
     $('addForm').scrollIntoView({behavior:'smooth',block:'center'});
@@ -4173,6 +4223,8 @@ table.strain td.pub{color:var(--muted);white-space:nowrap}
 .flag{font-size:.86rem;color:var(--warn);background:#FBEDE8;border-radius:10px;padding:8px 12px;margin:2px 0 8px}
 .bnotes{font-size:.88rem;color:var(--muted);margin:2px 0 8px;font-style:italic}
 .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.field label.usedup{margin-top:8px;font-weight:400;font-size:.88rem;display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;cursor:pointer}
+.field label.usedup input{margin-top:3px;width:auto}
 .namehint{margin-top:6px;font-size:.84rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .namehint .clash{font-weight:700}
 .listbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:.9rem}
