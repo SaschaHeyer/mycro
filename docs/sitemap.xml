@@ -14,13 +14,13 @@
   </url>
   <url>
     <loc>https://usemycro.com/culture-library.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://usemycro.com/grow-log.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -86,7 +86,7 @@
   </url>
   <url>
     <loc>https://usemycro.com/guides/</loc>
-    <lastmod>2026-11-19</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -128,7 +128,7 @@
   </url>
   <url>
     <loc>https://usemycro.com/guides/how-long-to-grow-mushrooms.html</loc>
-    <lastmod>2026-11-04</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -147,6 +147,12 @@
   <url>
     <loc>https://usemycro.com/guides/mushroom-yield-per-square-foot.html</loc>
     <lastmod>2026-09-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://usemycro.com/guides/grain-spawn-colonization.html</loc>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
