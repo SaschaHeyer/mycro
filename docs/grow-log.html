@@ -22,7 +22,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4C9 4 4 9 4 15h24C28 9 23 4 16 4Z' fill='%23C2702B'/%3E%3Crect x='12' y='14' width='8' height='14' rx='3' fill='%23E8DcC8'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-27","url":"https://usemycro.com/grow-log.html"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Mycro Grow Log","creator":{"@type":"Person","name":"Sascha Heyer","url":"https://usemycro.com/#about"},"applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"A free mushroom growing app and grow-log software that runs in a web browser with nothing to install. It follows each batch from inoculation through colonization, fruiting and harvest, and computes biological efficiency, days-in-stage and contamination rate automatically.","dateModified":"2026-11-28","url":"https://usemycro.com/grow-log.html"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -402,7 +402,8 @@
           <select id="f-culture"></select>
           <span class="hint">The jar or bag this batch came from, logged here or in the Culture Library, so a contamination can be traced back.</span>
           <label id="f-usedUp-wrap" class="usedup" style="display:none"><input id="f-usedUp" type="checkbox"> <span id="f-usedUp-text"></span></label>
-          <span id="f-usedUp-hint" class="hint" style="display:none"></span></div>
+          <span id="f-usedUp-hint" class="hint" style="display:none"></span>
+          <span id="f-lineWarn" class="hint linewarn" style="display:none"></span></div>
         <div class="field"><label>Generation <span class="hint">(optional)</span></label>
           <input id="f-gen" type="number" step="1" min="0" max="99" inputmode="numeric" placeholder="e.g. 1" autocomplete="off">
           <span class="hint" id="f-gen-hint">Transfers away from your first culture off the source (that one is Gen 0). Gen 0 liquid culture into a grain bag makes Gen 1.</span></div>
@@ -1219,7 +1220,43 @@ function usedUpCandidate(id){
 function runsOffCulture(id){ return state.batches.filter(function(b){ return b && b.parentId===id; }).length; }
 function cultureContainers(c){ var n=Math.round(+c.jars); return n>=1 ? n : 1; }
 function usedUpDefault(c){ return runsOffCulture(c.id)+1 >= cultureContainers(c); }
+/* Spawning from a line that is already in trouble says so BEFORE the run is added (I189).
+   On 2026-11-27 a farm spawned four wood ear blocks off a bag two generations below the bag
+   that had just lost both its runs to trich. The clue (I188) was live, but it only shows on a
+   run once it exists, and on the library node; the moment the information could change
+   anything is this picker. Rules:
+   (a) a contaminated record at or above the pick names it and its cause (the same walk the
+       card uses, flaggedLine);
+   (b) otherwise a suspect at or above the pick (MycroLineClue, same rules and same sentence as
+       the card and the library, so the three can never disagree);
+   (c) display only: it never blocks, unpicks or pre-selects anything; the grower may know the
+       bag is fine;
+   (d) one event per pick, not per repaint. */
+function lineWarnFor(id){
+  if(!id) return null;
+  var probe={id:'__pick__', parentId:id};
+  var f=flaggedLine(probe);
+  if(f) return {kind:'flag', html:'<b class="culbad">⚑ '+esc(f.code)+(f.self?' is':', which this comes from, is')+' marked contaminated'+
+      (CAUSE[f.cause] ? ': '+esc(CAUSE[f.cause]) : '')+'.</b> A run spawned from it will carry that warning.'};
+  var sus=window.MycroLineClue ? MycroLineClue.suspectAbove(state, 'batch', probe) : null;
+  if(sus){
+    var kindWord = sus.kind==='batch' ? 'spawn' : (CULTURE_LABEL[sus.rec.type]||'culture').toLowerCase();
+    var self = sus.rec.id===id;
+    return {kind:'suspect', html:'<b class="culbad">⚠ '+MycroLineClue.lossSentence(sus, esc, CAUSE[sus.cause])+'</b> '+
+      (self ? 'You are spawning straight from that '+esc(kindWord)+'.' : 'What you picked was made from that '+esc(kindWord)+'.')+
+      ' A clue, not the answer: look it over before it goes into more blocks.'};
+  }
+  return null;
+}
+function renderLineWarn(){
+  var el=$('f-lineWarn'), sel=$('f-culture'); if(!el) return;
+  var id=sel && sel.value, w=lineWarnFor(id);
+  if(!w){ el.style.display='none'; el.innerHTML=''; el._for=null; return; }
+  el.innerHTML=w.html; el.style.display='block';
+  if(el._for!==id){ el._for=id; if(window.track) try{ track('growlog_line_warn_pick',{kind:w.kind}); }catch(_){} }
+}
 function renderUsedUp(){
+  renderLineWarn();
   var wrap=$('f-usedUp-wrap'), cb=$('f-usedUp'), hint=$('f-usedUp-hint'), sel=$('f-culture');
   if(!wrap || !cb) return;
   var c=usedUpCandidate(sel && sel.value);
@@ -4237,6 +4274,8 @@ table.strain td.pub{color:var(--muted);white-space:nowrap}
 .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .field label.usedup{margin-top:8px;font-weight:400;font-size:.88rem;display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;cursor:pointer}
 .field label.usedup input{margin-top:3px;width:auto}
+.field .linewarn{margin-top:8px;padding:8px 10px;border-left:3px solid #c2410c;background:#fff7ed;color:#3b2a1a;font-size:.86rem;line-height:1.45}
+.field .linewarn .culbad{color:#9a3417}
 .namehint{margin-top:6px;font-size:.84rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .namehint .clash{font-weight:700}
 .listbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:.9rem}
